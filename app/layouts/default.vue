@@ -103,8 +103,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px var(--shadow-color);
-  transition: all 0.3s;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+  transition:
+    transform var(--transition-base),
+    opacity var(--transition-fast),
+    background var(--transition-fast);
   z-index: 99;
 
   :deep(svg) {

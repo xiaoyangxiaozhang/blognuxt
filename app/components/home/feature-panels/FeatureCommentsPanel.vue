@@ -43,10 +43,8 @@ const commentCards = computed(() => {
   const fromArticles = props.recentArticles.slice(0, 6).map((article) => ({
     id: `comment-${article.id}`,
     publishDate: article.publishDate,
-    text: `${article.categoryName}：${article.title}`
+    text: `${article.categoryName} · ${article.title}`
   }))
-
-
 
   return [...fromArticles]
 })
@@ -65,7 +63,7 @@ const commentCards = computed(() => {
 
 .comment-card {
   padding: 24px;
-  border-radius: 24px;
+  border-radius: 15px;
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);

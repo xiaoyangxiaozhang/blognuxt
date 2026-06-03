@@ -4,22 +4,21 @@
       <h2>Feature</h2>
     </div>
 
-    <div class="feature-tabs" role="tablist" aria-label="首页特性导航">
-      <button
+    <ul class="feature-tabs" role="tablist" aria-label="首页功能导航">
+      <li
         v-for="item in tabs"
         :key="item.key"
         :ref="el => { if (el) tabRefs[item.key] = el as HTMLElement }"
         class="feature-tab"
         :class="{ active: activeTab === item.key }"
-        type="button"
         role="tab"
         :aria-selected="activeTab === item.key"
         @click="switchTab(item.key)"
       >
         {{ item.label }}
-      </button>
+      </li>
       <div class="feature-tab-indicator" :style="indicatorPos"></div>
-    </div>
+    </ul>
 
     <transition name="fade" mode="out-in">
       <div :key="activeTab" class="feature-body">
@@ -30,8 +29,8 @@
 </template>
 
 <script setup lang="ts">
-import FeatureArticlesPanel from '~/components/home/feature-panels/FeatureArticlesPanel.vue'
 import FeatureAuthorPanel from '~/components/home/feature-panels/FeatureAuthorPanel.vue'
+import FeatureArticlesPanel from '~/components/home/feature-panels/FeatureArticlesPanel.vue'
 import FeatureCommentsPanel from '~/components/home/feature-panels/FeatureCommentsPanel.vue'
 import FeatureMomentsPanel from '~/components/home/feature-panels/FeatureMomentsPanel.vue'
 import FeatureNoticePanel from '~/components/home/feature-panels/FeatureNoticePanel.vue'
@@ -61,6 +60,12 @@ interface RecentArticleItem {
   cover: string
 }
 
+interface SidebarSocialItem {
+  name: string
+  url: string
+  icon: string
+}
+
 type FeatureTabKey = 'author' | 'articles' | 'moments' | 'comments' | 'notice'
 
 const props = defineProps<{
@@ -68,6 +73,7 @@ const props = defineProps<{
   authorDesc: string
   authorAvatar: string
   authorGithub?: string
+  sidebarSocial?: SidebarSocialItem[]
   announcementHtml?: string
   totalArticles: number
   categories: CategoryItem[]
@@ -81,7 +87,7 @@ const tabs: Array<{ key: FeatureTabKey; label: string }> = [
   { key: 'articles', label: '文章' },
   { key: 'moments', label: '动态' },
   { key: 'comments', label: '评论' },
-  { key: 'notice', label: '网站公告' }
+  { key: 'notice', label: '公告' }
 ]
 
 const activeTab = ref<FeatureTabKey>('author')
@@ -112,7 +118,6 @@ const updateIndicator = () => {
 
 onMounted(() => {
   nextTick(() => updateIndicator())
-
   window.addEventListener('resize', updateIndicator)
 })
 
@@ -138,6 +143,7 @@ const activeProps = computed(() => {
         authorDesc: props.authorDesc,
         authorAvatar: props.authorAvatar,
         authorGithub: props.authorGithub,
+        sidebarSocial: props.sidebarSocial,
         totalArticles: props.totalArticles,
         categories: props.categories,
         tags: props.tags,
@@ -150,7 +156,6 @@ const activeProps = computed(() => {
       }
     case 'moments':
       return {
-       
         recentArticles: props.recentArticles,
         tags: props.tags,
         loading: props.loading
@@ -182,66 +187,67 @@ const activeProps = computed(() => {
 }
 
 .section-heading {
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 
   h2 {
-    margin: 0;
-    display: inline-block;
-    font-size: 48px;
-    line-height: 1.08;
-    color: var(--home-text);
     position: relative;
+    display: inline-block;
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--home-text);
 
     &::after {
       content: '';
       position: absolute;
-      left: 4px;
-      bottom: 2px;
-      width: 72%;
-      height: 7px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, var(--home-accent), transparent);
+      bottom: -4px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      border-radius: 2px;
+      background: var(--brand-accent);
     }
   }
 }
 
 .feature-tabs {
   position: relative;
-  display: flex;
-  gap: 30px;
-  margin-bottom: 36px;
+  display: block;
+  list-style: none;
+  margin: 0;
+  padding: 0;
   overflow-x: auto;
-  padding-bottom: 4px;
+  white-space: nowrap;
+  font-size: 0;
 }
 
 .feature-tab-indicator {
   position: absolute;
-  bottom: 4px;
-  height: 5px;
-  border-radius: 999px;
-  background: #84dfff;
+  bottom: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--brand-accent);
   transition: left 0.3s ease, width 0.3s ease;
   pointer-events: none;
 }
 
 .feature-tab {
-  position: relative;
-  border: none;
-  background: transparent;
+  display: inline-block;
+  padding: 6px 16px;
   color: var(--home-text);
-  font-size: 20px;
-  font-weight: 500;
-  padding: 0 0 14px;
+  font-size: 15px;
+  font-weight: 400;
   cursor: pointer;
-  transition: color 0.25s ease;
+  user-select: none;
   white-space: nowrap;
+  transition: color 0.25s ease;
 
   &:hover {
-    color: #84dfff;
+    color: var(--brand-accent);
   }
 
   &.active {
-    color: #84dfff;
+    color: var(--brand-accent);
   }
 }
 
@@ -249,7 +255,7 @@ const activeProps = computed(() => {
   display: flex;
   justify-content: flex-start;
   min-height: 150px;
-  // overflow: hidden;
+  margin-top: 20px;
 }
 
 .fade-enter-active,
@@ -282,17 +288,21 @@ const activeProps = computed(() => {
     width: min(368px, 100%);
   }
 
-  .section-heading h2 {
-    font-size: 32px;
+  .section-heading {
+    margin-bottom: 20px;
+
+    h2 {
+      font-size: 24px;
+    }
   }
 
   .feature-tabs {
-    gap: 22px;
-    margin-bottom: 28px;
+    margin: 0;
   }
 
   .feature-tab {
-    font-size: 18px;
+    font-size: 14px;
+    padding: 6px 14px;
   }
 }
 </style>

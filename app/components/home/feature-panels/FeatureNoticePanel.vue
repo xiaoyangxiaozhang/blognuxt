@@ -30,7 +30,7 @@ const fallbackAnnouncement = computed(() => {
 .notice-card {
   width: 100%;
   padding: 28px;
-  border-radius: 28px;
+  border-radius: 15px;
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);

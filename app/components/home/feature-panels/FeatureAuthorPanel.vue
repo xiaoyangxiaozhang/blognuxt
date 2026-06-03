@@ -16,55 +16,116 @@
         </div>
       </div>
 
-      <div v-if="authorGithub" class="author-actions">
-        <a :href="authorGithub" target="_blank" rel="noreferrer" class="action-button">
-          My GitHub
+      <div v-if="socialLinks.length" class="author-socials">
+        <a
+          v-for="item in socialLinks"
+          :key="item.name"
+          :href="item.url || '#'"
+          :target="item.url ? '_blank' : undefined"
+          :rel="item.url ? 'noopener noreferrer' : undefined"
+          class="social-link"
+          :title="item.name"
+          :style="brandStyle(item.icon)"
+        >
+          <component :is="iconMap[item.icon] || fallbackIcon" />
         </a>
       </div>
-
-      <!-- <div class="author-stats">
-        <div class="stat-card">
-          <strong>{{ totalArticles }}</strong>
-          <span>文章</span>
-        </div>
-        <div class="stat-card">
-          <strong>{{ tags.length }}</strong>
-          <span>标签</span>
-        </div>
-        <div class="stat-card">
-          <strong>{{ categories.length }}</strong>
-          <span>分类</span>
-        </div>
-      </div> -->
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-interface CategoryItem {
-  id: number
-  name: string
-  slug: string
-  count: number
+import IconMdiEarth from '~icons/mdi/earth'
+
+// 图标映射：ri 图标名 → Vue 组件
+import IconRiGithubLine from '~icons/ri/github-line'
+import IconRiBilibiliLine from '~icons/ri/bilibili-line'
+import IconRiTwitterXLine from '~icons/ri/twitter-x-line'
+import IconRiNeteaseCloudMusicLine from '~icons/ri/netease-cloud-music-line'
+import IconRiTelegram2Line from '~icons/ri/telegram-2-line'
+import IconRiWeiboLine from '~icons/ri/weibo-line'
+import IconRiZhihuLine from '~icons/ri/zhihu-line'
+import IconRiTiktokLine from '~icons/ri/tiktok-line'
+import IconMaterialSymbolsMailOutlineRounded from '~icons/material-symbols/mail-outline-rounded'
+
+const iconMap: Record<string, any> = {
+  'github-line': IconRiGithubLine,
+  'bilibili-line': IconRiBilibiliLine,
+  'twitter-x-line': IconRiTwitterXLine,
+  'netease-cloud-music-line': IconRiNeteaseCloudMusicLine,
+  'telegram-2-line': IconRiTelegram2Line,
+  'weibo-line': IconRiWeiboLine,
+  'zhihu-line': IconRiZhihuLine,
+  'tiktok-line': IconRiTiktokLine,
+  'tiktok-fill': IconRiTiktokLine,
+  'mail-line': IconMaterialSymbolsMailOutlineRounded
 }
 
-interface TagItem {
-  id: number
-  name: string
-  slug: string
-  count: number
+const fallbackIcon = IconMdiEarth
+
+// 各平台品牌色
+interface BrandColor {
+  bg: string        // 默认背景色
+  color: string     // 图标颜色
+  hoverBg: string   // hover 背景加深
+  hoverColor: string // hover 图标颜色
+  border: string    // 边框色
 }
 
-defineProps<{
+const brandColors: Record<string, BrandColor> = {
+  'github-line':             { bg: '#24292e', color: '#fff', hoverBg: '#1b1f23', hoverColor: '#fff', border: '#24292e' },
+  'bilibili-line':           { bg: '#00A1D6', color: '#fff', hoverBg: '#0088b3', hoverColor: '#fff', border: '#00A1D6' },
+  'twitter-x-line':          { bg: '#000000', color: '#fff', hoverBg: '#1a1a1a', hoverColor: '#fff', border: '#000000' },
+  'netease-cloud-music-line': { bg: '#C20C0C', color: '#fff', hoverBg: '#a00a0a', hoverColor: '#fff', border: '#C20C0C' },
+  'telegram-2-line':         { bg: '#26A5E4', color: '#fff', hoverBg: '#1e8bc3', hoverColor: '#fff', border: '#26A5E4' },
+  'weibo-line':              { bg: '#E6162D', color: '#fff', hoverBg: '#c41226', hoverColor: '#fff', border: '#E6162D' },
+  'zhihu-line':              { bg: '#0084FF', color: '#fff', hoverBg: '#0070d9', hoverColor: '#fff', border: '#0084FF' },
+  'tiktok-line':             { bg: '#000000', color: '#fff', hoverBg: '#1a1a1a', hoverColor: '#fff', border: '#000000' },
+  'tiktok-fill':             { bg: '#000000', color: '#fff', hoverBg: '#1a1a1a', hoverColor: '#fff', border: '#000000' },
+  // 邮箱用暖橙色
+  'mail-line':               { bg: '#EA4335', color: '#fff', hoverBg: '#c93427', hoverColor: '#fff', border: '#EA4335' }
+}
+
+const defaultBrand: BrandColor = {
+  bg: 'var(--home-card-alt)',
+  color: 'var(--home-text-muted)',
+  hoverBg: 'var(--brand-accent-soft)',
+  hoverColor: 'var(--brand-accent)',
+  border: 'var(--home-border)'
+}
+
+const brandStyle = (icon: string): Record<string, string> => {
+  const b = brandColors[icon] || defaultBrand
+  return {
+    '--sl-bg': b.bg,
+    '--sl-color': b.color,
+    '--sl-hover-bg': b.hoverBg,
+    '--sl-hover-color': b.hoverColor,
+    '--sl-border': b.border
+  }
+}
+
+interface SidebarSocialItem {
+  name: string
+  url: string
+  icon: string
+}
+
+const props = defineProps<{
   authorName: string
   authorDesc: string
   authorAvatar: string
   authorGithub?: string
+  sidebarSocial?: SidebarSocialItem[]
   totalArticles: number
-  categories: CategoryItem[]
-  tags: TagItem[]
+  categories: any[]
+  tags: any[]
   loading: boolean
 }>()
+
+const socialLinks = computed(() => {
+  return props.sidebarSocial?.filter((s) => s.url && s.name) || []
+})
 </script>
 
 <style scoped lang="scss">
@@ -114,70 +175,52 @@ defineProps<{
   }
 }
 
-.author-actions {
+.author-socials {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.action-button {
+.social-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 172px;
-  min-height: 78px;
-  padding: 0 30px;
-  border-radius: 999px;
-  background: var(--home-card-bg);
-  border: 1px solid var(--home-border);
-  color: var(--home-text);
-  font-size: 18px;
-  font-weight: 600;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 20px;
   text-decoration: none;
-  box-shadow: var(--home-shadow);
-}
+  transition: all 0.25s cubic-bezier(0.345, 0.045, 0.345, 1);
 
-.author-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  max-width: 760px;
-}
+  // 品牌色通过 CSS 变量注入
+  color: var(--sl-color, var(--home-text-muted));
+  background: var(--sl-bg, var(--home-card-alt));
+  border: 1px solid var(--sl-border, var(--home-border));
 
-.stat-card {
-  padding: 18px 20px;
-  border-radius: 22px;
-  border: 1px solid var(--home-border);
-  background: var(--home-card-bg);
-
-  strong {
-    display: block;
-    margin-bottom: 8px;
-    color: var(--home-accent);
-    font-size: 28px;
+  &:hover,
+  &:focus-visible {
+    color: var(--sl-hover-color, var(--brand-accent));
+    background: var(--sl-hover-bg, var(--brand-accent-soft));
+    border-color: var(--sl-hover-color, var(--brand-accent));
+    transform: translateY(-2px) scale(1.12);
+    border-radius: 12px;
   }
 
-  span {
-    color: var(--home-text-muted);
-    font-size: 14px;
+  &:focus-visible {
+    outline: 2px solid var(--sl-hover-color, var(--brand-accent));
+    outline-offset: 2px;
   }
 }
 
 @media (max-width: 768px) {
-  
-
-
-
   .author-copy p {
     font-size: 16px;
   }
 
-  .action-button {
-    min-height: 62px;
-    min-width: 150px;
-    font-size: 16px;
-  }
-
-  .author-stats {
-    grid-template-columns: 1fr;
+  .social-link {
+    width: 38px;
+    height: 38px;
+    font-size: 17px;
   }
 }
 </style>

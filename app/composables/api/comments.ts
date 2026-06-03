@@ -6,8 +6,10 @@ const commentApi = createApi('/comments')
 export type CommentTargetType = 'article' | 'page' | 'moment'
 
 export interface CommentUserInfo {
+  id?: number | string
   nickname?: string
   avatar?: string
+  website?: string
 }
 
 export interface CommentListItem {
@@ -23,11 +25,13 @@ export interface CommentListItem {
   user_nickname?: string
   user_avatar?: string
   reply_to_nickname?: string
+  reply_user?: CommentUserInfo
   user?: CommentUserInfo
   parent?: {
     nickname?: string
     user?: CommentUserInfo
   }
+  replies?: CommentListItem[]
 }
 
 export interface GetCommentListParams {
@@ -48,9 +52,9 @@ export interface CreateCommentPayload {
 }
 
 export const getCommentList = (params: GetCommentListParams) => {
-  return commentApi.list<PaginationData<CommentListItem>>(params)
+  return commentApi.list<PaginationData<CommentListItem>>({ ...params })
 }
 
 export const createComment = (body: CreateCommentPayload) => {
-  return commentApi.create<CommentListItem>(body as Record<string, unknown>)
+  return commentApi.create<CommentListItem>({ ...body })
 }

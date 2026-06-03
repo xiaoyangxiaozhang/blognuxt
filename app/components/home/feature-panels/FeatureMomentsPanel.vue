@@ -59,7 +59,7 @@ const momentCards = computed<MomentCardItem[]>(() => {
       id: `moment-${item.id}`,
       publishDate: item.publish_time,
       text: item.content?.text || '',
-      cover: item.content?.images?.[0]
+      cover: proxyImageUrl(item.content?.images?.[0])
     }))
   }
 
@@ -87,7 +87,7 @@ const momentCards = computed<MomentCardItem[]>(() => {
 
 .moment-card {
   padding: 24px;
-  border-radius: 24px;
+  border-radius: 15px;
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
@@ -114,7 +114,7 @@ const momentCards = computed<MomentCardItem[]>(() => {
 
 .moment-cover {
   margin-top: 18px;
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   background: var(--home-card-alt);
 

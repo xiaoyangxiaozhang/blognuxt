@@ -7,16 +7,13 @@
       >
         <div class="container full-shell">
           <div class="header-content">
-            <div class="author-info">
-              <NuxtLink to="/" class="author-link">
-                <span class="author-mark">羊</span>
-                <span class="author-name">小羊嚣张</span>
-              </NuxtLink>
-            </div>
+            <NuxtLink to="/" class="blog-brand">小羊嚣张</NuxtLink>
 
             <nav class="nav-menu">
               <div class="nav-dropdown">
-                <button class="nav-dropdown-toggle" type="button">文章</button>
+                <button class="nav-dropdown-toggle" type="button">
+                  文章 <span class="dropdown-arrow">▾</span>
+                </button>
                 <div class="nav-dropdown-menu">
                   <NuxtLink to="/archive" class="nav-dropdown-item">归档</NuxtLink>
                   <NuxtLink to="/categories" class="nav-dropdown-item">分类</NuxtLink>
@@ -122,8 +119,18 @@ const applyTheme = (nextTheme: ThemeMode) => {
     return
   }
 
-  document.documentElement.setAttribute('data-theme', nextTheme)
-  localStorage.setItem('blog-color-theme', nextTheme)
+  const update = () => {
+    document.documentElement.setAttribute('data-theme', nextTheme)
+    localStorage.setItem('blog-color-theme', nextTheme)
+  }
+
+  // View Transitions API - 主题切换丝滑动效
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } }
+  if (doc.startViewTransition) {
+    doc.startViewTransition(() => update())
+  } else {
+    update()
+  }
 }
 
 const themeButtonTitle = computed(() =>
@@ -200,13 +207,19 @@ onUnmounted(() => {
   width: 100%;
   pointer-events: none;
   overflow-x: clip;
-  --header-nav-color: var(--text-secondary);
-  --header-action-color: var(--text-secondary);
+  /* --header-nav-color 和 --header-action-color 在 main.scss 中全局定义 */
+  animation: navSlideDown 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-:global([data-theme='blue-white']) .blog-header {
-  --header-nav-color: #ffffff;
-  --header-action-color: #ffffff;
+@keyframes navSlideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .header-stage {
@@ -276,14 +289,33 @@ onUnmounted(() => {
   margin: 0 auto;
 }
 
+.header-layer-full {
+  transition:
+    background-color 0.4s cubic-bezier(0.345, 0.045, 0.345, 1),
+    backdrop-filter 0.4s cubic-bezier(0.345, 0.045, 0.345, 1);
+}
+
+.state-logo .header-layer-full.active,
+.state-island .header-layer-full.active {
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+
+.state-full .header-layer-full.active {
+  background: transparent;
+  border-bottom: none;
+  backdrop-filter: none;
+}
+
 .full-shell {
   padding-top: 0;
 }
 
 .header-content {
   height: 60px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
   align-items: center;
   gap: 24px;
   padding: 0 2px;
@@ -295,6 +327,7 @@ onUnmounted(() => {
 }
 
 .author-link,
+.blog-brand,
 .nav-item,
 .nav-dropdown-toggle,
 .nav-dropdown-item,
@@ -302,57 +335,43 @@ onUnmounted(() => {
   text-decoration: none;
 }
 
-.author-info {
-  min-width: 0;
-}
-
-.author-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-primary);
-  transition: color 0.2s ease, transform 0.2s ease;
-}
-
-.author-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 42px;
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--text-on-accent);
-  font-size: 12px;
+.blog-brand {
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  color: var(--header-nav-color);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--brand-accent);
+  }
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin: 0 auto;
 }
 
 .mini-logo-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #84dfff;
+  color: var(--brand-accent);
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-shadow:
-    0 0 10px rgba(132, 223, 255, 0.24),
-    0 0 22px rgba(132, 223, 255, 0.14);
-}
-
-.author-name,
-.mini-logo-name {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+    0 0 8px rgba(129, 131, 255, 0.16),
+    0 0 16px rgba(129, 131, 255, 0.08);
 }
 
 .nav-menu {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 28px;
 }
 
@@ -365,7 +384,7 @@ onUnmounted(() => {
 
   &:hover,
   &.router-link-active {
-    color: var(--accent);
+    color: var(--brand-accent);
   }
 }
 
@@ -378,6 +397,20 @@ onUnmounted(() => {
   background: transparent;
   cursor: pointer;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dropdown-arrow {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.2s ease;
+  line-height: 1;
+}
+
+.nav-dropdown:hover .dropdown-arrow {
+  transform: rotate(180deg);
 }
 
 .nav-dropdown-menu {
@@ -385,12 +418,14 @@ onUnmounted(() => {
   top: calc(100% + 10px);
   left: 50%;
   display: flex;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 16px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 110px;
+  padding: 8px 8px;
+  border-radius: 12px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
-  box-shadow: 0 14px 30px var(--shadow-color);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(12px);
   opacity: 0;
   visibility: hidden;
@@ -401,7 +436,7 @@ onUnmounted(() => {
 .nav-dropdown-item {
   display: block;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   color: var(--header-nav-color);
   font-size: 14px;
   white-space: nowrap;
@@ -409,7 +444,7 @@ onUnmounted(() => {
 
   &:hover {
     background: var(--accent-soft);
-    color: var(--accent);
+    color: var(--brand-accent);
   }
 }
 
@@ -447,7 +482,7 @@ onUnmounted(() => {
 
   &:hover {
     background: var(--accent-soft);
-    color: var(--accent);
+    color: var(--brand-accent);
     border-color: var(--accent-border);
   }
 }
@@ -486,7 +521,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: #84dfff;
+  color: var(--brand-accent);
   backdrop-filter: none;
   box-shadow: none;
   cursor: pointer;
@@ -502,10 +537,10 @@ onUnmounted(() => {
     position: absolute;
     inset: 4px -2px;
     border-radius: 999px;
-    background: rgba(132, 223, 255, 0.18);
+    background: rgba(129, 131, 255, 0.1);
     box-shadow:
-      0 0 20px rgba(132, 223, 255, 0.22),
-      0 10px 28px rgba(6, 16, 28, 0.22);
+      0 0 14px rgba(129, 131, 255, 0.12),
+      0 6px 16px rgba(6, 16, 28, 0.14);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     z-index: -1;
@@ -523,10 +558,10 @@ onUnmounted(() => {
 
   &::before {
     inset: 2px 0;
-    background: rgba(132, 223, 255, 0.1);
+    background: rgba(129, 131, 255, 0.06);
     box-shadow:
-      0 0 16px rgba(132, 223, 255, 0.14),
-      0 6px 18px rgba(6, 16, 28, 0.16);
+      0 0 10px rgba(129, 131, 255, 0.08),
+      0 4px 10px rgba(6, 16, 28, 0.1);
   }
 
   &:hover {
@@ -543,12 +578,12 @@ onUnmounted(() => {
   border-radius: 999px;
   background: var(--bg-header-scrolled);
   border: 1px solid var(--border-color);
-  box-shadow: 0 18px 46px var(--shadow-color);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   transform-origin: top center;
   transition:
-    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    transform 0.24s cubic-bezier(0.345, 0.045, 0.345, 1),
+    opacity 0.2s cubic-bezier(0.345, 0.045, 0.345, 1);
 }
 
 .island-nav {
@@ -569,7 +604,8 @@ onUnmounted(() => {
 
   &:hover,
   &.router-link-active {
-    background: var(--accent-soft);
+    background: var(--brand-accent-soft);
+    color: var(--brand-accent);
   }
 }
 
@@ -598,7 +634,6 @@ onUnmounted(() => {
   }
 
   .header-content {
-    grid-template-columns: auto 1fr auto;
     padding: 0 16px;
     gap: 16px;
   }
@@ -639,7 +674,6 @@ onUnmounted(() => {
   }
 
   .header-content {
-    grid-template-columns: auto auto;
     justify-content: space-between;
     height: 54px;
   }
@@ -684,16 +718,15 @@ onUnmounted(() => {
     padding: 0 12px;
   }
 
-  .author-name {
+  .blog-brand {
     font-size: 14px;
   }
 
-  .author-mark,
   .mini-logo-mark {
     min-width: auto;
     height: auto;
     padding: 0;
-    color: #84dfff;
+    color: var(--brand-accent);
     font-size: 11px;
   }
 

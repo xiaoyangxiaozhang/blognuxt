@@ -1,9 +1,9 @@
 // ==================== Markdown 内容排版样式系统 ====================
 // ========== 颜色变量定义 ==========
 
-// 亮色主题（默认）
-:root,
-[data-theme="light"] {
+// 亮色主题
+[data-theme="light"],
+[data-theme='blue-white'] {
   // 文本颜色
   --prose-text: #000000;
   --prose-heading: #000000;
@@ -83,7 +83,8 @@
   --prose-custom-accent: #000000;
 }
 
-// 暗色主题
+// 暗色主题（默认）
+:root,
 [data-theme="dark"] {
   // 文本颜色
   --prose-text: #ffffffb3;

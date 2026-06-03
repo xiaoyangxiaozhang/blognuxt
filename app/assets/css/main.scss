@@ -5,104 +5,177 @@
   box-sizing: border-box;
 }
 
+/* Markdown 排版系统 */
+@import './_prose.scss';
+
+/* ========== 动效 token（对齐 oyiso） ========== */
 :root {
-  --bg-primary: #000000;
-  --bg-secondary: #0f0f0f;
-  --bg-panel: rgba(0, 0, 0, 0.92);
-  --bg-panel-solid: #111111;
-  --bg-soft: rgba(255, 255, 255, 0.06);
-  --bg-elevated: rgba(10, 10, 10, 0.98);
-  --bg-header: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(20, 20, 20, 0.5) 42%, rgba(20, 20, 20, 0.2) 72%, rgba(20, 20, 20, 0) 100%);
-  --bg-header-scrolled: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(30, 30, 30, 0.9));
+  --ease-out-expo: cubic-bezier(0.345, 0.045, 0.345, 1);
+  --ease-out-quart: cubic-bezier(0.345, 0.045, 0.345, 1);
+  --transition-fast: 150ms var(--ease-out-expo);
+  --transition-base: 250ms var(--ease-out-expo);
+  --transition-slow: 400ms var(--ease-out-expo);
+}
+
+:root {
+  --bg-primary: #0e0e0e;
+  --bg-secondary: #151515;
+  --bg-panel: rgba(23, 23, 23, 0.92);
+  --bg-panel-solid: #171717;
+  --bg-soft: rgba(255, 255, 255, 0.04);
+  --bg-elevated: rgba(23, 23, 23, 0.98);
+  --bg-header: rgba(23, 23, 23, 0.7);
+  --bg-header-scrolled: rgba(23, 23, 23, 0.85);
   --text-primary: #ffffff;
-  --text-secondary: #ffffff;
-  --text-muted: #8c8c8c;
-  --text-on-accent: #000000;
+  --text-secondary: #cccccc;
+  --text-muted: #999999;
+  --text-on-accent: #ffffff;
   --accent: #ffffff;
-  --accent-strong: #d9d9d9;
-  --accent-soft: rgba(255, 255, 255, 0.1);
-  --accent-border: rgba(255, 255, 255, 0.18);
+  --accent-strong: #cccccc;
+  --accent-soft: rgba(255, 255, 255, 0.06);
+  --accent-border: rgba(255, 255, 255, 0.1);
   --border-color: rgba(255, 255, 255, 0.08);
-  --shadow-color: rgba(0, 0, 0, 0.45);
+  --shadow-color: rgba(0, 0, 0, 0.15);
   --hero-name-color: #ffffff;
-  --overlay-strong: rgba(0, 0, 0, 0.48);
+  --overlay-strong: rgba(0, 0, 0, 0.35);
   --scroll-track: #1a1a1a;
   --scroll-thumb: #333333;
-  --scroll-thumb-hover: #ffffff;
-  --home-surface: #050505;
-  --home-surface-elevated: #101010;
-  --home-card-bg: #141414;
-  --home-card-hover: #1b1b1b;
-  --home-card-alt: #171717;
-  --home-border: rgba(255, 255, 255, 0.08);
+  --scroll-thumb-hover: #999999;
+  --home-surface: #0e0e0e;
+  --home-surface-elevated: #171717;
+  --home-card-bg: #171717;
+  --home-card-hover: #1e1e1e;
+  --home-card-alt: #1a1a1a;
+  --home-border: #262626;
   --home-accent: #ffffff;
-  --home-accent-soft: rgba(255, 255, 255, 0.08);
-  --home-text: #f5f5f5;
-  --home-text-muted: #f5f5f5;
-  --home-shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+  --home-accent-soft: rgba(255, 255, 255, 0.04);
+  --home-text: #ffffff;
+  --home-text-muted: #999999;
+  --home-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+  /* Hero 顶部渐变色（支持主题切换） */
+  --hero-gradient-start: #000000;
+  /* Header 导航字体颜色 */
+  --header-nav-color: #ffffff;
+  --header-action-color: #ffffff;
+  /* 品牌交互色（oyiso: #8183ff 紫蓝 + #67c3d3 青色） */
+  --brand-accent: #8183ff;
+  --brand-accent-soft: rgba(129, 131, 255, 0.12);
+  --brand-accent-hover: #6b6de6;
+  --brand-accent-text: #ffffff;
+  /* 评论区 token */
+  --comment-input-text: #ffffff;
+  --comment-input-placeholder: #999999;
+  --comment-login-bg: rgba(129, 131, 255, 0.08);
+  --comment-toolbar-btn: #999999;
+  --comment-toolbar-btn-hover: #cccccc;
+  --comment-separator: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme='blue-white'] {
   --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
+  --bg-secondary: #fafafa;
   --bg-panel: rgba(255, 255, 255, 0.84);
   --bg-panel-solid: #ffffff;
-  --bg-soft: rgba(0, 0, 0, 0.16);
+  --bg-soft: rgba(0, 0, 0, 0.08);
   --bg-elevated: rgba(255, 255, 255, 0.95);
-  --bg-header: linear-gradient(to bottom, rgba(255, 255, 255, 0.7) 0%, rgba(245, 245, 245, 0.5) 42%, rgba(245, 245, 245, 0.2) 72%, rgba(245, 245, 245, 0) 100%);
-  --bg-header-scrolled: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(245, 245, 245, 0.95));
+  --bg-header: rgba(255, 255, 255, 0.7);
+  --bg-header-scrolled: rgba(255, 255, 255, 0.92);
   --text-primary: #000000;
-  --text-secondary: #000000;
-  --text-muted: #666666;
+  --text-secondary: #555555;
+  --text-muted: #999999;
   --text-on-accent: #ffffff;
   --accent: #000000;
   --accent-strong: #333333;
-  --accent-soft: rgba(0, 0, 0, 0.14);
-  --accent-border: rgba(0, 0, 0, 0.22);
-  --border-color: rgba(0, 0, 0, 0.14);
-  --shadow-color: rgba(0, 0, 0, 0.12);
+  --accent-soft: rgba(0, 0, 0, 0.06);
+  --accent-border: rgba(0, 0, 0, 0.12);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --shadow-color: rgba(0, 0, 0, 0.05);
   --hero-name-color: #000000;
-  --overlay-strong: rgba(245, 245, 245, 0.32);
+  --overlay-strong: rgba(245, 245, 245, 0.25);
   --scroll-track: #f5f5f5;
   --scroll-thumb: #cccccc;
-  --scroll-thumb-hover: #000000;
-  --home-surface: #f5f7fb;
+  --scroll-thumb-hover: #999999;
+  --home-surface: #ffffff;
   --home-surface-elevated: #ffffff;
   --home-card-bg: #ffffff;
-  --home-card-hover: #f4f6f9;
-  --home-card-alt: #f8fafc;
-  --home-border: rgba(0, 0, 0, 0.08);
-  --home-accent: #111111;
-  --home-accent-soft: rgba(0, 0, 0, 0.06);
-  --home-text: #111111;
-  --home-text-muted: #111111;
-  --home-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  --home-card-hover: #fafafa;
+  --home-card-alt: #fafafa;
+  --home-border: #f2f2f2;
+  --home-accent: #333333;
+  --home-accent-soft: rgba(0, 0, 0, 0.04);
+  --home-text: #000000;
+  --home-text-muted: #999999;
+  --home-shadow: 0 0 10px rgba(0, 0, 0, 0.04);
+  /* Hero 顶部渐变色 */
+  --hero-gradient-start: #ffffff;
+  /* Header 导航字体颜色（亮色主题变黑） */
+  --header-nav-color: #000000;
+  --header-action-color: #000000;
+  /* 品牌交互色 */
+  --brand-accent: #8183ff;
+  --brand-accent-soft: rgba(129, 131, 255, 0.08);
+  --brand-accent-hover: #6b6de6;
+  --brand-accent-text: #ffffff;
+  /* 评论区 token */
+  --comment-input-text: #000000;
+  --comment-input-placeholder: #999999;
+  --comment-login-bg: rgba(129, 131, 255, 0.06);
+  --comment-toolbar-btn: #999999;
+  --comment-toolbar-btn-hover: #555555;
+  --comment-separator: rgba(0, 0, 0, 0.06);
 }
 
 html, body {
   height: 100%;
   min-height: 100%;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: Overpass, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow-x: clip;
 }
 
+/* 主题切换全局过渡（对齐 oyiso cubic-bezier） */
+html {
+  transition: background-color 0.4s cubic-bezier(0.345, 0.045, 0.345, 1),
+              color 0.4s cubic-bezier(0.345, 0.045, 0.345, 1);
+}
+
+/* 对所有依赖 CSS 变量的元素统一添加过渡 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+  animation: theme-fade-in 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes theme-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* 自定义滚动条样式 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
   background: var(--scroll-track);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--scroll-thumb);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -127,5 +200,22 @@ html, body {
   &:has(> .el-avatar:only-child) {
     overflow: visible;
     text-overflow: clip;
+  }
+}
+
+/* 全局动效 - reduced motion 尊重用户偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.01ms !important;
   }
 }

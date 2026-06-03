@@ -1,5 +1,7 @@
 <template>
   <section class="moments-page">
+    <!-- 骨架屏幕布 -->
+    <PageCurtain v-model="curtainReady" @opened="onCurtainOpened" />
     <div class="moments-shell">
       <header class="moments-header">
         <div class="moments-cover">
@@ -34,8 +36,8 @@
         </div>
 
         <div v-else-if="moments.length === 0" class="empty-state">
-          <h2>还没有动态</h2>
-          <p>发布后的内容会显示在这里。</p>
+          <h2>No moments yet</h2>
+          <p>New updates will appear here after publishing.</p>
         </div>
 
         <template v-else>
@@ -49,7 +51,7 @@
                 <h2 class="row-name">{{ authorName }}</h2>
               </header>
 
-              <p class="row-text">{{ item.text || '今天也记录一点生活。' }}</p>
+              <p class="row-text">{{ item.text || 'A small note from today.' }}</p>
 
               <div
                 v-if="item.images.length > 0"
@@ -85,13 +87,13 @@
                       <button
                         type="button"
                         class="action-button mini-action"
-                        aria-label="前往评论区"
+                        aria-label="Scroll to comments"
                         @click="scrollToCommentPanel"
                       >
                         <IconMaterialSymbolsChatBubbleRounded />
                       </button>
 
-                      <button type="button" class="more-button" aria-label="更多操作">
+                      <button type="button" class="more-button" aria-label="More actions">
                         <span></span>
                         <span></span>
                         <span></span>
@@ -102,19 +104,21 @@
               </footer>
             </div>
           </article>
-
-          <div ref="commentPanelRef" class="page-comment-panel">
-            <UnifiedCommentPanel
-              :comments="commentList"
-              :loading="commentsPending"
-              :submitting="commentSubmitting"
-              :form="commentForm"
-              empty-text="还没有评论，来留下第一条消息吧。"
-              @update:form="handleFormUpdate"
-              @submit="handleCommentSubmit"
-            />
-          </div>
         </template>
+
+        <div ref="commentPanelRef" class="page-comment-panel">
+          <UnifiedCommentPanel
+            :comments="commentList"
+            :loading="commentsPending"
+            :submitting="commentSubmitting"
+            :form="commentForm"
+            :error-text="commentError"
+            description="Page-level comments stay available even when the list is empty."
+            empty-text="No comments yet. Be the first to leave one."
+            @update:form="handleFormUpdate"
+            @submit="handleCommentSubmit"
+          />
+        </div>
       </section>
     </div>
   </section>
@@ -124,9 +128,13 @@
 import { ElMessage } from 'element-plus'
 import IconMaterialSymbolsChatBubbleRounded from '~icons/material-symbols/chat-bubble-rounded'
 import IconMaterialSymbolsLocationOnRounded from '~icons/material-symbols/location-on-rounded'
-import { createComment, getCommentList, type CommentListItem, type CommentTargetType } from '~/composables/api/comments'
+import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
+import { COMMENT_TARGETS, normalizeCommentList } from '~/composables/commentDisplay'
+import { createComment, getCommentList } from '~/composables/api/comments'
 import { getMomentList } from '~/composables/api/moments'
 import { getBasicSettings } from '~/composables/api/user'
+import { useCommentAuth } from '~/composables/useCommentAuth'
+import PageCurtain from '~/components/layouts/PageCurtain.vue'
 
 interface DynamicMomentItem {
   id: number
@@ -143,19 +151,9 @@ interface DynamicCommentForm {
   content: string
 }
 
-interface DynamicCommentCard {
-  id: number | string
-  author: string
-  avatar?: string
-  content: string
-  publishTime: string
-  website?: string
-  replyTo?: string
-}
-
-const COMMENT_TARGET_TYPE: CommentTargetType = 'page'
-const COMMENT_TARGET_KEY = 'moment'
+const commentTarget = COMMENT_TARGETS.dynamicPage
 const DEFAULT_AVATAR = 'https://picsum.photos/200/200?random=7'
+const { isLoggedIn, fetchProfile } = useCommentAuth()
 
 const { data, pending } = await useAsyncData(
   'dynamic-page',
@@ -173,7 +171,7 @@ const { data, pending } = await useAsyncData(
             id: item.id,
             publishTime: item.publish_time,
             text: item.content?.text || '',
-            images: item.content?.images?.filter(Boolean) || [],
+            images: (item.content?.images?.filter(Boolean) || []).map(i => proxyImageUrl(i)),
             location: item.content?.location || ''
           })),
         settings: settingsResponse.data || {},
@@ -184,37 +182,36 @@ const { data, pending } = await useAsyncData(
       return {
         moments: [] as DynamicMomentItem[],
         settings: {} as Record<string, string>,
-        error: '动态内容加载失败，请稍后再试。'
+        error: 'Failed to load moments.'
       }
     }
   }
 )
 
 const {
-  data: commentsData,
+  data: commentsPayload,
   pending: commentsPending,
   refresh: refreshComments
 } = await useAsyncData(
   'dynamic-page-comments',
   async () => {
     try {
-      return await getCommentList({
-        target_type: COMMENT_TARGET_TYPE,
-        target_key: COMMENT_TARGET_KEY,
+      const response = await getCommentList({
+        target_type: commentTarget.targetType,
+        target_key: commentTarget.targetKey,
         page: 1,
         page_size: 10
       })
+
+      return {
+        response,
+        error: ''
+      }
     } catch (error) {
       console.error(error)
       return {
-        code: 500,
-        message: '评论加载失败',
-        data: {
-          list: [],
-          total: 0,
-          page: 1,
-          page_size: 10
-        }
+        response: null,
+        error: 'Failed to load comments.'
       }
     }
   }
@@ -223,13 +220,11 @@ const {
 const moments = computed<DynamicMomentItem[]>(() => data.value?.moments || [])
 const settings = computed<Record<string, string>>(() => data.value?.settings || {})
 const pageError = computed(() => data.value?.error || '')
+const commentError = computed(() => commentsPayload.value?.error || '')
 
 const authorName = computed(() => settings.value['basic.author'] || 'XiaoLin')
-const authorDesc = computed(() => settings.value['basic.author_desc'] || '把日常、灵感和风景慢慢记录下来。')
-const authorAvatar = computed(() => settings.value['basic.author_avatar'] || DEFAULT_AVATAR)
-
-// Use a shared SSR payload seed so the first client hydration matches the server-rendered relative time.
-const nowSeed = useState('dynamic-now-seed', () => Date.now())
+const authorDesc = computed(() => settings.value['basic.author_desc'] || 'Collecting daily notes and small inspirations.')
+const authorAvatar = computed(() => proxyImageUrl(settings.value['basic.author_avatar']) || DEFAULT_AVATAR)
 
 const commentSubmitting = ref(false)
 const commentPanelRef = ref<HTMLElement | null>(null)
@@ -240,10 +235,27 @@ const commentForm = reactive<DynamicCommentForm>({
   content: ''
 })
 
-const commentList = computed<DynamicCommentCard[]>(() => {
-  const list = commentsData.value?.data?.list || []
-  return list.map(mapCommentItem)
+const isRevealed = ref(false)
+const curtainReady = ref(false)
+
+const triggerReveal = () => {
+  setTimeout(() => {
+    curtainReady.value = true
+  }, 200)
+}
+
+const onCurtainOpened = () => {
+  isRevealed.value = true
+}
+
+// 检查数据加载状态触发入场动画
+watch(pending, (val) => {
+  if (!val && import.meta.client) {
+    triggerReveal()
+  }
 })
+
+const commentList = computed(() => normalizeCommentList(commentsPayload.value?.response?.data?.list))
 
 const handleFormUpdate = (nextForm: DynamicCommentForm) => {
   commentForm.nickname = nextForm.nickname
@@ -253,18 +265,18 @@ const handleFormUpdate = (nextForm: DynamicCommentForm) => {
 }
 
 const handleCommentSubmit = async () => {
-  if (!commentForm.nickname.trim()) {
-    ElMessage.warning('请先填写昵称。')
+  if (!isLoggedIn.value && !commentForm.nickname.trim()) {
+    ElMessage.warning('Please enter a nickname.')
     return
   }
 
-  if (!commentForm.email.trim()) {
-    ElMessage.warning('请先填写邮箱。')
+  if (!isLoggedIn.value && !commentForm.email.trim()) {
+    ElMessage.warning('Please enter an email.')
     return
   }
 
   if (!commentForm.content.trim()) {
-    ElMessage.warning('请输入评论内容。')
+    ElMessage.warning('Please enter your comment.')
     return
   }
 
@@ -272,24 +284,31 @@ const handleCommentSubmit = async () => {
 
   try {
     await createComment({
-      target_type: COMMENT_TARGET_TYPE,
-      target_key: COMMENT_TARGET_KEY,
+      target_type: commentTarget.targetType,
+      target_key: commentTarget.targetKey,
       content: commentForm.content.trim(),
-      nickname: commentForm.nickname.trim(),
-      email: commentForm.email.trim(),
+      nickname: isLoggedIn.value ? undefined : commentForm.nickname.trim(),
+      email: isLoggedIn.value ? undefined : commentForm.email.trim(),
       website: commentForm.website.trim() || undefined
     })
 
     commentForm.content = ''
     await refreshComments()
-    ElMessage.success('评论已提交。')
+    ElMessage.success('Comment submitted.')
   } catch (error) {
     console.error(error)
-    ElMessage.error('评论提交失败，请稍后重试。')
+    ElMessage.error('Failed to submit comment.')
   } finally {
     commentSubmitting.value = false
   }
 }
+
+onMounted(() => {
+  if (!pending.value) {
+    triggerReveal()
+  }
+  fetchProfile()
+})
 
 const scrollToCommentPanel = async () => {
   await nextTick()
@@ -299,48 +318,20 @@ const scrollToCommentPanel = async () => {
   })
 }
 
-const mapCommentItem = (item: CommentListItem): DynamicCommentCard => {
-  const author = item.nickname || item.user_nickname || item.user?.nickname || '匿名访客'
-  const publishTime = item.created_at || item.publish_time || item.createdAt || ''
-  const avatar = item.avatar || item.user_avatar || item.user?.avatar || ''
-  const replyTo =
-    item.reply_to_nickname ||
-    item.parent?.nickname ||
-    item.parent?.user?.nickname ||
-    ''
-
-  return {
-    id: item.id,
-    author,
-    avatar,
-    content: item.content || '',
-    publishTime,
-    website: item.website || '',
-    replyTo: replyTo || undefined
-  }
-}
-
 const formatMomentDate = (value: string) => {
-  if (!value) return '刚刚'
-
+  if (!value) return ''
   const date = new Date(value.replace(/-/g, '/'))
   if (Number.isNaN(date.getTime())) return value
-
-  const diff = nowSeed.value - date.getTime()
-  const minute = 60 * 1000
-  const hour = 60 * 60 * 1000
-  const day = 24 * hour
-
-  if (diff < minute) return '刚刚'
-  if (diff < hour) return `${Math.max(1, Math.floor(diff / minute))}分钟前`
-  if (diff < day) return `${Math.max(1, Math.floor(diff / hour))}小时前`
-  return `${Math.max(1, Math.floor(diff / day))}天前`
+  const y = date.getFullYear()
+  const m = date.getMonth() + 1
+  const d = date.getDate()
+  return `${y}年${m}月${d}日`
 }
 </script>
 
 <style scoped lang="scss">
 .moments-page {
-  padding: 86px 0 80px;
+  padding: 0 0 80px;
   background: var(--home-surface);
   color: var(--home-text);
   overflow-x: clip;
@@ -403,7 +394,7 @@ const formatMomentDate = (value: string) => {
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(4px);
   padding: 4px 12px;
-  border-radius: 30px;
+  border-radius: 15px;
 
   h1 {
     margin: 0;
@@ -443,7 +434,7 @@ const formatMomentDate = (value: string) => {
   color: var(--home-text);
   text-align: right;
   padding: 2px 12px;
-  border-radius: 30px;
+  border-radius: 15px;
 }
 
 .moments-stream {
@@ -603,7 +594,7 @@ const formatMomentDate = (value: string) => {
   background: var(--home-accent-soft);
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background var(--transition-fast), color var(--transition-fast);
 
   &:hover {
     background: color-mix(in srgb, var(--home-accent-soft) 72%, var(--home-text) 10%);

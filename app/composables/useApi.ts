@@ -18,12 +18,19 @@ export interface ArticleListItem {
   url?: string
   title: string
   cover: string
+  location?: string
+  comment_count?: number
+  is_top?: boolean
+  is_essence?: boolean
   publish_time: string
   category?: {
+    id?: number
     name: string
     url?: string
   }
   tags?: Array<{
+    id?: number
+    slug?: string
     name: string
     url?: string
   }>

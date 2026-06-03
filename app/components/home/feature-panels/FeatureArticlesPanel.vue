@@ -46,9 +46,8 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
 
 .article-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 300px));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
-  justify-content: center;
   width: 100%;
 }
 
@@ -57,13 +56,17 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
   grid-template-columns: 96px minmax(0, 1fr);
   gap: 16px;
   align-items: center;
+  min-width: 0;
   padding: 18px;
-  border-radius: 24px;
+  border-radius: 15px;
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
   text-decoration: none;
-  transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+  transition:
+    transform var(--transition-base),
+    background var(--transition-base),
+    border-color var(--transition-base);
 
   &:hover {
     transform: translateY(-4px);
@@ -75,7 +78,7 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
 .thumb {
   width: 96px;
   height: 96px;
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   background: var(--home-card-alt);
 
@@ -124,13 +127,13 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
 
 @media (max-width: 1200px) {
   .article-grid {
-    grid-template-columns: repeat(2, minmax(0, 360px));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .article-grid {
-    grid-template-columns: minmax(0, 560px);
+    grid-template-columns: 1fr;
   }
 
   .article-card {
@@ -144,5 +147,4 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
     height: 84px;
   }
 }
-
 </style>

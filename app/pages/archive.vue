@@ -1,5 +1,7 @@
 <template>
   <div class="blog-archive">
+    <!-- 骨架屏幕布 -->
+    <PageCurtain v-model="curtainReady" @opened="onCurtainOpened" />
     <div class="archive-content">
       <div class="archive-hero">
         <h1 class="archive-title">All Posts ({{ totalArticles }})</h1>
@@ -64,6 +66,7 @@
 <script setup lang="ts">
 import { getArticleList } from '~/composables/api/article'
 import type { ArticleListItem } from '~/composables/useApi'
+import PageCurtain from '~/components/layouts/PageCurtain.vue'
 
 interface ArchiveArticleItem {
   id: number
@@ -87,6 +90,18 @@ interface ArchiveYearGroup {
 }
 
 const expandedYears = ref<string[]>([])
+const isRevealed = ref(false)
+const curtainReady = ref(false)
+
+const triggerReveal = () => {
+  setTimeout(() => {
+    curtainReady.value = true
+  }, 200)
+}
+
+const onCurtainOpened = () => {
+  isRevealed.value = true
+}
 
 const resolveArticleSlug = (item: Pick<ArticleListItem, 'id' | 'slug' | 'url'>) => {
   if (item.slug) {
@@ -183,6 +198,19 @@ const archiveGroups = computed<ArchiveYearGroup[]>(() => {
 
 const totalArticles = computed(() => data.value?.total || 0)
 const pageError = computed(() => data.value?.error || '')
+
+// 检查数据加载状态触发入场动画
+watch(pending, (val) => {
+  if (!val && import.meta.client) {
+    triggerReveal()
+  }
+})
+
+onMounted(() => {
+  if (!pending.value) {
+    triggerReveal()
+  }
+})
 </script>
 
 <style scoped lang="scss">
@@ -221,14 +249,14 @@ const pageError = computed(() => data.value?.error || '')
     width: 100%;
     height: 10px;
     border-radius: 999px;
-    background: rgba(129, 140, 248, 0.45);
+    background: var(--brand-accent-soft);
     z-index: -1;
   }
 }
 
 .archive-state {
   padding: 28px;
-  border-radius: 24px;
+  border-radius: 15px;
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
@@ -241,7 +269,7 @@ const pageError = computed(() => data.value?.error || '')
 }
 
 .year-section {
-  border-radius: 28px;
+  border-radius: 15px;
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
@@ -349,9 +377,9 @@ const pageError = computed(() => data.value?.error || '')
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #818cf8;
+    background: var(--brand-accent);
     transform: translateY(-50%);
-    box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.12);
+    box-shadow: 0 0 0 4px var(--brand-accent-soft);
   }
 }
 
@@ -363,7 +391,7 @@ const pageError = computed(() => data.value?.error || '')
   width: 3px;
   height: 46px;
   border-radius: 999px;
-  background: rgba(129, 140, 248, 0.95);
+  background: var(--brand-accent);
 }
 
 .article-day {
@@ -385,7 +413,7 @@ const pageError = computed(() => data.value?.error || '')
 }
 
 .article-item:hover .article-title {
-  color: #4f46e5;
+  color: var(--brand-accent-hover);
 }
 
 .article-meta {

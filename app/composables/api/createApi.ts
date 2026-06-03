@@ -1,6 +1,11 @@
 import { apiGet, apiPost } from '~/composables/useApi'
 
 export const createApi = (basePath: string) => {
+  const get = <T>(path = '', params?: Record<string, unknown>) => {
+    const normalizedPath = path || basePath
+    return apiGet<T>(normalizedPath, { params })
+  }
+
   const list = <T>(params?: Record<string, unknown>) => {
     return apiGet<T>(basePath, { params })
   }
@@ -14,6 +19,7 @@ export const createApi = (basePath: string) => {
   }
 
   return {
+    get,
     list,
     detail,
     create
