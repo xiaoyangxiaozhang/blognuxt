@@ -51,9 +51,12 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
-import { normalizeCommentList } from '~/composables/commentDisplay'
-import { createComment, getCommentList } from '~/composables/api/comments'
+import { normalizeCommentList } from '~/utils/comments'
+import { createComment, getCommentList } from '~/services/api/comments'
 import { useCommentAuth } from '~/composables/useCommentAuth'
+import { proxyImageUrl } from '~/utils/image'
+import { formatDate } from '~/utils/date'
+import { renderMarkdown } from '~/utils/markdown'
 
 interface ArticleDetailData {
   title: string
@@ -91,16 +94,6 @@ const commentForm = reactive<ArticleCommentForm>({
   content: ''
 })
 const commentSubmitting = ref(false)
-
-const formatDate = (value: string) => {
-  if (!value) return ''
-  const date = new Date(value.replace(/-/g, '/'))
-  if (Number.isNaN(date.getTime())) return value
-  const y = date.getFullYear()
-  const m = date.getMonth() + 1
-  const d = date.getDate()
-  return `${y}年${m}月${d}日`
-}
 
 const { data, pending } = await useAsyncData(
   () => `article-${articleSlug.value}`,
@@ -183,7 +176,7 @@ const {
 const article = computed(() => data.value?.article ?? null)
 const pageError = computed(() => data.value?.error ?? '')
 const commentError = computed(() => commentsPayload.value?.error || '')
-const articleContentHtml = computed(() => proxyHtmlImages(article.value?.content))
+const articleContentHtml = computed(() => renderMarkdown(article.value?.content))
 const commentList = computed(() => normalizeCommentList(commentsPayload.value?.response?.data?.list))
 
 const handleFormUpdate = (nextForm: ArticleCommentForm) => {

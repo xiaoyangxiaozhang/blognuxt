@@ -34,8 +34,8 @@
 
 <script setup lang="ts">
 import IconMaterialSymbolsFolderOpenOutlineRounded from '~icons/material-symbols/folder-open-outline-rounded'
-import { getCategoryList } from '~/composables/api/category'
-import PageCurtain from '~/components/layouts/PageCurtain.vue'
+import { getCategoryList } from '~/services/api/category'
+import PageCurtain from '~/components/shell/PageCurtain.vue'
 
 type Category = {
   id: number

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { getBasicSettings } from '~/composables/api/user'
-import { getArticleList } from '~/composables/api/article'
+import { getBasicSettings } from '~/services/api/user'
+import { getArticleList } from '~/services/api/article'
+import { proxyImageUrl } from '~/utils/image'
 import IconMdiGithub from '~icons/mdi/github'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'
 

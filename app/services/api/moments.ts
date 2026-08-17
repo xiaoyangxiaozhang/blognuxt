@@ -1,5 +1,5 @@
-import{createApi} from '~/composables/api/createApi'
-import type { PaginationData } from '~/composables/useApi'
+import { createApi } from '~/services/api/createApi'
+import type { PaginationData } from '~/types/api'
 const momentApi = createApi('/moments')
 export interface MomentContent {
   text: string

@@ -79,14 +79,16 @@
 </template>
 
 <script setup lang="ts">
-import PageCurtain from '~/components/layouts/PageCurtain.vue'
+import PageCurtain from '~/components/shell/PageCurtain.vue'
 import HomeFeaturePanel from '~/components/home/HomeFeaturePanel.vue'
 import HomeNewestSection from '~/components/home/HomeNewestSection.vue'
-import { getArticleList } from '~/composables/api/article'
-import { getCategoryList } from '~/composables/api/category'
-import { getTagList } from '~/composables/api/tag'
-import { getBasicSettings, getSettings } from '~/composables/api/user'
-import type { ArticleListItem, CategoryItem, TagItem } from '~/composables/useApi'
+import { getArticleList } from '~/services/api/article'
+import { getCategoryList } from '~/services/api/category'
+import { getTagList } from '~/services/api/tag'
+import { getBasicSettings, getSettings } from '~/services/api/user'
+import type { ArticleListItem, CategoryItem, TagItem } from '~/types/api'
+import { formatDate } from '~/utils/date'
+import { proxyImageUrl } from '~/utils/image'
 import IconMaterialSymbolsMailOutlineRounded from '~icons/material-symbols/mail-outline-rounded'
 import IconMdiEarth from '~icons/mdi/earth'
 
@@ -146,13 +148,6 @@ const pageSize = 10
 const displayedIntroChars = ref<string[]>([])
 let typingTimer: ReturnType<typeof setInterval> | null = null
 let restartTimer: ReturnType<typeof setTimeout> | null = null
-
-const formatDate = (value: string) => {
-  if (!value) return ''
-  const date = new Date(value.replace(/-/g, '/'))
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString('zh-CN')
-}
 
 const resolveArticleSlug = (item: Pick<ArticleListItem, 'id' | 'slug' | 'url'>) => {
   if (item.slug) return item.slug

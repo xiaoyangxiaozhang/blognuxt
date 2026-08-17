@@ -1,3 +1,5 @@
+import { proxyImageUrl } from '~/utils/image'
+
 export interface CommentRenderBlockText {
   type: 'text'
   content: string

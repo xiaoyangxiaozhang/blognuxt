@@ -1,4 +1,4 @@
-import type { PaginationData, TagItem } from '~/composables/useApi'
+import type { PaginationData, TagItem } from '~/types/api'
 import { createApi } from './createApi'
 
 const tagApi = createApi('/tags')

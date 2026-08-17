@@ -64,9 +64,9 @@
 </template>
 
 <script setup lang="ts">
-import { getArticleList } from '~/composables/api/article'
-import type { ArticleListItem } from '~/composables/useApi'
-import PageCurtain from '~/components/layouts/PageCurtain.vue'
+import { getArticleList } from '~/services/api/article'
+import type { ArticleListItem } from '~/types/api'
+import PageCurtain from '~/components/shell/PageCurtain.vue'
 
 interface ArchiveArticleItem {
   id: number

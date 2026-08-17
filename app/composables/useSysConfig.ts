@@ -3,7 +3,7 @@ import IconMdiGithub from '~icons/mdi/github'
 import IconMdiGoogle from '~icons/mdi/google'
 import IconMdiMicrosoftWindows from '~icons/mdi/microsoft-windows'
 import IconSimpleIconsQq from '~icons/simple-icons/qq'
-import { getSettingGroup } from '~/composables/api/sysconfig'
+import { getSettingGroup } from '~/services/api/sysconfig'
 
 export type OAuthProvider = 'github' | 'google' | 'qq' | 'microsoft'
 export type OAuthConfigMap = Record<string, string>

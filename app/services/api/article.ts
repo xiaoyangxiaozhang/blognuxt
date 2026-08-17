@@ -1,4 +1,4 @@
-import type { ArticleListItem, PaginationData } from '~/composables/useApi'
+import type { ArticleListItem, PaginationData } from '~/types/api'
 import { createApi } from './createApi'
 
 const articleApi = createApi('/articles')

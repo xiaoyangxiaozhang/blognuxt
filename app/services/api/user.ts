@@ -1,4 +1,4 @@
-import type { CategoryItem, TagItem } from '~/composables/useApi'
+import type { CategoryItem, TagItem } from '~/types/api'
 import { apiGet } from '~/composables/useApi'
 
 export interface BasicSettingMap {

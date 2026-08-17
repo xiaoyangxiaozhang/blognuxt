@@ -1,4 +1,4 @@
-import type { CategoryItem, PaginationData } from '~/composables/useApi'
+import type { CategoryItem, PaginationData } from '~/types/api'
 import { createApi } from './createApi'
 
 const categoryApi = createApi('/categories')

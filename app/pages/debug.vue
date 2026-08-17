@@ -27,12 +27,13 @@
 import { ref } from 'vue'
 
 const result = ref('点击上方按钮测试接口...')
+const config = useRuntimeConfig()
 
 const testApi = async (url: string) => {
   result.value = `正在请求: ${url}\n\n`
   
   try {
-    const response = await fetch(`http://39.106.193.56:8080/api/v1${url}`)
+    const response = await fetch(`${config.public.apiBase}${url}`)
     const data = await response.json()
     result.value = `✅ 请求成功!\n\nURL: ${url}\n\n响应:\n${JSON.stringify(data, null, 2)}`
   } catch (error: any) {

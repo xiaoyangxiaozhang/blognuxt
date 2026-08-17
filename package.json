@@ -2,28 +2,36 @@
   "name": "blognuxt",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": "^22.19.0 || ^24.11.0 || >=26.0.0"
+  },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "nuxt dev --host 127.0.0.1 --port 3000",
+    "dev:public": "nuxt dev --host 0.0.0.0 --port 3000",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
-    "axios": "^1.15.2",
     "element-plus": "^2.13.7",
+    "markdown-it": "^14.1.0",
     "nuxt": "^4.4.2",
     "pinia": "^3.0.4",
-    "vue": "^3.5.32",
-    "vue-router": "^5.0.4"
+    "vue": "^3.5.32"
   },
   "devDependencies": {
     "@element-plus/nuxt": "^1.1.5",
     "@iconify/json": "^2.2.470",
+    "@iconify-json/material-symbols": "^1.2.88",
+    "@iconify-json/mdi": "^1.2.3",
+    "@iconify-json/ri": "^1.2.10",
+    "@iconify-json/simple-icons": "^1.2.93",
+    "@iconify-json/tabler": "^1.2.38",
     "@pinia/nuxt": "^0.11.3",
     "sass-embedded": "^1.99.0",
-    "unplugin-auto-import": "^21.0.0",
     "unplugin-icons": "^23.0.1"
   }
 }

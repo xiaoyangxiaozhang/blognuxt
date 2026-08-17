@@ -97,8 +97,8 @@ import IconMaterialSymbolsCalendarMonthOutlineRounded from '~icons/material-symb
 import IconMaterialSymbolsChatBubbleOutlineRounded from '~icons/material-symbols/chat-bubble-outline-rounded'
 import IconMaterialSymbolsLocationOnOutlineRounded from '~icons/material-symbols/location-on-outline-rounded'
 import IconMaterialSymbolsSearchRounded from '~icons/material-symbols/search-rounded'
-import { getArticleList } from '~/composables/api/article'
-import { mapArticleCard, type DisplayArticleCard } from '~/composables/articleDisplay'
+import { getArticleList } from '~/services/api/article'
+import { mapArticleCard, type DisplayArticleCard } from '~/utils/article'
 
 const props = withDefaults(defineProps<{
   title?: string

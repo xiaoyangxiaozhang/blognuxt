@@ -1,4 +1,6 @@
-import type { ArticleListItem } from '~/composables/useApi'
+import type { ArticleListItem } from '~/types/api'
+import { formatDate } from '~/utils/date'
+import { proxyImageUrl } from '~/utils/image'
 
 export interface DisplayArticleTag {
   id?: number
@@ -22,12 +24,7 @@ export interface DisplayArticleCard {
 
 const DEFAULT_COVER = 'https://picsum.photos/600/400?random=31'
 
-export const formatArticleDate = (value: string) => {
-  if (!value) return ''
-  const date = new Date(value.replace(/-/g, '/'))
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString('zh-CN')
-}
+export const formatArticleDate = formatDate
 
 export const resolveArticleSlug = (item: Pick<ArticleListItem, 'id' | 'slug' | 'url'>) => {
   if (item.slug) {

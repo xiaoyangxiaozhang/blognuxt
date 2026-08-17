@@ -1,4 +1,5 @@
-import type { CommentListItem, CommentTargetType } from '~/composables/api/comments'
+import type { CommentListItem, CommentTargetType } from '~/services/api/comments'
+import { proxyImageUrl } from '~/utils/image'
 
 export interface CommentTargetConfig {
   targetType: CommentTargetType

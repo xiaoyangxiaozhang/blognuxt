@@ -141,12 +141,13 @@
 <script setup lang="ts">
 import { h } from 'vue'
 import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
-import { getCommentList, createComment } from '~/composables/api/comments'
-import { normalizeCommentList } from '~/composables/commentDisplay'
-import { getBasicSettings, getSettings } from '~/composables/api/user'
-import { getArticleList } from '~/composables/api/article'
+import { getCommentList, createComment } from '~/services/api/comments'
+import { normalizeCommentList } from '~/utils/comments'
+import { getBasicSettings, getSettings } from '~/services/api/user'
+import { getArticleList } from '~/services/api/article'
 import type { UnifiedCommentForm, UnifiedCommentItem } from '~/components/comments/UnifiedCommentPanel.vue'
-import PageCurtain from '~/components/layouts/PageCurtain.vue'
+import PageCurtain from '~/components/shell/PageCurtain.vue'
+import { proxyImageUrl } from '~/utils/image'
 
 import IconMdiGithub from '~icons/mdi/github'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'

@@ -7,7 +7,44 @@
       >
         <div class="container full-shell">
           <div class="header-content">
-            <NuxtLink to="/" class="blog-brand">小羊嚣张</NuxtLink>
+            <div
+              class="brand-menu-wrap"
+              :class="{ 'is-open': brandMenuOpen }"
+              @focusin="openBrandMenu"
+              @focusout="handleBrandMenuFocusOut"
+              @mouseleave="scheduleBrandMenuClose"
+            >
+              <button
+                class="blog-brand"
+                type="button"
+                :aria-expanded="brandMenuOpen"
+                aria-controls="brand-route-menu"
+                @mouseenter="openBrandMenu"
+                @click="openBrandMenu"
+              >
+                小羊嚣张
+                <span class="brand-menu-arrow" :class="{ open: brandMenuOpen }">▾</span>
+              </button>
+              <Transition name="brand-menu">
+                <nav
+                  v-if="brandMenuOpen"
+                  id="brand-route-menu"
+                  class="brand-route-menu"
+                  aria-label="站点导航"
+                >
+                  <NuxtLink
+                    v-for="(item, index) in brandRoutes"
+                    :key="item.to"
+                    :to="item.to"
+                    class="brand-route-item"
+                    :style="{ '--menu-index': index }"
+                    @click.stop
+                  >
+                    {{ item.label }}
+                  </NuxtLink>
+                </nav>
+              </Transition>
+            </div>
 
             <nav class="nav-menu">
               <div class="nav-dropdown">
@@ -23,11 +60,10 @@
               <NuxtLink to="/friends" class="nav-item">友链</NuxtLink>
               <NuxtLink to="/dynamic" class="nav-item">动态</NuxtLink>
               <NuxtLink to="/message" class="nav-item">留言</NuxtLink>
-              <NuxtLink to="/about" class="nav-item">关于</NuxtLink>
             </nav>
 
             <div class="header-actions">
-              <button class="action-btn action-theme" :title="themeButtonTitle" type="button" @click="toggleTheme">
+              <button class="action-btn action-theme island-theme-btn" :title="themeButtonTitle" type="button" @click="toggleTheme">
                 <IconMaterialSymbolsDarkModeRounded v-if="theme === 'midnight-blue'"/>
                 <IconMaterialSymbolsWbSunnyRounded v-else />
               </button>
@@ -76,7 +112,7 @@
               <NuxtLink to="/archive" class="island-link">归档</NuxtLink>
               <NuxtLink to="/categories" class="island-link">分类</NuxtLink>
               <NuxtLink to="/tags" class="island-link">标签</NuxtLink>
-              <NuxtLink to="/about" class="island-link">关于</NuxtLink>
+              <NuxtLink to="/message" class="island-link">留言</NuxtLink>
             </nav>
 
             <div class="island-actions">
@@ -106,8 +142,20 @@ type HeaderState = 'full' | 'logo' | 'island'
 
 const theme = ref<ThemeMode>('midnight-blue')
 const headerState = ref<HeaderState>('full')
+const brandMenuOpen = ref(false)
+let brandMenuCloseTimer: ReturnType<typeof setTimeout> | null = null
 const lastScrollY = ref(0)
 const lastDirection = ref<'up' | 'down' | null>(null)
+
+const brandRoutes = [
+  { label: '首页', to: '/' },
+  { label: '归档', to: '/archive' },
+  { label: '分类', to: '/categories' },
+  { label: '标签', to: '/tags' },
+  { label: '友链', to: '/friends' },
+  { label: '动态', to: '/dynamic' },
+  { label: '留言', to: '/message' }
+]
 
 const NAV_SWITCH_OFFSET = 48
 const DIRECTION_THRESHOLD = 4
@@ -140,6 +188,39 @@ const themeButtonTitle = computed(() =>
 const toggleTheme = () => {
   applyTheme(theme.value === 'midnight-blue' ? 'blue-white' : 'midnight-blue')
 }
+
+const openBrandMenu = () => {
+  cancelBrandMenuClose()
+  brandMenuOpen.value = true
+}
+
+const cancelBrandMenuClose = () => {
+  if (brandMenuCloseTimer) {
+    clearTimeout(brandMenuCloseTimer)
+    brandMenuCloseTimer = null
+  }
+}
+
+const scheduleBrandMenuClose = () => {
+  cancelBrandMenuClose()
+  brandMenuCloseTimer = setTimeout(closeBrandMenu, 80)
+}
+
+const closeBrandMenu = () => {
+  cancelBrandMenuClose()
+  brandMenuOpen.value = false
+}
+
+const handleBrandMenuFocusOut = (event: FocusEvent) => {
+  const currentTarget = event.currentTarget as HTMLElement
+  const nextTarget = event.relatedTarget as Node | null
+  if (!nextTarget || !currentTarget.contains(nextTarget)) scheduleBrandMenuClose()
+}
+
+const route = useRoute()
+watch(() => route.fullPath, () => {
+  closeBrandMenu()
+})
 
 const scrollToTop = () => {
   if (!import.meta.client) {
@@ -195,6 +276,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  cancelBrandMenuClose()
   window.removeEventListener('scroll', handleScroll)
 })
 </script>
@@ -206,7 +288,8 @@ onUnmounted(() => {
   z-index: 300;
   width: 100%;
   pointer-events: none;
-  overflow-x: clip;
+  overflow: visible;
+  isolation: isolate;
   /* --header-nav-color 和 --header-action-color 在 main.scss 中全局定义 */
   animation: navSlideDown 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -225,7 +308,7 @@ onUnmounted(() => {
 .header-stage {
   position: relative;
   min-height: 86px;
-  overflow-x: clip;
+  overflow: visible;
 }
 
 .header-layer {
@@ -237,7 +320,7 @@ onUnmounted(() => {
   visibility: hidden;
   transform: translateY(-8px) scale(0.94);
   transform-origin: top center;
-  overflow-x: clip;
+  overflow: visible;
   transition:
     opacity 0.16s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
@@ -247,6 +330,8 @@ onUnmounted(() => {
 .header-layer.active {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
+  z-index: 10;
   transform: translateY(0) scale(1);
   transition:
     opacity 0.16s cubic-bezier(0.22, 1, 0.36, 1),
@@ -336,6 +421,13 @@ onUnmounted(() => {
 }
 
 .blog-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
   font-size: 18px;
   font-weight: 700;
   color: var(--header-nav-color);
@@ -345,6 +437,152 @@ onUnmounted(() => {
 
   &:hover {
     color: var(--brand-accent);
+  }
+}
+
+.brand-menu-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 100;
+
+  // 连接按钮与下拉内容，鼠标可从按钮平滑移动到菜单。
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 140px;
+    height: 13px;
+    pointer-events: none;
+  }
+
+  &.is-open::after {
+    pointer-events: auto;
+  }
+}
+
+.brand-menu-arrow {
+  font-size: 11px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+.brand-route-menu {
+  position: absolute;
+  top: calc(100% + 13px);
+  left: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 128px;
+  max-height: 420px;
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: 0 12px 28px rgba(6, 16, 28, 0.14);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  z-index: 20;
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
+  transform-origin: top center;
+}
+
+.brand-menu-enter-active,
+.brand-menu-leave-active {
+  overflow: hidden;
+  transform-origin: top center;
+  transition:
+    max-height 480ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 480ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.brand-menu-enter-from,
+.brand-menu-leave-to {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  transform: translateY(-8px) scaleY(0.94);
+  pointer-events: none;
+}
+
+.brand-route-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--header-nav-color);
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.2s ease, background-color 0.2s ease;
+
+  &:hover,
+  &:focus-visible,
+  &.router-link-active {
+    color: #8183ff;
+    background: transparent;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #8183ff;
+    outline-offset: -2px;
+  }
+}
+
+.brand-menu-enter-active .brand-route-item {
+  animation: brandRouteEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--menu-index) * 42ms);
+}
+
+.brand-menu-leave-active .brand-route-item {
+  animation: brandRouteExit 220ms cubic-bezier(0.55, 0, 0.78, 0.22) both;
+  animation-delay: calc((7 - var(--menu-index)) * 34ms);
+}
+
+@keyframes brandRouteEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scaleY(0.72);
+    transform-origin: top center;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    transform-origin: top center;
+  }
+}
+
+@keyframes brandRouteExit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    transform-origin: top center;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scaleY(0.72);
+    transform-origin: top center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-menu-enter-active,
+  .brand-menu-leave-active {
+    transition-duration: 1ms;
+  }
+
+  .brand-menu-enter-active .brand-route-item,
+  .brand-menu-leave-active .brand-route-item {
+    animation: none;
   }
 }
 
@@ -491,8 +729,8 @@ onUnmounted(() => {
   width: 36px;
   height: 36px;
   padding: 0;
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
+  background: transparent;
+  border-color: transparent;
 }
 
 .action-btn :deep(svg) {
@@ -557,11 +795,7 @@ onUnmounted(() => {
   background: transparent;
 
   &::before {
-    inset: 2px 0;
-    background: rgba(129, 131, 255, 0.06);
-    box-shadow:
-      0 0 10px rgba(129, 131, 255, 0.08),
-      0 4px 10px rgba(6, 16, 28, 0.1);
+    display: none;
   }
 
   &:hover {
@@ -576,14 +810,19 @@ onUnmounted(() => {
   min-height: 58px;
   padding: 8px 10px 8px 12px;
   border-radius: 999px;
-  background: var(--bg-header-scrolled);
-  border: 1px solid var(--border-color);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  background: transparent;
+  border: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   transform-origin: top center;
   transition:
     transform 0.24s cubic-bezier(0.345, 0.045, 0.345, 1),
     opacity 0.2s cubic-bezier(0.345, 0.045, 0.345, 1);
+}
+
+.island-theme-btn {
+  background: transparent;
+  border-color: transparent;
 }
 
 .island-nav {

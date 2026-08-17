@@ -1,5 +1,6 @@
 import { ElMessage } from 'element-plus'
-import { getUserProfile, login, logout, register, type AuthUserProfile, type LoginResponseData } from '~/composables/api/auth'
+import { getUserProfile, login, logout, register, type AuthUserProfile, type LoginResponseData } from '~/services/api/auth'
+import { proxyImageUrl } from '~/utils/image'
 
 const STORAGE_KEYS = {
   accessToken: 'access_token',

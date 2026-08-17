@@ -45,9 +45,9 @@
 </template>
 
 <script setup lang="ts">
-import { getTagList } from '~/composables/api/tag'
-import PageCurtain from '~/components/layouts/PageCurtain.vue'
-import type { TagItem } from '~/composables/useApi'
+import { getTagList } from '~/services/api/tag'
+import PageCurtain from '~/components/shell/PageCurtain.vue'
+import type { TagItem } from '~/types/api'
 
 interface TagCardItem extends TagItem {
   displayCount: number

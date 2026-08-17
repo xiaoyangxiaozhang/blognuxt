@@ -1,5 +1,4 @@
 import Icons from 'unplugin-icons/vite'
-import AutoImport from 'unplugin-auto-import/vite'
 
 // 开发环境下代理图片请求（绕过 CORS）
 // 服务端渲染/生产构建使用 Nitro server route: server/routes/proxy-image.get.ts
@@ -70,13 +69,12 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.scss'],
   runtimeConfig: {
     public: {
-      apiBase: ''
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://39.106.193.56:8080/api/v1'
     }
   },
 vite: {
     plugins: [
       Icons({ compiler: 'vue3', autoInstall: true }),
-      AutoImport({ imports: ['vue', 'vue-router', '@vueuse/core'] }),
       devProxyPlugin
     ]
   },

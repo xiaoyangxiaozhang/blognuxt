@@ -129,12 +129,14 @@ import { ElMessage } from 'element-plus'
 import IconMaterialSymbolsChatBubbleRounded from '~icons/material-symbols/chat-bubble-rounded'
 import IconMaterialSymbolsLocationOnRounded from '~icons/material-symbols/location-on-rounded'
 import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
-import { COMMENT_TARGETS, normalizeCommentList } from '~/composables/commentDisplay'
-import { createComment, getCommentList } from '~/composables/api/comments'
-import { getMomentList } from '~/composables/api/moments'
-import { getBasicSettings } from '~/composables/api/user'
+import { COMMENT_TARGETS, normalizeCommentList } from '~/utils/comments'
+import { createComment, getCommentList } from '~/services/api/comments'
+import { getMomentList } from '~/services/api/moments'
+import { getBasicSettings } from '~/services/api/user'
+import { proxyImageUrl } from '~/utils/image'
+import { formatDate } from '~/utils/date'
 import { useCommentAuth } from '~/composables/useCommentAuth'
-import PageCurtain from '~/components/layouts/PageCurtain.vue'
+import PageCurtain from '~/components/shell/PageCurtain.vue'
 
 interface DynamicMomentItem {
   id: number
@@ -318,15 +320,7 @@ const scrollToCommentPanel = async () => {
   })
 }
 
-const formatMomentDate = (value: string) => {
-  if (!value) return ''
-  const date = new Date(value.replace(/-/g, '/'))
-  if (Number.isNaN(date.getTime())) return value
-  const y = date.getFullYear()
-  const m = date.getMonth() + 1
-  const d = date.getDate()
-  return `${y}年${m}月${d}日`
-}
+const formatMomentDate = formatDate
 </script>
 
 <style scoped lang="scss">

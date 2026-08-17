@@ -63,7 +63,7 @@
 <script setup lang="ts">
 import { nextTick } from 'vue'
 import IconMaterialSymbolsFolderOpenRounded from '~icons/material-symbols/folder-open-rounded'
-import { getDominantColor } from '~/composables/useDominantColor'
+import { getDominantColor } from '~/utils/dominantColor'
 
 interface ArticleTag {
   name: string
@@ -300,7 +300,6 @@ watch(() => props.articles, async (articles) => {
   font-size: 30px;
   line-height: 1.2;
   -webkit-line-clamp: 3;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
 }
 
 @media (max-width: 1200px) {

@@ -257,7 +257,7 @@
       @change="handleImageSelect"
     >
 
-    <LoginDilog v-model="loginDialogVisible" @login-success="handleLoginSuccess" />
+    <LoginDialog v-model="loginDialogVisible" @login-success="handleLoginSuccess" />
   </section>
 </template>
 
@@ -269,9 +269,9 @@ import IconTablerInfoCircle from '~icons/tabler/info-circle'
 import IconTablerLogin from '~icons/tabler/login'
 import IconTablerMoodSmile from '~icons/tabler/mood-smile'
 import IconTablerEye from '~icons/tabler/eye'
-import LoginDilog from '~/components/layouts/LoginDilog.vue'
-import { renderCommentContent, extractCommentImageUrls } from '~/composables/commentRenderer'
-import { uploadFile } from '~/composables/api/upload'
+import LoginDialog from '~/components/shell/LoginDialog.vue'
+import { renderCommentContent, extractCommentImageUrls } from '~/utils/commentRenderer'
+import { uploadFile } from '~/services/api/upload'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 
 export interface UnifiedCommentForm {

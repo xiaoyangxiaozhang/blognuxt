@@ -28,8 +28,8 @@
 
 <script setup lang="ts">
 import IconMaterialSymbolsKeyboardArrowUpRounded from '~icons/material-symbols/keyboard-arrow-up-rounded'
-import Header from '~/components/layouts/Header.vue'
-import Footer from '~/components/layouts/Footer.vue'
+import Header from '~/components/shell/Header.vue'
+import Footer from '~/components/shell/Footer.vue'
 
 const route = useRoute()
 const showBackToTop = ref(false)

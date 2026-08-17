@@ -20,7 +20,9 @@
 </template>
 
 <script setup lang="ts">
-import { getMomentList } from '~/composables/api/moments'
+import { getMomentList } from '~/services/api/moments'
+import { formatDate } from '~/utils/date'
+import { proxyImageUrl } from '~/utils/image'
 
 interface RecentArticleItem {
   id: number
@@ -57,7 +59,7 @@ const momentCards = computed<MomentCardItem[]>(() => {
   if (momentsData.value?.data?.list && momentsData.value.data.list.length > 0) {
     return momentsData.value.data.list.map((item) => ({
       id: `moment-${item.id}`,
-      publishDate: item.publish_time,
+      publishDate: formatDate(item.publish_time),
       text: item.content?.text || '',
       cover: proxyImageUrl(item.content?.images?.[0])
     }))
