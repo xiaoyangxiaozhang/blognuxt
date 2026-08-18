@@ -40,6 +40,8 @@ jobs:
           npm run postinstall
 
       - name: Build Nuxt production output
+        env:
+          NUXT_PUBLIC_API_BASE: https://xiaoyangxiaozhang.xyz/api/v1
         run: npm run build
 
       - name: Check build output
