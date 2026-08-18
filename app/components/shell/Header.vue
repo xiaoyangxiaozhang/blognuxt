@@ -47,6 +47,7 @@
             </div>
 
             <nav class="nav-menu">
+              <NuxtLink to="/" class="nav-item">首页</NuxtLink>
               <div class="nav-dropdown">
                 <button class="nav-dropdown-toggle" type="button">
                   文章 <span class="dropdown-arrow">▾</span>
@@ -109,6 +110,7 @@
             </button>
 
             <nav class="island-nav">
+              <NuxtLink to="/" class="island-link">首页</NuxtLink>
               <NuxtLink to="/archive" class="island-link">归档</NuxtLink>
               <NuxtLink to="/categories" class="island-link">分类</NuxtLink>
               <NuxtLink to="/tags" class="island-link">标签</NuxtLink>
@@ -401,6 +403,7 @@ onUnmounted(() => {
 .header-content {
   height: 60px;
   display: flex;
+  position: relative;
   align-items: center;
   gap: 24px;
   padding: 0 2px;
@@ -590,7 +593,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 28px;
-  margin: 0 auto;
 }
 
 .mini-logo-mark {
@@ -607,10 +609,15 @@ onUnmounted(() => {
 }
 
 .nav-menu {
+  position: absolute;
+  left: 50%;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 28px;
+  margin: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .nav-item,

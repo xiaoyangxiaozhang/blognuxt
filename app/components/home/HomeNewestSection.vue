@@ -1,7 +1,11 @@
 <template>
-  <section class="newest-section">
+  <section
+    ref="newestSectionRef"
+    class="newest-section"
+    :class="{ 'scroll-reveal-enabled': scrollRevealReady }"
+  >
     <div class="newest-wrapper">
-      <div class="section-heading">
+      <div data-scroll-reveal class="section-heading">
         <h2>Newest</h2>
       </div>
 
@@ -19,8 +23,10 @@
             v-for="(article, index) in articles"
             :key="article.id"
             :data-article-id="article.id"
+            data-scroll-reveal
             class="article-card"
             :class="{ featured: index === 0 }"
+            :style="{ '--reveal-delay': revealDelay(index) }"
           >
             <NuxtLink :to="`/article/${article.slug}`" class="article-cover-link">
               <div class="article-cover">
@@ -29,7 +35,7 @@
             </NuxtLink>
 
             <div class="article-content">
-              <div class="article-meta">
+              <div data-reveal-child class="article-meta">
                 <span class="category">
                   <IconMaterialSymbolsFolderOpenRounded />
                   {{ article.categoryName }}
@@ -42,12 +48,12 @@
                   {{ tag.name }}
                 </span>
               </div>
-              <h3 class="article-title">
+              <h3 data-reveal-child class="article-title">
                 <NuxtLink :to="`/article/${article.slug}`">
                   {{ article.title }}
                 </NuxtLink>
               </h3>
-              <span class="article-date">{{ article.publishDate }}</span>
+              <span data-reveal-child class="article-date">{{ article.publishDate }}</span>
             </div>
           </article>
 
@@ -64,6 +70,7 @@
 import { nextTick } from 'vue'
 import IconMaterialSymbolsFolderOpenRounded from '~icons/material-symbols/folder-open-rounded'
 import { getDominantColor } from '~/utils/dominantColor'
+import { useScrollReveal } from '~/composables/useScrollReveal'
 
 interface ArticleTag {
   name: string
@@ -87,6 +94,14 @@ const props = defineProps<{
   errorMessage: string
 }>()
 
+const newestSectionRef = ref<HTMLElement | null>(null)
+const {
+  isReady: scrollRevealReady,
+  refresh: refreshScrollReveal
+} = useScrollReveal(newestSectionRef)
+
+const revealDelay = (index: number) => `${Math.min(index, 5) * 110}ms`
+
 // 文章加载后提取封面主色调并应用到标签
 watch(() => props.articles, async (articles) => {
   if (!articles.length) return
@@ -108,11 +123,29 @@ watch(() => props.articles, async (articles) => {
     }
   }
 }, { immediate: true })
+
+onUpdated(refreshScrollReveal)
 </script>
 
 <style scoped lang="scss">
 .newest-section {
   margin-top: 28px;
+}
+
+[data-scroll-reveal] {
+  --reveal-distance: 34px;
+  opacity: 0;
+  transform: translate3d(0, var(--reveal-distance), 0);
+  transition:
+    opacity 0.9s cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 1.05s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+[data-scroll-reveal].is-revealed {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
 }
 
 .newest-wrapper {
@@ -176,6 +209,37 @@ watch(() => props.articles, async (articles) => {
   &:hover {
     transform: scale(0.97);
   }
+}
+
+.article-card [data-reveal-child] {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  transition:
+    opacity 0.62s cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 0.72s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.article-card.is-revealed .article-meta,
+.article-card.is-revealed .article-title,
+.article-card.is-revealed .article-date {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.article-card.is-revealed .article-meta {
+  transition-delay: calc(var(--reveal-delay, 0ms) + 150ms);
+}
+
+.article-card.is-revealed .article-title {
+  transition-delay: calc(var(--reveal-delay, 0ms) + 270ms);
+}
+
+.article-card.is-revealed .article-date {
+  transition-delay: calc(var(--reveal-delay, 0ms) + 390ms);
+}
+
+.article-card[data-scroll-reveal].is-revealed:hover {
+  transform: scale(0.97);
 }
 
 .article-card.featured {
@@ -311,7 +375,7 @@ watch(() => props.articles, async (articles) => {
     margin-bottom: 20px;
 
     h2 {
-      font-size: 24px;
+      font-size: 44px;
     }
   }
 
@@ -335,14 +399,14 @@ watch(() => props.articles, async (articles) => {
   }
 
   .newest-wrapper {
-    width: 380px;
+    width: min(368px, 100%);
   }
 
   .section-heading {
-    margin-bottom: 18px;
+    margin-bottom: 20px;
 
     h2 {
-      font-size: 22px;
+      font-size: 24px;
     }
   }
 
@@ -379,6 +443,19 @@ watch(() => props.articles, async (articles) => {
   .article-card.featured .article-title {
     font-size: 18px;
     line-height: 1.35;
+  }
+
+  [data-scroll-reveal] {
+    --reveal-distance: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-scroll-reveal],
+  .article-card [data-reveal-child] {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 </style>

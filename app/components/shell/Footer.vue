@@ -187,8 +187,6 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
   gap: 40px;
   padding: 24px 0;
   margin-bottom: 24px;
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
 }
 
 .stat-item {

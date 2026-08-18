@@ -1,10 +1,14 @@
 <template>
-  <section class="feature-panel">
-    <div class="section-heading">
+  <section
+    ref="featurePanelRef"
+    class="feature-panel"
+    :class="{ 'scroll-reveal-enabled': scrollRevealReady }"
+  >
+    <div data-scroll-reveal class="section-heading">
       <h2>Feature</h2>
     </div>
 
-    <ul class="feature-tabs" role="tablist" aria-label="首页功能导航">
+    <ul data-scroll-reveal class="feature-tabs" role="tablist" aria-label="首页功能导航">
       <li
         v-for="item in tabs"
         :key="item.key"
@@ -20,11 +24,13 @@
       <div class="feature-tab-indicator" :style="indicatorPos"></div>
     </ul>
 
-    <transition name="fade" mode="out-in">
-      <div :key="activeTab" class="feature-body">
-        <component :is="activeComponent" v-bind="activeProps" />
-      </div>
-    </transition>
+    <div data-scroll-reveal class="feature-body-reveal">
+      <transition name="fade" mode="out-in">
+        <div :key="activeTab" class="feature-body">
+          <component :is="activeComponent" v-bind="activeProps" />
+        </div>
+      </transition>
+    </div>
   </section>
 </template>
 
@@ -34,6 +40,7 @@ import FeatureArticlesPanel from '~/components/home/feature-panels/FeatureArticl
 import FeatureCommentsPanel from '~/components/home/feature-panels/FeatureCommentsPanel.vue'
 import FeatureMomentsPanel from '~/components/home/feature-panels/FeatureMomentsPanel.vue'
 import FeatureNoticePanel from '~/components/home/feature-panels/FeatureNoticePanel.vue'
+import { useScrollReveal } from '~/composables/useScrollReveal'
 
 interface CategoryItem {
   id: number
@@ -81,6 +88,9 @@ const props = defineProps<{
   recentArticles: RecentArticleItem[]
   loading: boolean
 }>()
+
+const featurePanelRef = ref<HTMLElement | null>(null)
+const { isReady: scrollRevealReady } = useScrollReveal(featurePanelRef)
 
 const tabs: Array<{ key: FeatureTabKey; label: string }> = [
   { key: 'author', label: '博主' },
@@ -186,6 +196,29 @@ const activeProps = computed(() => {
   margin: 0 auto;
 }
 
+.scroll-reveal-enabled [data-scroll-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 30px, 0);
+  transition:
+    opacity 0.95s cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 1.05s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.scroll-reveal-enabled [data-scroll-reveal].is-revealed {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal-enabled [data-scroll-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 .section-heading {
   margin-bottom: 24px;
 
@@ -219,6 +252,7 @@ const activeProps = computed(() => {
   overflow-x: auto;
   white-space: nowrap;
   font-size: 0;
+  --reveal-delay: 120ms;
 }
 
 .feature-tab-indicator {
@@ -249,6 +283,10 @@ const activeProps = computed(() => {
   &.active {
     color: var(--brand-accent);
   }
+}
+
+.feature-body-reveal {
+  --reveal-delay: 240ms;
 }
 
 .feature-body {

@@ -69,7 +69,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.scss'],
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://39.106.193.56:8080/api/v1'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://xiaoyangxiaozhang.xyz/api/v1'
     }
   },
 vite: {
