@@ -1,0 +1,77 @@
+name: Deploy blognuxt to Aliyun ECS
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: blognuxt-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Nuxt production output
+        run: npm run build
+
+      - name: Check build output
+        run: test -f .output/server/index.mjs
+
+      - name: Configure SSH
+        env:
+          ALIYUN_SSH_KEY: ${{ secrets.ALIYUN_SSH_KEY }}
+          ALIYUN_KNOWN_HOSTS: ${{ secrets.ALIYUN_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          : "${ALIYUN_SSH_KEY:?请配置 ALIYUN_SSH_KEY}"
+          : "${ALIYUN_KNOWN_HOSTS:?请配置 ALIYUN_KNOWN_HOSTS}"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$ALIYUN_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$ALIYUN_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+      - name: Upload and activate release
+        env:
+          ALIYUN_HOST: ${{ secrets.ALIYUN_HOST }}
+          ALIYUN_USER: ${{ secrets.ALIYUN_USER }}
+          ALIYUN_DEPLOY_PATH: ${{ secrets.ALIYUN_DEPLOY_PATH }}
+          RELEASE_ID: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+          : "${ALIYUN_HOST:?请配置 ALIYUN_HOST}"
+          : "${ALIYUN_USER:?请配置 ALIYUN_USER}"
+          : "${ALIYUN_DEPLOY_PATH:?请配置 ALIYUN_DEPLOY_PATH，例如 /srv/blognuxt}"
+
+          ssh "$ALIYUN_USER@$ALIYUN_HOST" \
+            "install -d -m 755 '$ALIYUN_DEPLOY_PATH/releases/$RELEASE_ID' '$ALIYUN_DEPLOY_PATH/bin'"
+
+          rsync -az --delete -e ssh \
+            .output/ \
+            "$ALIYUN_USER@$ALIYUN_HOST:$ALIYUN_DEPLOY_PATH/releases/$RELEASE_ID/.output/"
+
+          rsync -az -e ssh \
+            deploy/aliyun/activate.sh \
+            "$ALIYUN_USER@$ALIYUN_HOST:$ALIYUN_DEPLOY_PATH/bin/activate.sh"
+
+          ssh "$ALIYUN_USER@$ALIYUN_HOST" \
+            "chmod 755 '$ALIYUN_DEPLOY_PATH/bin/activate.sh' && '$ALIYUN_DEPLOY_PATH/bin/activate.sh' '$ALIYUN_DEPLOY_PATH' '$RELEASE_ID'"

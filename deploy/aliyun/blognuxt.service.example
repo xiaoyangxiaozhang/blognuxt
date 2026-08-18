@@ -1,0 +1,25 @@
+[Unit]
+Description=blognuxt Nuxt SSR application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=blognuxt
+Group=blognuxt
+WorkingDirectory=/srv/blognuxt/current
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+EnvironmentFile=-/etc/blognuxt/blognuxt.env
+# 如果服务器上的 Node 不在 /usr/bin/node，请改成 command -v node 的绝对路径。
+ExecStart=/usr/bin/node /srv/blognuxt/current/.output/server/index.mjs
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
