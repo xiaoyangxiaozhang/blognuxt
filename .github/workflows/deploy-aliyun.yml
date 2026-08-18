@@ -28,7 +28,16 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          set -Eeuo pipefail
+          # package-lock.json was generated on macOS and is missing Rolldown's
+          # Linux optional binding. Install the locked tree first, then add the
+          # matching Linux binding without changing package.json or the lockfile.
+          npm ci --ignore-scripts --include=optional
+          ROLLDOWN_VERSION="$(node -p "require('./node_modules/rolldown/package.json').version")"
+          npm install --ignore-scripts --no-save --package-lock=false \
+            "@rolldown/binding-linux-x64-gnu@${ROLLDOWN_VERSION}"
+          npm run postinstall
 
       - name: Build Nuxt production output
         run: npm run build
