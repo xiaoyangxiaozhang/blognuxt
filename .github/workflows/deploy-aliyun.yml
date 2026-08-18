@@ -72,7 +72,7 @@ jobs:
           : "${ALIYUN_DEPLOY_PATH:?请配置 ALIYUN_DEPLOY_PATH，例如 /srv/blognuxt}"
 
           ssh "$ALIYUN_USER@$ALIYUN_HOST" \
-            "install -d -m 755 '$ALIYUN_DEPLOY_PATH/releases/$RELEASE_ID' '$ALIYUN_DEPLOY_PATH/bin'"
+            "mkdir -p '$ALIYUN_DEPLOY_PATH/releases/$RELEASE_ID' '$ALIYUN_DEPLOY_PATH/bin'"
 
           rsync -az --delete -e ssh \
             .output/ \
