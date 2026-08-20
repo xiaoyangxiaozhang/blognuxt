@@ -12,7 +12,10 @@
         <NuxtLink
           v-for="item in categories"
           :key="item.id"
-          :to="`/tags?category=${item.id}`"
+          :to="{
+            path: item.url || `/category/${item.slug}`,
+            query: { name: item.name }
+          }"
           class="category-card"
         >
           <div class="category-icon-label">
@@ -36,12 +39,6 @@
 import IconMaterialSymbolsFolderOpenOutlineRounded from '~icons/material-symbols/folder-open-outline-rounded'
 import { getCategoryList } from '~/services/api/category'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
-
-type Category = {
-  id: number
-  name: string
-  count: number
-}
 
 const { data, pending } = await useAsyncData('categories-page', async () => {
   const res = await getCategoryList({ page_size: 10 })

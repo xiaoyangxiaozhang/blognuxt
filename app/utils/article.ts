@@ -15,6 +15,8 @@ export interface DisplayArticleCard {
   title: string
   cover: string
   publishDate: string
+  categoryName: string
+  categoryUrl: string
   location: string
   commentCount: number
   isTop: boolean
@@ -47,6 +49,8 @@ export const mapArticleCard = (item: ArticleListItem): DisplayArticleCard => ({
   title: item.title,
   cover: proxyImageUrl(item.cover) || DEFAULT_COVER,
   publishDate: formatArticleDate(item.publish_time),
+  categoryName: item.category?.name || '未分类',
+  categoryUrl: item.category?.url || '',
   location: item.location || '',
   commentCount: item.comment_count ?? 0,
   isTop: Boolean(item.is_top),

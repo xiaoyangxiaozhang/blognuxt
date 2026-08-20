@@ -8,7 +8,7 @@
       </div>
     </header>
 
-    <form class="comment-composer" @submit.prevent="emit('submit')">
+    <form class="comment-composer" @submit.prevent="handleSubmit">
       <div class="composer-card">
         <div class="composer-topline">
           <label class="info-field">
@@ -44,7 +44,13 @@
             />
           </label>
 
-          <button type="button" class="plain-icon info-button" aria-label="Comment tips">
+          <button
+            v-if="tip?.trim()"
+            type="button"
+            class="plain-icon info-button"
+            aria-label="Comment tips"
+            :title="tip"
+          >
             <IconTablerInfoCircle />
           </button>
         </div>
@@ -82,23 +88,34 @@
                 </div>
               </template>
             </template>
-            <p v-else class="preview-placeholder">预览会显示在这里。</p>
+            <div
+              v-for="item in localUploads"
+              :key="`local-preview-${item.url}`"
+              class="preview-image-wrap pending-preview"
+            >
+              <img :src="item.previewUrl" :alt="`待发送图片 ${item.name}`" class="preview-image" />
+              <span class="pending-preview-label">点击发送时上传</span>
+            </div>
+            <p v-if="previewBlocks.length === 0 && localUploads.length === 0" class="preview-placeholder">
+              预览会显示在这里。
+            </p>
           </div>
         </div>
 
         <div v-if="attachmentPreviews.length > 0" class="attachment-strip">
           <div v-for="item in attachmentPreviews" :key="item.url" class="attachment-item" :class="{ uploading: item.uploading }">
-            <img :src="item.url" :alt="item.name" />
+            <img :src="item.previewUrl" :alt="item.name" />
             <button
-              v-if="!item.uploading"
               type="button"
               class="remove-attachment"
               aria-label="Remove image"
-              @click="removeImage(item.url)"
+              @click="removeAttachment(item)"
             >
               ×
             </button>
             <span v-if="item.uploading" class="attachment-status">上传中</span>
+            <span v-else-if="item.uploadError" class="attachment-status attachment-status-error">上传失败</span>
+            <span v-else-if="item.file" class="attachment-status attachment-status-pending">待发送</span>
           </div>
         </div>
 
@@ -123,9 +140,9 @@
               登录
             </button>
 
-            <button type="submit" class="submit-button" :disabled="submitting || uploadingCount > 0">
+            <button type="submit" class="submit-button" :disabled="submitting || processingSubmit || uploadingCount > 0">
               <span v-if="submitting">提交中...</span>
-              <span v-else-if="uploadingCount > 0">等待上传...</span>
+              <span v-else-if="processingSubmit || uploadingCount > 0">上传图片中...</span>
               <span v-else>发表评论</span>
             </button>
           </div>
@@ -262,6 +279,7 @@
 </template>
 
 <script setup lang="ts">
+import { markRaw } from 'vue'
 import { ElMessage } from 'element-plus'
 import IconTablerMessage from '~icons/tabler/message'
 import IconTablerPhoto from '~icons/tabler/photo'
@@ -271,6 +289,7 @@ import IconTablerMoodSmile from '~icons/tabler/mood-smile'
 import IconTablerEye from '~icons/tabler/eye'
 import LoginDialog from '~/components/shell/LoginDialog.vue'
 import { renderCommentContent, extractCommentImageUrls } from '~/utils/commentRenderer'
+import { proxyImageUrl } from '~/utils/image'
 import { uploadFile } from '~/services/api/upload'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 
@@ -292,9 +311,13 @@ export interface UnifiedCommentItem {
 }
 
 interface AttachmentPreviewItem {
+  file?: File
   url: string
+  previewUrl: string
   name: string
   uploading: boolean
+  uploadedUrl?: string
+  uploadError?: boolean
 }
 
 const props = withDefaults(defineProps<{
@@ -312,7 +335,7 @@ const props = withDefaults(defineProps<{
   loading: false,
   submitting: false,
   title: '评论',
-  tip: '支持表情、图片上传与预览，登录后会优先使用你的账号资料。',
+  tip: '',
   emptyText: '还没有评论，来留下第一条消息吧。',
   errorText: '',
   variant: 'default',
@@ -340,14 +363,15 @@ const uploadedImageUrls = computed(() => extractCommentImageUrls(props.form.cont
 const attachmentPreviews = computed<AttachmentPreviewItem[]>(() => {
   const uploaded = uploadedImageUrls.value.map((url) => ({
     url,
+    previewUrl: proxyImageUrl(url),
     name: 'uploaded-image',
     uploading: false
   }))
 
-  const pending = localUploads.value.filter((item) => item.uploading)
-  return [...pending, ...uploaded]
+  return [...localUploads.value, ...uploaded]
 })
 const uploadingCount = computed(() => localUploads.value.filter((item) => item.uploading).length)
+const processingSubmit = ref(false)
 
 const updateField = (field: keyof UnifiedCommentForm, value: string) => {
   emit('update:form', {
@@ -409,7 +433,27 @@ const removeImage = (url: string) => {
   updateField('content', nextContent)
 }
 
-const handleImageSelect = async (event: Event) => {
+const removeAttachment = (item: AttachmentPreviewItem) => {
+  if (item.file) {
+    URL.revokeObjectURL(item.previewUrl)
+    localUploads.value = localUploads.value.filter((localItem) => localItem.url !== item.url)
+    return
+  }
+
+  removeImage(item.url)
+}
+
+const appendUploadedImages = (content: string, urls: string[]) => {
+  if (urls.length === 0) {
+    return content
+  }
+
+  const imageMarkdown = urls.map((url) => `![](${url})`).join('\n')
+  const trimmedContent = content.trim()
+  return trimmedContent ? `${trimmedContent}\n\n${imageMarkdown}` : imageMarkdown
+}
+
+const handleImageSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
   const files = Array.from(target.files || [])
 
@@ -420,30 +464,82 @@ const handleImageSelect = async (event: Event) => {
   for (const file of files) {
     const localUrl = URL.createObjectURL(file)
     localUploads.value.push({
+      file: markRaw(file),
       url: localUrl,
+      previewUrl: localUrl,
       name: file.name,
-      uploading: true
+      uploading: false
     })
+  }
+
+  target.value = ''
+}
+
+const uploadPendingImages = async () => {
+  const pendingImages = localUploads.value.filter((item) => item.file && !item.uploadedUrl)
+
+  for (const item of pendingImages) {
+    item.uploading = true
+    item.uploadError = false
 
     try {
-      const response = await uploadFile(file)
+      const response = await uploadFile(item.file as File)
       const imageUrl = response.data?.file_url
 
       if (!imageUrl) {
         throw new Error(response.message || 'Upload failed.')
       }
 
-      insertAtCursor(`\n![](${imageUrl})\n`)
+      item.uploadedUrl = imageUrl
     } catch (error) {
-      console.error(error)
-      ElMessage.error(`Failed to upload ${file.name}.`)
+      item.uploadError = true
+      throw error
     } finally {
-      URL.revokeObjectURL(localUrl)
-      localUploads.value = localUploads.value.filter((item) => item.url !== localUrl)
+      item.uploading = false
     }
   }
 
-  target.value = ''
+  const uploadedUrls = localUploads.value
+    .map((item) => item.uploadedUrl)
+    .filter((url): url is string => Boolean(url))
+
+  if (uploadedUrls.length === 0) {
+    return
+  }
+
+  updateField('content', appendUploadedImages(props.form.content, uploadedUrls))
+
+  localUploads.value.forEach((item) => URL.revokeObjectURL(item.previewUrl))
+  localUploads.value = []
+}
+
+const handleSubmit = async () => {
+  if (processingSubmit.value || props.submitting || uploadingCount.value > 0) {
+    return
+  }
+
+  // 先让父页面做昵称、邮箱等校验，避免明显无效时提前上传图片。
+  if (!isLoggedIn.value && (!props.form.nickname.trim() || !props.form.email.trim())) {
+    emit('submit')
+    return
+  }
+
+  if (localUploads.value.length === 0) {
+    emit('submit')
+    return
+  }
+
+  processingSubmit.value = true
+
+  try {
+    await uploadPendingImages()
+    emit('submit')
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('图片上传失败，请检查网络后重试。')
+  } finally {
+    processingSubmit.value = false
+  }
 }
 
 const renderCommentBlocks = (content: string) => renderCommentContent(content)
@@ -687,6 +783,21 @@ onMounted(async () => {
   margin-bottom: 10px;
 }
 
+.pending-preview {
+  position: relative;
+}
+
+.pending-preview-label {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 65%);
+  color: #fff;
+  font-size: 10px;
+}
+
 .preview-image,
 .comment-image {
   width: min(100%, 280px);
@@ -759,6 +870,16 @@ onMounted(async () => {
   background: var(--home-accent);
   color: var(--text-on-accent);
   font-size: 9px;
+}
+
+.attachment-status-pending {
+  background: var(--brand-accent-soft);
+  color: var(--brand-accent);
+}
+
+.attachment-status-error {
+  background: #b42318;
+  color: #fff;
 }
 
 .composer-footer {

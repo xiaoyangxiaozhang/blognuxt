@@ -84,8 +84,9 @@
 }
 
 // 暗色主题（默认）
-:root,
-[data-theme="dark"] {
+:root:not([data-theme]),
+[data-theme="dark"],
+[data-theme="midnight-blue"] {
   // 文本颜色
   --prose-text: #ffffffb3;
   --prose-heading: #ffffff;

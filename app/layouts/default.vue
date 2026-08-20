@@ -2,7 +2,7 @@
   <div class="blog-layout">
     <Header />
 
-    <main class="blog-main">
+    <main class="blog-main" :class="{ 'blog-main-article': route.path.startsWith('/article/') }">
       <div class="container">
         <div class="hero-wrapper">
           <transition name="fade" mode="out-in">
@@ -84,6 +84,11 @@ onUnmounted(() => {
   padding: 0;
   margin-top: -86px;
 
+  // 首页需要让视觉首屏延伸到透明导航下方，文章详情则必须避开固定导航。
+  &.blog-main-article {
+    margin-top: 0;
+  }
+
   .container {
     margin: 0;
   }
@@ -135,6 +140,10 @@ onUnmounted(() => {
   .blog-main {
     padding:  0;
     margin-top: -72px;
+
+    &.blog-main-article {
+      margin-top: 0;
+    }
   }
 
   .back-to-top {
@@ -146,6 +155,10 @@ onUnmounted(() => {
 @media (max-width: 480px) {
   .blog-main {
     margin-top: -86px;
+
+    &.blog-main-article {
+      margin-top: 0;
+    }
 
     .container {
       padding: 0;

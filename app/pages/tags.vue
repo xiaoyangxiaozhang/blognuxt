@@ -26,9 +26,13 @@
           </div>
 
           <div v-else class="tag-grid">
-            <div
+            <NuxtLink
               v-for="tag in sortedTags"
               :key="tag.id"
+              :to="{
+                path: tag.url || `/tag/${tag.slug}`,
+                query: { name: tag.name }
+              }"
               class="tag-card"
             >
               <div class="tag-card-inner">
@@ -36,7 +40,7 @@
                 <h3 class="tag-name">{{ tag.name }}</h3>
                 <span class="tag-hash">#</span>
               </div>
-            </div>
+            </NuxtLink>
           </div>
         </template>
       </div>
@@ -169,11 +173,13 @@ onMounted(() => {
 }
 
 .tag-card {
+  display: block;
   border-radius: 12px;
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   overflow: hidden;
   cursor: pointer;
+  text-decoration: none;
   transition:
     transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.35s ease,
@@ -187,6 +193,11 @@ onMounted(() => {
     box-shadow:
       0 0 0 2px color-mix(in srgb, var(--brand-accent) 30%, transparent),
       0 12px 28px -8px rgba(0, 0, 0, 0.24);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 3px;
   }
 }
 

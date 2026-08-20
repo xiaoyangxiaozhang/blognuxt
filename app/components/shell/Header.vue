@@ -707,6 +707,11 @@ onUnmounted(() => {
   gap: 12px;
 }
 
+.header-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .action-btn {
   width: 32px;
   height: 32px;

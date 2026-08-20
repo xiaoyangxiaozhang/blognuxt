@@ -263,6 +263,7 @@ onMounted(() => {
   width: 100%;
   max-height: 420px;
   overflow: hidden;
+  border-radius: 15px;
 
   img {
     width: 100%;

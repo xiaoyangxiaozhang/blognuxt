@@ -1,8 +1,7 @@
 <template>
-  <section class="article-feed">
-    <div class="feed-head">
+  <section ref="feedRef" class="article-feed">
+    <div data-scroll-reveal class="feed-head">
       <div class="feed-copy">
-        <p v-if="title" class="feed-kicker">Article Feed</p>
         <h2 v-if="title" class="feed-title">{{ title }}</h2>
         <p v-if="description" class="feed-description">{{ description }}</p>
       </div>
@@ -14,6 +13,7 @@
           v-model.trim="searchKeyword"
           class="search-input"
           type="search"
+          :aria-label="searchPlaceholder"
           :placeholder="searchPlaceholder"
         />
       </label>
@@ -30,50 +30,40 @@
     <template v-else>
       <div v-if="visibleArticles.length" class="articles-grid">
         <article
-          v-for="article in visibleArticles"
+          v-for="(article, index) in visibleArticles"
           :key="article.id"
+          :data-article-id="article.id"
+          data-scroll-reveal
           class="article-card"
+          :class="{ featured: index === 0 }"
+          :style="{ '--reveal-delay': revealDelay(index) }"
         >
           <NuxtLink :to="`/article/${article.slug}`" class="article-cover-link">
             <div class="article-cover">
               <img :src="article.cover" :alt="article.title" loading="lazy" />
-
-              <div v-if="article.isEssence || article.isTop" class="article-flags">
-                <span v-if="article.isEssence" class="flag-chip essence">精选</span>
-                <span v-if="article.isTop" class="flag-chip top">置顶</span>
-              </div>
             </div>
           </NuxtLink>
 
-          <div class="article-body">
-            <h3 class="article-title">
+          <div class="article-content">
+            <div data-reveal-child class="article-meta">
+              <span class="category">
+                <IconMaterialSymbolsFolderOpenRounded />
+                {{ article.categoryName }}
+              </span>
+              <span
+                v-for="tag in article.tags.slice(0, 2)"
+                :key="`${article.id}-${tag.slug || tag.name}`"
+                class="tag"
+              >
+                {{ tag.name }}
+              </span>
+            </div>
+
+            <h3 data-reveal-child class="article-title">
               <NuxtLink :to="`/article/${article.slug}`">{{ article.title }}</NuxtLink>
             </h3>
 
-            <div class="article-meta">
-              <span class="meta-chip">
-                <IconMaterialSymbolsCalendarMonthOutlineRounded />
-                {{ article.publishDate }}
-              </span>
-              <span v-if="article.location" class="meta-chip">
-                <IconMaterialSymbolsLocationOnOutlineRounded />
-                {{ article.location }}
-              </span>
-              <span class="meta-chip">
-                <IconMaterialSymbolsChatBubbleOutlineRounded />
-                {{ article.commentCount }}
-              </span>
-            </div>
-
-            <div v-if="article.tags.length" class="article-tags">
-              <span
-                v-for="tag in article.tags"
-                :key="`${article.id}-${tag.slug || tag.name}`"
-                class="tag-chip"
-              >
-                #{{ tag.name }}
-              </span>
-            </div>
+            <span data-reveal-child class="article-date">{{ article.publishDate }}</span>
           </div>
         </article>
       </div>
@@ -82,7 +72,7 @@
         <el-empty :description="searchKeyword ? '没有匹配到相关文章' : emptyText" />
       </div>
 
-      <div v-if="showBottomState" class="load-state">
+      <div v-if="showBottomState && visibleArticles.length" class="load-state">
         <span v-if="loadingMore">正在加载更多文章...</span>
         <span v-else-if="!hasMore && articles.length > 0">已经到底啦</span>
       </div>
@@ -93,12 +83,13 @@
 </template>
 
 <script setup lang="ts">
-import IconMaterialSymbolsCalendarMonthOutlineRounded from '~icons/material-symbols/calendar-month-outline-rounded'
-import IconMaterialSymbolsChatBubbleOutlineRounded from '~icons/material-symbols/chat-bubble-outline-rounded'
-import IconMaterialSymbolsLocationOnOutlineRounded from '~icons/material-symbols/location-on-outline-rounded'
+import { nextTick } from 'vue'
+import IconMaterialSymbolsFolderOpenRounded from '~icons/material-symbols/folder-open-rounded'
 import IconMaterialSymbolsSearchRounded from '~icons/material-symbols/search-rounded'
 import { getArticleList } from '~/services/api/article'
 import { mapArticleCard, type DisplayArticleCard } from '~/utils/article'
+import { getDominantColor } from '~/utils/dominantColor'
+import { useScrollReveal } from '~/composables/useScrollReveal'
 
 const props = withDefaults(defineProps<{
   title?: string
@@ -116,6 +107,7 @@ const props = withDefaults(defineProps<{
   pageSize: 12
 })
 
+const feedRef = ref<HTMLElement | null>(null)
 const articles = ref<DisplayArticleCard[]>([])
 const searchKeyword = ref('')
 const page = ref(1)
@@ -127,9 +119,15 @@ const sentinelRef = ref<HTMLElement | null>(null)
 
 let observer: IntersectionObserver | null = null
 
+const {
+  refresh: refreshScrollReveal
+} = useScrollReveal(feedRef)
+
 const normalizedKeyword = computed(() => searchKeyword.value.trim().toLowerCase())
 const hasMore = computed(() => articles.value.length < total.value)
 const showBottomState = computed(() => !initialLoading.value && !errorMessage.value && articles.value.length > 0)
+
+const revealDelay = (index: number) => `${Math.min(index, 5) * 110}ms`
 
 const visibleArticles = computed(() => {
   if (!normalizedKeyword.value) {
@@ -139,7 +137,7 @@ const visibleArticles = computed(() => {
   return articles.value.filter((article) => {
     const haystack = [
       article.title,
-      article.location,
+      article.categoryName,
       ...article.tags.map((tag) => tag.name)
     ]
       .join(' ')
@@ -228,13 +226,41 @@ watch(
   }
 )
 
+watch(articles, async (items) => {
+  if (!items.length) {
+    return
+  }
+
+  await nextTick()
+
+  for (const article of items) {
+    if (!article.cover) {
+      continue
+    }
+
+    try {
+      const color = await getDominantColor(article.cover)
+      if (!color) {
+        continue
+      }
+
+      const card = feedRef.value?.querySelector<HTMLElement>(`[data-article-id="${article.id}"]`)
+      card?.style.setProperty('--card-accent', color)
+    } catch (error) {
+      console.warn('Failed to extract color for article', article.id, error)
+    }
+  }
+})
+
 onMounted(async () => {
   await resetAndReload()
   startObserver()
+  refreshScrollReveal()
 })
 
 onUpdated(() => {
   startObserver()
+  refreshScrollReveal()
 })
 
 onBeforeUnmount(() => {
@@ -245,164 +271,259 @@ onBeforeUnmount(() => {
 <style scoped lang="scss">
 .article-feed {
   display: grid;
-  gap: 26px;
+  gap: 24px;
+}
+
+[data-scroll-reveal] {
+  --reveal-distance: 34px;
+  opacity: 0;
+  transform: translate3d(0, var(--reveal-distance), 0);
+  transition:
+    opacity 0.9s cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 1.05s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+[data-scroll-reveal].is-revealed {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
 }
 
 .feed-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
+  gap: 24px;
   align-items: end;
 }
 
-.feed-kicker {
-  margin: 0 0 8px;
-  font-size: 12px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--home-text-muted);
-}
-
 .feed-title {
+  position: relative;
+  display: inline-block;
   margin: 0;
-  font-size: clamp(28px, 4vw, 46px);
-  line-height: 1.02;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.25;
   color: var(--home-text);
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--brand-accent);
+  }
 }
 
 .feed-description {
-  margin: 12px 0 0;
-  max-width: 58ch;
+  margin: 16px 0 0;
+  color: var(--home-text-muted);
   font-size: 14px;
-  line-height: 1.8;
-  color: var(--text-muted);
+  line-height: 1.7;
 }
 
 .search-shell {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 56px;
-  padding: 0 18px;
+  min-height: 46px;
+  padding: 0 16px;
   border: 1px solid var(--home-border);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--home-card-bg) 88%, #fff 12%), var(--home-card-bg));
+  border-radius: 12px;
+  background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+
+  &:focus-within {
+    border-color: var(--brand-accent);
+    box-shadow: 0 0 0 3px var(--brand-accent-soft);
+  }
 }
 
 .search-icon {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  color: var(--home-accent);
+  color: var(--home-text-muted);
 }
 
 .search-input {
   width: 100%;
-  border: none;
+  border: 0;
+  outline: 0;
   background: transparent;
   color: var(--home-text);
   font-size: 14px;
-  outline: none;
-}
 
-.search-input::placeholder {
-  color: var(--home-text-muted);
+  &::placeholder {
+    color: var(--home-text-muted);
+  }
 }
 
 .state-block {
-  padding: 14px 0;
+  padding: 30px 0;
 }
 
 .articles-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px;
-  align-items: start;
+  gap: 24px;
+  align-items: stretch;
 }
 
 .article-card {
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 15px;
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
-  transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow var(--transition-base);
 
   &:hover {
-    transform: translateY(-4px);
-    border-color: var(--accent-border);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+    transform: scale(0.97);
   }
+}
+
+.article-card [data-reveal-child] {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  transition:
+    opacity 0.62s cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 0.72s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.article-card.is-revealed .article-meta,
+.article-card.is-revealed .article-title,
+.article-card.is-revealed .article-date {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.article-card.is-revealed .article-meta {
+  transition-delay: calc(var(--reveal-delay, 0ms) + 150ms);
+}
+
+.article-card.is-revealed .article-title {
+  transition-delay: calc(var(--reveal-delay, 0ms) + 270ms);
+}
+
+.article-card.is-revealed .article-date {
+  transition-delay: calc(var(--reveal-delay, 0ms) + 390ms);
+}
+
+.article-card[data-scroll-reveal].is-revealed:hover {
+  transform: scale(0.97);
+}
+
+.article-card.featured {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr);
+  min-height: 360px;
 }
 
 .article-cover-link {
   display: block;
-}
+  min-width: 0;
+  height: 100%;
 
-.article-cover {
-  position: relative;
-  height: clamp(220px, 28vw, 300px);
-  overflow: hidden;
-  background: var(--home-card-alt);
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.45s ease;
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: -4px;
   }
 }
 
-.article-card:hover .article-cover img {
-  transform: scale(1.03);
+.article-cover {
+  height: 260px;
+  overflow: hidden;
+  background: var(--home-card-alt);
 }
 
-.article-flags {
-  position: absolute;
-  top: 14px;
-  right: 14px;
+.article-card:not(.featured) .article-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.article-card.featured .article-cover {
+  height: 100%;
+}
+
+.article-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(3px);
+  transition: transform var(--transition-slow), filter 0.4s ease;
+}
+
+.article-card:hover .article-cover img {
+  filter: blur(0);
+}
+
+.article-content {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  padding: 22px 24px 24px;
+}
+
+.article-card.featured .article-content {
+  justify-content: space-between;
+  padding: 34px 36px 28px;
+}
+
+.article-meta {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-.flag-chip {
-  padding: 6px 10px;
-  border-radius: 999px;
-  backdrop-filter: blur(10px);
+.category {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--card-accent, var(--home-accent));
+  font-size: 13px;
+  font-weight: 500;
+
+  :deep(svg) {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--card-accent, var(--accent-soft)) 25%, transparent);
+  color: var(--card-accent, var(--home-text-muted));
   font-size: 12px;
-  line-height: 1;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.flag-chip.essence {
-  background: rgba(233, 174, 68, 0.82);
-}
-
-.flag-chip.top {
-  background: rgba(96, 147, 255, 0.76);
-}
-
-.article-body {
-  display: grid;
-  gap: 16px;
-  padding: 22px 22px 24px;
 }
 
 .article-title {
-  margin: 0;
-  font-size: 21px;
-  line-height: 1.35;
-  color: var(--home-text);
   display: -webkit-box;
+  margin: 0;
   overflow: hidden;
-  -webkit-line-clamp: 3;
+  color: var(--home-text);
+  font-size: 18px;
+  line-height: 1.45;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 
   a {
     color: inherit;
@@ -411,49 +532,25 @@ onBeforeUnmount(() => {
     &:hover {
       color: var(--home-accent);
     }
+
+    &:focus-visible {
+      outline: 2px solid var(--brand-accent);
+      outline-offset: 3px;
+      border-radius: 3px;
+    }
   }
 }
 
-.article-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.article-card.featured .article-title {
+  font-size: 30px;
+  line-height: 1.2;
 }
 
-.meta-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--home-card-alt) 84%, transparent);
-  color: var(--text-muted);
-  font-size: 12px;
-
-  :deep(svg) {
-    width: 15px;
-    height: 15px;
-    color: var(--home-accent);
-  }
-}
-
-.article-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.tag-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--home-accent) 16%, transparent);
-  background: color-mix(in srgb, var(--home-accent-soft) 72%, transparent);
-  color: var(--home-text);
-  font-size: 12px;
+.article-date {
+  display: block;
+  margin-top: 10px;
+  color: var(--home-text-muted);
+  font-size: 13px;
 }
 
 .empty-state {
@@ -466,7 +563,7 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   padding-top: 6px;
-  color: var(--text-muted);
+  color: var(--home-text-muted);
   font-size: 13px;
 }
 
@@ -478,10 +575,36 @@ onBeforeUnmount(() => {
 @media (max-width: 900px) {
   .feed-head {
     grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .search-shell {
+    width: min(100%, 360px);
+  }
+
+  .article-card.featured {
+    grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.95fr);
+    min-height: 280px;
+  }
+
+  .article-card.featured .article-content {
+    padding: 26px 26px 22px;
+  }
+
+  .article-card.featured .article-title {
+    font-size: 28px;
   }
 }
 
 @media (max-width: 768px) {
+  .feed-title {
+    font-size: 24px;
+  }
+
+  .search-shell {
+    width: 100%;
+  }
+
   .articles-grid {
     grid-template-columns: 1fr;
   }
@@ -490,12 +613,43 @@ onBeforeUnmount(() => {
     border-radius: 14px;
   }
 
-  .article-body {
+  .article-card.featured {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .article-cover,
+  .article-card.featured .article-cover {
+    height: 220px;
+  }
+
+  .article-content,
+  .article-card.featured .article-content {
     padding: 18px 18px 20px;
   }
 
-  .article-title {
+  .article-title,
+  .article-card.featured .article-title {
     font-size: 18px;
+    line-height: 1.35;
+  }
+
+  [data-scroll-reveal] {
+    --reveal-distance: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-scroll-reveal],
+  .article-card [data-reveal-child] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .article-card:hover,
+  .article-card[data-scroll-reveal].is-revealed:hover {
+    transform: none;
   }
 }
 </style>

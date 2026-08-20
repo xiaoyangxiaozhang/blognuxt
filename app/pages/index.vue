@@ -3,11 +3,41 @@
     <!-- 骨架屏幕布 -->
     <PageCurtain v-model="curtainReady" @opened="onCurtainOpened" />
 
-    <section class="page-top-visual">
+    <section ref="heroVisualRef" class="page-top-visual">
 
-      <div class="viewport-background">
-        <video class="viewport-bg-video" autoplay loop muted playsinline poster="~/assets/img/background.png">
-          <source src="~/assets/img/hero-bg.mp4" type="video/mp4" />
+      <div
+        class="viewport-background"
+        :class="{
+          'is-video-ready': heroVideoReady,
+          'has-video-error': heroVideoFailed
+        }"
+      >
+        <img
+          class="viewport-bg-poster"
+          src="~/assets/img/hero-poster.jpg"
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          fetchpriority="high"
+        />
+        <video
+          ref="heroVideoRef"
+          class="viewport-bg-video"
+          loop
+          muted
+          playsinline
+          preload="none"
+          poster="~/assets/img/hero-poster.jpg"
+          aria-hidden="true"
+          @playing="onHeroVideoPlaying"
+          @error="onHeroVideoError"
+        >
+          <source
+            src="~/assets/img/hero-bg-mobile.mp4"
+            type="video/mp4"
+            media="(max-width: 768px)"
+          />
+          <source src="~/assets/img/hero-bg-optimized.mp4" type="video/mp4" />
         </video>
       </div>
 
@@ -146,8 +176,15 @@ const EMPTY_HOME_PAYLOAD: HomePayload = {
 const currentPage = ref(1)
 const pageSize = 10
 const displayedIntroChars = ref<string[]>([])
+const heroVisualRef = ref<HTMLElement | null>(null)
+const heroVideoRef = ref<HTMLVideoElement | null>(null)
+const heroVideoReady = ref(false)
+const heroVideoFailed = ref(false)
 let typingTimer: ReturnType<typeof setInterval> | null = null
 let restartTimer: ReturnType<typeof setTimeout> | null = null
+let heroVideoObserver: IntersectionObserver | null = null
+let reducedMotionQuery: MediaQueryList | null = null
+let heroIsVisible = true
 
 const resolveArticleSlug = (item: Pick<ArticleListItem, 'id' | 'slug' | 'url'>) => {
   if (item.slug) return item.slug
@@ -281,6 +318,60 @@ const clearTypingTimers = () => {
   }
 }
 
+const shouldAvoidHeroVideo = () => {
+  if (!import.meta.client) {
+    return true
+  }
+
+  const connection = (navigator as Navigator & {
+    connection?: { saveData?: boolean }
+  }).connection
+
+  return Boolean(reducedMotionQuery?.matches || connection?.saveData)
+}
+
+const syncHeroVideoPlayback = async () => {
+  const video = heroVideoRef.value
+  if (!video) {
+    return
+  }
+
+  if (shouldAvoidHeroVideo() || !heroIsVisible || document.hidden || heroVideoFailed.value) {
+    video.pause()
+    return
+  }
+
+  try {
+    await video.play()
+  } catch (error) {
+    // 自动播放被浏览器阻止时保留封面，不展示黑屏或错误状态。
+    console.warn('Hero background video autoplay was skipped', error)
+  }
+}
+
+const onHeroVideoPlaying = () => {
+  if (!shouldAvoidHeroVideo()) {
+    heroVideoReady.value = true
+  }
+}
+
+const onHeroVideoError = () => {
+  heroVideoFailed.value = true
+  heroVideoReady.value = false
+}
+
+const handleMotionPreferenceChange = () => {
+  if (shouldAvoidHeroVideo()) {
+    heroVideoReady.value = false
+  }
+
+  void syncHeroVideoPlayback()
+}
+
+const handleDocumentVisibilityChange = () => {
+  void syncHeroVideoPlayback()
+}
+
 const resetTyping = () => {
   clearTypingTimers()
 
@@ -311,6 +402,22 @@ watch(typingIntroText, () => {
 onMounted(() => {
   resetTyping()
 
+  reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  reducedMotionQuery.addEventListener('change', handleMotionPreferenceChange)
+  document.addEventListener('visibilitychange', handleDocumentVisibilityChange)
+
+  if (heroVisualRef.value) {
+    heroVideoObserver = new IntersectionObserver(([entry]) => {
+      heroIsVisible = Boolean(entry?.isIntersecting)
+      void syncHeroVideoPlayback()
+    }, {
+      threshold: 0.05
+    })
+    heroVideoObserver.observe(heroVisualRef.value)
+  }
+
+  void syncHeroVideoPlayback()
+
   // SSR 数据已预加载，直接触发入场动画
   if (!pending.value) {
     triggerReveal()
@@ -319,6 +426,12 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearTypingTimers()
+  heroVideoObserver?.disconnect()
+  heroVideoObserver = null
+  reducedMotionQuery?.removeEventListener('change', handleMotionPreferenceChange)
+  reducedMotionQuery = null
+  document.removeEventListener('visibilitychange', handleDocumentVisibilityChange)
+  heroVideoRef.value?.pause()
 })
 </script>
 
@@ -363,6 +476,7 @@ onBeforeUnmount(() => {
   inset: 0;
   z-index: 1;
   overflow: hidden;
+  background: var(--hero-gradient-start, #000000);
 
   /* 顶部渐变叠加层 */
   &::after {
@@ -379,12 +493,41 @@ onBeforeUnmount(() => {
     transition: background 0.4s cubic-bezier(0.345, 0.045, 0.345, 1);
   }
 
+  .viewport-bg-poster,
   .viewport-bg-video {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
     animation: bgZoomIn 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+  }
+
+  .viewport-bg-poster {
+    z-index: 1;
+    opacity: 1;
+    transition: opacity 0.65s ease;
+  }
+
+  .viewport-bg-video {
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.65s ease;
+  }
+
+  &.is-video-ready {
+    .viewport-bg-poster {
+      opacity: 0;
+    }
+
+    .viewport-bg-video {
+      opacity: 1;
+    }
+  }
+
+  &.has-video-error .viewport-bg-video {
+    display: none;
   }
 }
 
@@ -418,6 +561,18 @@ onBeforeUnmount(() => {
   }
   to {
     transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport-background {
+    .viewport-bg-poster {
+      animation: none;
+    }
+
+    .viewport-bg-video {
+      display: none;
+    }
   }
 }
 
