@@ -71,8 +71,14 @@
               <button class="action-btn" type="button" title="RSS" aria-label="RSS">
                 <IconMaterialSymbolsRssFeed />
               </button>
-              <button class="action-btn" type="button" title="通知" aria-label="通知">
-                 <IconMaterialSymbolsNotifications />
+              <button
+                class="action-btn action-subscribe"
+                type="button"
+                title="订阅更新"
+                aria-label="订阅更新"
+                @click="subscribeDialogOpen = true"
+              >
+                <IconMaterialSymbolsNotifications />
               </button>
               <button class="action-btn" type="button" title="收藏" aria-label="收藏">
                 <IconMaterialSymbolsStarOutline />
@@ -118,6 +124,15 @@
             </nav>
 
             <div class="island-actions">
+              <button
+                class="action-btn action-subscribe"
+                type="button"
+                title="订阅更新"
+                aria-label="订阅更新"
+                @click="subscribeDialogOpen = true"
+              >
+                <IconMaterialSymbolsNotifications />
+              </button>
               <button class="action-btn action-theme" :title="themeButtonTitle" type="button" @click="toggleTheme">
                 <IconMaterialSymbolsDarkModeRounded v-if="theme === 'midnight-blue'"  /> 
                 <IconMaterialSymbolsWbSunnyRounded  v-else/>
@@ -128,6 +143,8 @@
       </div>
     </div>
   </header>
+
+  <SubscribeDialog v-model="subscribeDialogOpen" />
 </template>
 
 <script setup lang="ts">
@@ -138,6 +155,7 @@ import IconMaterialSymbolsRssFeed from '~icons/material-symbols/rss-feed'
 import IconMaterialSymbolsSearch from '~icons/material-symbols/search'
 import IconMaterialSymbolsStarOutline from '~icons/material-symbols/star-outline'
 import IconMaterialSymbolsWbSunnyRounded from '~icons/material-symbols/wb-sunny-rounded'
+import SubscribeDialog from '~/components/shell/SubscribeDialog.vue'
 
 type ThemeMode = 'midnight-blue' | 'blue-white'
 type HeaderState = 'full' | 'logo' | 'island'
@@ -145,6 +163,7 @@ type HeaderState = 'full' | 'logo' | 'island'
 const theme = ref<ThemeMode>('midnight-blue')
 const headerState = ref<HeaderState>('full')
 const brandMenuOpen = ref(false)
+const subscribeDialogOpen = ref(false)
 let brandMenuCloseTimer: ReturnType<typeof setTimeout> | null = null
 const lastScrollY = ref(0)
 const lastDirection = ref<'up' | 'down' | null>(null)
@@ -897,7 +916,7 @@ onUnmounted(() => {
     gap: 18px;
   }
 
-  .header-actions .action-btn:not(.action-theme) {
+  .header-actions .action-btn:not(.action-theme):not(.action-subscribe) {
     display: none;
   }
 

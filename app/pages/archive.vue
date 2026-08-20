@@ -216,9 +216,7 @@ onMounted(() => {
 <style scoped lang="scss">
 .blog-archive {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, var(--home-accent-soft) 0%, transparent 36%),
-    linear-gradient(180deg, var(--home-surface-elevated) 0%, var(--home-surface) 100%);
+  background: var(--home-surface);
   color: var(--home-text);
   padding: 80px 0 72px;
 }
