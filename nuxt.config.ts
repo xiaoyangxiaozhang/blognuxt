@@ -69,7 +69,10 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.scss'],
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://xiaoyangxiaozhang.xyz/api/v1'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://xiaoyangxiaozhang.xyz/api/v1',
+      analyticsEnabled: process.env.NUXT_PUBLIC_ANALYTICS_ENABLED
+        ? process.env.NUXT_PUBLIC_ANALYTICS_ENABLED === 'true'
+        : process.env.NODE_ENV !== 'development'
     }
   },
 vite: {
