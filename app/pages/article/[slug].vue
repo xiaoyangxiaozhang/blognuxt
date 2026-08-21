@@ -57,12 +57,15 @@ import { useCommentAuth } from '~/composables/useCommentAuth'
 import { proxyImageUrl } from '~/utils/image'
 import { formatDate } from '~/utils/date'
 import { renderMarkdown } from '~/utils/markdown'
+import defaultShareImage from '~/assets/img/hero-poster.jpg'
 
 interface ArticleDetailData {
   title: string
   slug: string
   url?: string
   content: string
+  summary?: string
+  ai_summary?: string
   cover: string
   publish_time: string
   category?: {
@@ -178,6 +181,84 @@ const pageError = computed(() => data.value?.error ?? '')
 const commentError = computed(() => commentsPayload.value?.error || '')
 const articleContentHtml = computed(() => renderMarkdown(article.value?.content))
 const commentList = computed(() => normalizeCommentList(commentsPayload.value?.response?.data?.list))
+
+const config = useRuntimeConfig()
+const siteUrl = String(config.public.siteUrl || '').replace(/\/$/, '')
+
+const toAbsoluteShareUrl = (value?: string | null) => {
+  const fallback = new URL(defaultShareImage, `${siteUrl}/`).href
+  const normalized = value?.trim() || ''
+
+  if (!normalized) {
+    return fallback
+  }
+
+  if (normalized.startsWith('/')) {
+    return `${siteUrl}${normalized}`
+  }
+
+  // Let the public same-origin image proxy expose external covers over HTTPS.
+  if (/^https?:\/\//i.test(normalized)) {
+    return `${siteUrl}/proxy-image?url=${encodeURIComponent(normalized)}`
+  }
+
+  try {
+    return new URL(normalized, `${siteUrl}/`).href
+  } catch {
+    return fallback
+  }
+}
+
+const articleUrl = computed(() =>
+  `${siteUrl}/article/${encodeURIComponent(articleSlug.value)}`
+)
+
+const articleDescription = computed(() => {
+  const source =
+    article.value?.summary ||
+    article.value?.ai_summary ||
+    article.value?.content ||
+    ''
+
+  return source
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/[#>*_~`]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160)
+})
+
+const articleShareImage = computed(() => toAbsoluteShareUrl(article.value?.cover))
+
+useSeoMeta({
+  title: () => article.value ? `${article.value.title}｜小羊嚣张` : '小羊嚣张',
+  description: () => articleDescription.value,
+  ogTitle: () => article.value?.title || '小羊嚣张',
+  ogDescription: () => articleDescription.value,
+  ogType: 'article',
+  ogUrl: () => articleUrl.value,
+  ogImage: () => articleShareImage.value,
+  ogImageAlt: () => article.value?.title || '文章封面',
+  ogSiteName: '小羊嚣张',
+  twitterCard: 'summary_large_image',
+  twitterTitle: () => article.value?.title || '小羊嚣张',
+  twitterDescription: () => articleDescription.value,
+  twitterImage: () => articleShareImage.value
+})
+
+useHead(() => ({
+  link: [{ rel: 'canonical', href: articleUrl.value }],
+  meta: [
+    { property: 'og:image:secure_url', content: articleShareImage.value },
+    ...(article.value?.publish_time
+      ? [{ property: 'article:published_time', content: article.value.publish_time }]
+      : []),
+    ...(article.value?.category?.name
+      ? [{ property: 'article:section', content: article.value.category.name }]
+      : [])
+  ]
+}))
 
 const handleFormUpdate = (nextForm: ArticleCommentForm) => {
   commentForm.nickname = nextForm.nickname

@@ -70,6 +70,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'https://xiaoyangxiaozhang.xyz/api/v1',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://xiaoyangxiaozhang.xyz',
       analyticsEnabled: process.env.NUXT_PUBLIC_ANALYTICS_ENABLED
         ? process.env.NUXT_PUBLIC_ANALYTICS_ENABLED === 'true'
         : process.env.NODE_ENV !== 'development'
