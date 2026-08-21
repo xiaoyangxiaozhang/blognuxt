@@ -22,7 +22,8 @@
                 @mouseenter="openBrandMenu"
                 @click="openBrandMenu"
               >
-                小羊嚣张
+                <img class="brand-logo" :src="logoUrl" alt="" aria-hidden="true" />
+                <span>小羊嚣张</span>
                 <span class="brand-menu-arrow" :class="{ open: brandMenuOpen }">▾</span>
               </button>
               <Transition name="brand-menu">
@@ -100,7 +101,7 @@
       >
         <div class="floating-center">
           <button class="mini-logo" type="button" aria-label="返回顶部" @click="scrollToTop">
-            <span class="mini-logo-mark">羊</span>
+            <img class="mini-logo-mark" :src="logoUrl" alt="" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -112,7 +113,7 @@
         <div class="floating-center">
           <div class="island-shell">
             <button class="mini-logo mini-logo-inline" type="button" aria-label="返回顶部" @click="scrollToTop">
-              <span class="mini-logo-mark">羊</span>
+              <img class="mini-logo-mark" :src="logoUrl" alt="" aria-hidden="true" />
             </button>
 
             <nav class="island-nav">
@@ -156,6 +157,7 @@ import IconMaterialSymbolsSearch from '~icons/material-symbols/search'
 import IconMaterialSymbolsStarOutline from '~icons/material-symbols/star-outline'
 import IconMaterialSymbolsWbSunnyRounded from '~icons/material-symbols/wb-sunny-rounded'
 import SubscribeDialog from '~/components/shell/SubscribeDialog.vue'
+import logoUrl from '~/assets/img/logo-sheep.png'
 
 type ThemeMode = 'midnight-blue' | 'blue-white'
 type HeaderState = 'full' | 'logo' | 'island'
@@ -462,6 +464,22 @@ onUnmounted(() => {
   }
 }
 
+.brand-logo,
+.mini-logo-mark {
+  display: block;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: invert(1);
+  transition: filter 0.4s ease;
+}
+
+:global([data-theme='blue-white']) .brand-logo,
+:global([data-theme='blue-white']) .mini-logo-mark {
+  filter: none;
+}
+
 .brand-menu-wrap {
   position: relative;
   flex: 0 0 auto;
@@ -615,16 +633,8 @@ onUnmounted(() => {
 }
 
 .mini-logo-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--brand-accent);
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-shadow:
-    0 0 8px rgba(129, 131, 255, 0.16),
-    0 0 16px rgba(129, 131, 255, 0.08);
+  width: 38px;
+  height: 38px;
 }
 
 .nav-menu {
@@ -993,11 +1003,8 @@ onUnmounted(() => {
   }
 
   .mini-logo-mark {
-    min-width: auto;
-    height: auto;
-    padding: 0;
-    color: var(--brand-accent);
-    font-size: 11px;
+    width: 30px;
+    height: 30px;
   }
 
 }
