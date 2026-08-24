@@ -14,13 +14,27 @@
       >
         <img
           class="viewport-bg-poster"
-          src="~/assets/img/hero-poster.jpg"
+          :src="heroPosterUrl"
           alt=""
           aria-hidden="true"
           decoding="async"
           fetchpriority="high"
         />
         <video
+          v-if="heroBackgroundIsVideo"
+          ref="heroVideoRef"
+          class="viewport-bg-video"
+          :src="heroBackgroundUrl"
+          loop
+          muted
+          playsinline
+          preload="none"
+          aria-hidden="true"
+          @playing="onHeroVideoPlaying"
+          @error="onHeroVideoError"
+        />
+        <video
+          v-else-if="!heroBackgroundUrl"
           ref="heroVideoRef"
           class="viewport-bg-video"
           loop
@@ -112,6 +126,7 @@
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 import HomeFeaturePanel from '~/components/home/HomeFeaturePanel.vue'
 import HomeNewestSection from '~/components/home/HomeNewestSection.vue'
+import defaultHeroPoster from '~/assets/img/hero-poster.jpg'
 import { getArticleList } from '~/services/api/article'
 import { getCategoryList } from '~/services/api/category'
 import { getTagList } from '~/services/api/tag'
@@ -119,6 +134,7 @@ import { getBasicSettings, getSettings } from '~/services/api/user'
 import type { ArticleListItem, CategoryItem, TagItem } from '~/types/api'
 import { formatDate } from '~/utils/date'
 import { proxyImageUrl } from '~/utils/image'
+import { isVideoUrl, parseBlogJson } from '~/composables/useBlogSettings'
 import IconMaterialSymbolsMailOutlineRounded from '~icons/material-symbols/mail-outline-rounded'
 import IconMdiEarth from '~icons/mdi/earth'
 
@@ -256,6 +272,20 @@ const { data, pending } = await useAsyncData<HomePayload>('home-page', buildHome
 const homeData = computed(() => data.value || EMPTY_HOME_PAYLOAD)
 const basicSettings = computed(() => homeData.value.basicSettings)
 const blogSettings = computed(() => homeData.value.blogSettings)
+const heroBackgroundUrl = computed(() => blogSettings.value['blog.background_image']?.trim() || '')
+const heroBackgroundIsVideo = computed(() => isVideoUrl(heroBackgroundUrl.value))
+const heroPosterUrl = computed(() => {
+  const screenshot = blogSettings.value['blog.screenshot']?.trim() || ''
+  if (heroBackgroundIsVideo.value && screenshot && !isVideoUrl(screenshot)) {
+    return proxyImageUrl(screenshot)
+  }
+
+  if (heroBackgroundUrl.value && !heroBackgroundIsVideo.value) {
+    return proxyImageUrl(heroBackgroundUrl.value)
+  }
+
+  return defaultHeroPoster
+})
 
 const isRevealed = ref(false)
 const curtainReady = ref(false)
@@ -303,7 +333,13 @@ const sidebarSocialList = computed<SidebarSocialItem[]>(() => {
     return []
   }
 })
-const typingIntroText = computed(() => authorDesc.value || '欢迎来到这里。')
+const typingIntroText = computed(() => {
+  const typingTexts = parseBlogJson<string[]>(blogSettings.value['blog.typing_texts'], [])
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+  return typingTexts[0] || blogSettings.value['blog.slogan'] || blogSettings.value['blog.subtitle'] || authorDesc.value || '欢迎来到这里。'
+})
 const announcementHtml = computed(() => blogSettings.value['blog.announcement'] || '')
 
 const clearTypingTimers = () => {

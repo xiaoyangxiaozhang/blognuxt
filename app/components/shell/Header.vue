@@ -23,7 +23,7 @@
                 @click="openBrandMenu"
               >
                 <img class="brand-logo" :src="logoUrl" alt="" aria-hidden="true" />
-                <span>小羊嚣张</span>
+                <span>{{ siteTitle }}</span>
                 <span class="brand-menu-arrow" :class="{ open: brandMenuOpen }">▾</span>
               </button>
               <Transition name="brand-menu">
@@ -158,11 +158,14 @@ import IconMaterialSymbolsStarOutline from '~icons/material-symbols/star-outline
 import IconMaterialSymbolsWbSunnyRounded from '~icons/material-symbols/wb-sunny-rounded'
 import SubscribeDialog from '~/components/shell/SubscribeDialog.vue'
 import logoUrl from '~/assets/img/logo-sheep.png'
+import { useBlogSettings } from '~/composables/useBlogSettings'
 
 type ThemeMode = 'midnight-blue' | 'blue-white'
 type HeaderState = 'full' | 'logo' | 'island'
 
 const theme = ref<ThemeMode>('midnight-blue')
+const { settings: blogSettings } = useBlogSettings()
+const siteTitle = computed(() => blogSettings.value['blog.title'] || '小羊嚣张')
 const headerState = ref<HeaderState>('full')
 const brandMenuOpen = ref(false)
 const subscribeDialogOpen = ref(false)

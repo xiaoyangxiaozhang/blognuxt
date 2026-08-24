@@ -2,10 +2,15 @@
 import { getBasicSettings } from '~/services/api/user'
 import { getArticleList } from '~/services/api/article'
 import { proxyImageUrl } from '~/utils/image'
+import { parseBlogJson, useBlogSettings } from '~/composables/useBlogSettings'
 import IconMdiGithub from '~icons/mdi/github'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'
+import IconRiMailLine from '~icons/ri/mail-line'
+import IconRiTwitterXLine from '~icons/ri/twitter-x-line'
+import IconMdiEarth from '~icons/mdi/earth'
 
 const { data: settingsData } = await useAsyncData('footer-settings', () => getBasicSettings())
+const { settings: blogSettings } = useBlogSettings()
 
 const authorName = computed(() => settingsData.value?.data?.['basic.author'] || '小羊嚣张')
 const authorAvatar = computed(() => proxyImageUrl(settingsData.value?.data?.['basic.author_avatar']) || '~/assets/img/dashboard.png')
@@ -19,6 +24,43 @@ const authorGithub = computed(() => {
   )
 })
 const socialBilibili = computed(() => settingsData.value?.data?.['basic.bilibili'] || '')
+const footerSlogan = computed(() => blogSettings.value['blog.slogan'] || '让美好持续发生')
+
+interface FooterSocialItem {
+  name: string
+  url: string
+  icon: string
+  position?: string
+}
+
+interface FooterLinkItem {
+  name: string
+  url: string
+}
+
+const configuredFooterSocials = computed<FooterSocialItem[]>(() =>
+  parseBlogJson<FooterSocialItem[]>(blogSettings.value['blog.footer_social'], [])
+    .filter((item) => item.url?.trim())
+)
+const footerSocials = computed<FooterSocialItem[]>(() => {
+  if (configuredFooterSocials.value.length > 0) return configuredFooterSocials.value
+
+  return [
+    ...(authorGithub.value ? [{ name: 'GitHub', url: authorGithub.value, icon: 'github-line' }] : []),
+    ...(socialBilibili.value ? [{ name: 'Bilibili', url: socialBilibili.value, icon: 'bilibili-line' }] : [])
+  ]
+})
+const footerLinks = computed<FooterLinkItem[]>(() =>
+  parseBlogJson<FooterLinkItem[]>(blogSettings.value['blog.footer_links'], [])
+    .filter((item) => item.name?.trim() && item.url?.trim())
+)
+const footerIconMap: Record<string, any> = {
+  'github-line': IconMdiGithub,
+  'bilibili-line': IconRiBilibiliLine,
+  'mail-line': IconRiMailLine,
+  'twitter-x-line': IconRiTwitterXLine
+}
+const footerIcon = (icon: string) => footerIconMap[icon] || IconMdiEarth
 
 const copyrightYear = computed(() => {
   const year = new Date().getFullYear()
@@ -45,30 +87,21 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
           <img :src="authorAvatar" alt="作者头像" class="author-avatar" />
           <div>
             <span class="author-name">{{ authorName }}</span>
-            <p class="author-tagline">让美好持续发生</p>
+            <p class="author-tagline">{{ footerSlogan }}</p>
           </div>
         </div>
 
         <div class="footer-socials">
           <a
-            v-if="authorGithub"
-            :href="authorGithub"
+            v-for="item in footerSocials"
+            :key="`${item.name}-${item.url}`"
+            :href="item.url"
             target="_blank"
             rel="noopener noreferrer"
             class="footer-social-link"
-            title="GitHub"
+            :title="item.name"
           >
-            <IconMdiGithub />
-          </a>
-          <a
-            v-if="socialBilibili"
-            :href="socialBilibili"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="footer-social-link"
-            title="哔哩哔哩"
-          >
-            <IconRiBilibiliLine />
+            <component :is="footerIcon(item.icon)" />
           </a>
         </div>
       </div>
@@ -89,6 +122,11 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
       </div>
 
       <div class="footer-bottom">
+        <nav v-if="footerLinks.length" class="footer-links" aria-label="页脚链接">
+          <NuxtLink v-for="item in footerLinks" :key="`${item.name}-${item.url}`" :to="item.url" class="footer-link">
+            {{ item.name }}
+          </NuxtLink>
+        </nav>
         <p class="copyright">
           Copyright &copy; {{ copyrightYear }} {{ authorName }}
           <template v-if="icp">
@@ -210,6 +248,24 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
 
 .footer-bottom {
   text-align: center;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.footer-link {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--accent);
+  }
 }
 
 .copyright {
