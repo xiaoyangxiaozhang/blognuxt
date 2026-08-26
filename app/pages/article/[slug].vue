@@ -240,7 +240,6 @@ useSeoMeta({
   ogUrl: () => articleUrl.value,
   ogImage: () => articleShareImage.value,
   ogImageAlt: () => article.value?.title || '文章封面',
-  ogSiteName: '小羊嚣张',
   twitterCard: 'summary_large_image',
   twitterTitle: () => article.value?.title || '小羊嚣张',
   twitterDescription: () => articleDescription.value,

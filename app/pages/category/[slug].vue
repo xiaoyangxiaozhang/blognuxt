@@ -42,7 +42,7 @@ useHead({
 .filtered-shell {
   width: min(1000px, calc(100% - 60px));
   margin: 0 auto;
-  padding: 72px 0 80px;
+  padding: 104px 0 80px;
 }
 
 .back-link {
@@ -76,7 +76,7 @@ useHead({
 @media (max-width: 768px) {
   .filtered-shell {
     width: min(100%, calc(100% - 60px));
-    padding: 48px 0 56px;
+    padding: 96px 0 56px;
   }
 }
 </style>

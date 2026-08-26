@@ -76,7 +76,7 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .categories-page {
-  padding: 72px 0 80px;
+  padding: 104px 0 80px;
 }
 
 .categories-wrapper {
@@ -193,7 +193,7 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .categories-page {
-    padding: 48px 0 56px;
+    padding: 96px 0 56px;
   }
 
   .page-title {

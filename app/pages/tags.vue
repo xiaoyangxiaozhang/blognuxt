@@ -139,7 +139,7 @@ onMounted(() => {
 .content-shell {
   width: min(1000px, calc(100% - 60px));
   margin: 0 auto;
-  padding: 72px 0 56px;
+  padding: 104px 0 56px;
 }
 
 .tag-header {
@@ -296,7 +296,7 @@ onMounted(() => {
 @media (max-width: 768px) {
   .content-shell {
     width: min(100%, calc(100% - 28px));
-    padding: 40px 0 56px;
+    padding: 96px 0 56px;
   }
 }
 
