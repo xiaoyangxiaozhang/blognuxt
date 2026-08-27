@@ -4,5 +4,6 @@ export type SettingGroupType =
   | 'notification'
   | 'upload'
   | 'ai'
+  | 'chatbot'
   | 'oauth'
   | 'wechat'

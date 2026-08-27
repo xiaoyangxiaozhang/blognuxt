@@ -21,7 +21,7 @@
               </div>
             </div>
 
-            <p class="profile-signature">{{ authorDesc }}</p>
+            <p class="profile-signature">{{ typingSignatureText }}</p>
           </div>
         </div>
       </header>
@@ -132,9 +132,10 @@ import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import { COMMENT_TARGETS, normalizeCommentList } from '~/utils/comments'
 import { createComment, getCommentList } from '~/services/api/comments'
 import { getMomentList } from '~/services/api/moments'
-import { getBasicSettings } from '~/services/api/user'
+import { getBasicSettings, getSettings } from '~/services/api/user'
 import { proxyImageUrl } from '~/utils/image'
 import { formatDate } from '~/utils/date'
+import { parseBlogJson } from '~/composables/useBlogSettings'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 
@@ -161,9 +162,10 @@ const { data, pending } = await useAsyncData(
   'dynamic-page',
   async () => {
     try {
-      const [momentsResponse, settingsResponse] = await Promise.all([
+      const [momentsResponse, settingsResponse, blogSettingsResponse] = await Promise.all([
         getMomentList({ page_size: 20 }),
-        getBasicSettings()
+        getBasicSettings(),
+        getSettings('blog')
       ])
 
       return {
@@ -177,6 +179,7 @@ const { data, pending } = await useAsyncData(
             location: item.content?.location || ''
           })),
         settings: settingsResponse.data || {},
+        blogSettings: blogSettingsResponse.data || {},
         error: ''
       }
     } catch (error) {
@@ -184,6 +187,7 @@ const { data, pending } = await useAsyncData(
       return {
         moments: [] as DynamicMomentItem[],
         settings: {} as Record<string, string>,
+        blogSettings: {} as Record<string, string>,
         error: 'Failed to load moments.'
       }
     }
@@ -221,12 +225,20 @@ const {
 
 const moments = computed<DynamicMomentItem[]>(() => data.value?.moments || [])
 const settings = computed<Record<string, string>>(() => data.value?.settings || {})
+const blogSettings = computed<Record<string, string>>(() => data.value?.blogSettings || {})
 const pageError = computed(() => data.value?.error || '')
 const commentError = computed(() => commentsPayload.value?.error || '')
 
 const authorName = computed(() => settings.value['basic.author'] || 'XiaoLin')
 const authorDesc = computed(() => settings.value['basic.author_desc'] || 'Collecting daily notes and small inspirations.')
 const authorAvatar = computed(() => proxyImageUrl(settings.value['basic.author_avatar']) || DEFAULT_AVATAR)
+const typingSignatureText = computed(() => {
+  const typingTexts = parseBlogJson<string[]>(blogSettings.value['blog.typing_texts'], [])
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+  return typingTexts[0] || blogSettings.value['blog.slogan'] || blogSettings.value['blog.subtitle'] || authorDesc.value
+})
 
 const commentSubmitting = ref(false)
 const commentPanelRef = ref<HTMLElement | null>(null)
@@ -409,7 +421,6 @@ const formatMomentDate = formatDate
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
   justify-self: end;
   align-self: end;
-  border: 3px solid rgba(255, 255, 255, 0.92);
 
   img {
     width: 100%;

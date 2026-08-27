@@ -180,7 +180,8 @@ const brandRoutes = [
   { label: '标签', to: '/tags' },
   { label: '友链', to: '/friends' },
   { label: '动态', to: '/dynamic' },
-  { label: '留言', to: '/message' }
+  { label: '留言', to: '/message' },
+  { label: 'ITom Lab', to: '/itom' }
 ]
 
 const NAV_SWITCH_OFFSET = 48
@@ -774,7 +775,19 @@ onUnmounted(() => {
   height: 36px;
   padding: 0;
   background: transparent;
-  border-color: transparent;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+
+  &:hover,
+  &:focus,
+  &:focus-visible,
+  &:active {
+    background: transparent;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+  }
 }
 
 .action-btn :deep(svg) {
