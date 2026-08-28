@@ -84,7 +84,13 @@
               <button class="action-btn" type="button" title="收藏" aria-label="收藏">
                 <IconMaterialSymbolsStarOutline />
               </button>
-              <button class="action-btn" type="button" title="搜索" aria-label="搜索">
+              <button
+                class="action-btn action-search"
+                type="button"
+                title="搜索"
+                aria-label="搜索"
+                @click="searchDialogOpen = true"
+              >
                 <IconMaterialSymbolsSearch />
               </button>
               <button class="action-btn" type="button" title="菜单" aria-label="菜单">
@@ -134,6 +140,15 @@
               >
                 <IconMaterialSymbolsNotifications />
               </button>
+              <button
+                class="action-btn action-search"
+                type="button"
+                title="搜索"
+                aria-label="搜索"
+                @click="searchDialogOpen = true"
+              >
+                <IconMaterialSymbolsSearch />
+              </button>
               <button class="action-btn action-theme" :title="themeButtonTitle" type="button" @click="toggleTheme">
                 <IconMaterialSymbolsDarkModeRounded v-if="theme === 'midnight-blue'"  /> 
                 <IconMaterialSymbolsWbSunnyRounded  v-else/>
@@ -146,6 +161,7 @@
   </header>
 
   <SubscribeDialog v-model="subscribeDialogOpen" />
+  <SearchDialog v-model="searchDialogOpen" />
 </template>
 
 <script setup lang="ts">
@@ -156,6 +172,7 @@ import IconMaterialSymbolsRssFeed from '~icons/material-symbols/rss-feed'
 import IconMaterialSymbolsSearch from '~icons/material-symbols/search'
 import IconMaterialSymbolsStarOutline from '~icons/material-symbols/star-outline'
 import IconMaterialSymbolsWbSunnyRounded from '~icons/material-symbols/wb-sunny-rounded'
+import SearchDialog from '~/components/shell/SearchDialog.vue'
 import SubscribeDialog from '~/components/shell/SubscribeDialog.vue'
 import logoUrl from '~/assets/img/logo-sheep.png'
 import { useBlogSettings } from '~/composables/useBlogSettings'
@@ -169,6 +186,7 @@ const siteTitle = computed(() => blogSettings.value['blog.title'] || '小羊嚣�
 const headerState = ref<HeaderState>('full')
 const brandMenuOpen = ref(false)
 const subscribeDialogOpen = ref(false)
+const searchDialogOpen = ref(false)
 let brandMenuCloseTimer: ReturnType<typeof setTimeout> | null = null
 const lastScrollY = ref(0)
 const lastDirection = ref<'up' | 'down' | null>(null)
@@ -246,6 +264,7 @@ const handleBrandMenuFocusOut = (event: FocusEvent) => {
 const route = useRoute()
 watch(() => route.fullPath, () => {
   closeBrandMenu()
+  searchDialogOpen.value = false
 })
 
 const scrollToTop = () => {
@@ -774,7 +793,19 @@ onUnmounted(() => {
   height: 36px;
   padding: 0;
   background: transparent;
-  border-color: transparent;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+
+  &:hover,
+  &:focus,
+  &:focus-visible,
+  &:active {
+    background: transparent;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+  }
 }
 
 .action-btn :deep(svg) {
@@ -929,7 +960,7 @@ onUnmounted(() => {
     gap: 18px;
   }
 
-  .header-actions .action-btn:not(.action-theme):not(.action-subscribe) {
+  .header-actions .action-btn:not(.action-theme):not(.action-subscribe):not(.action-search) {
     display: none;
   }
 

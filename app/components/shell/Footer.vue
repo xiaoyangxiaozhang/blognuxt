@@ -3,7 +3,7 @@ import { getBasicSettings } from '~/services/api/user'
 import { getArticleList } from '~/services/api/article'
 import { proxyImageUrl } from '~/utils/image'
 import { parseBlogJson, useBlogSettings } from '~/composables/useBlogSettings'
-import IconMdiGithub from '~icons/mdi/github'
+import IconRiGithubLine from '~icons/ri/github-line'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'
 import IconRiMailLine from '~icons/ri/mail-line'
 import IconRiTwitterXLine from '~icons/ri/twitter-x-line'
@@ -55,12 +55,45 @@ const footerLinks = computed<FooterLinkItem[]>(() =>
     .filter((item) => item.name?.trim() && item.url?.trim())
 )
 const footerIconMap: Record<string, any> = {
-  'github-line': IconMdiGithub,
+  'github-line': IconRiGithubLine,
   'bilibili-line': IconRiBilibiliLine,
   'mail-line': IconRiMailLine,
   'twitter-x-line': IconRiTwitterXLine
 }
 const footerIcon = (icon: string) => footerIconMap[icon] || IconMdiEarth
+
+interface FooterBrandColor {
+  bg: string
+  color: string
+  hoverBg: string
+  hoverColor: string
+  border: string
+}
+
+const footerBrandColors: Record<string, FooterBrandColor> = {
+  'github-line': { bg: '#24292e', color: '#fff', hoverBg: '#1b1f23', hoverColor: '#fff', border: '#24292e' },
+  'bilibili-line': { bg: '#00A1D6', color: '#fff', hoverBg: '#0088b3', hoverColor: '#fff', border: '#00A1D6' },
+  'twitter-x-line': { bg: '#000', color: '#fff', hoverBg: '#1a1a1a', hoverColor: '#fff', border: '#000' },
+  'mail-line': { bg: '#EA4335', color: '#fff', hoverBg: '#c93427', hoverColor: '#fff', border: '#EA4335' }
+}
+
+const footerSocialStyle = (icon: string): Record<string, string> => {
+  const brand = footerBrandColors[icon] || {
+    bg: 'var(--home-card-alt)',
+    color: 'var(--home-text-muted)',
+    hoverBg: 'var(--brand-accent-soft)',
+    hoverColor: 'var(--brand-accent)',
+    border: 'var(--home-border)'
+  }
+
+  return {
+    '--sl-bg': brand.bg,
+    '--sl-color': brand.color,
+    '--sl-hover-bg': brand.hoverBg,
+    '--sl-hover-color': brand.hoverColor,
+    '--sl-border': brand.border
+  }
+}
 
 const copyrightYear = computed(() => {
   const year = new Date().getFullYear()
@@ -100,6 +133,7 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
             rel="noopener noreferrer"
             class="footer-social-link"
             :title="item.name"
+            :style="footerSocialStyle(item.icon)"
           >
             <component :is="footerIcon(item.icon)" />
           </a>
@@ -190,32 +224,41 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
 
 .footer-socials {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .footer-social-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  color: var(--text-muted);
-  background: var(--bg-soft);
-  transition:
-    color 0.25s ease,
-    background 0.25s ease,
-    transform 0.2s ease;
+  font-size: 20px;
+  text-decoration: none;
+  color: var(--sl-color, var(--home-text-muted));
+  background: var(--sl-bg, var(--home-card-alt));
+  border: 1px solid var(--sl-border, var(--home-border));
+  transition: all 0.25s cubic-bezier(0.345, 0.045, 0.345, 1);
 
   :deep(svg) {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
 
-  &:hover {
-    color: var(--accent);
-    background: var(--accent-soft);
-    transform: translateY(-2px);
+  &:hover,
+  &:focus-visible {
+    color: var(--sl-hover-color, var(--brand-accent));
+    background: var(--sl-hover-bg, var(--brand-accent-soft));
+    border-color: var(--sl-hover-color, var(--brand-accent));
+    transform: translateY(-2px) scale(1.12);
+    border-radius: 12px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--sl-hover-color, var(--brand-accent));
+    outline-offset: 2px;
   }
 }
 

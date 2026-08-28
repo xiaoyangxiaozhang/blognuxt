@@ -1,51 +1,93 @@
 <template>
-  <section class="categories-page">
-    <!-- 骨架屏幕布 -->
+  <div class="categories-page">
     <PageCurtain v-model="curtainReady" @opened="onCurtainOpened" />
-    <div class="categories-wrapper">
-      <div class="page-head">
-        <h1 class="page-title">分类</h1>
-        <p class="page-subtitle">按主题浏览所有文章</p>
-      </div>
+    <section class="content-section">
+      <div class="content-shell">
+        <div v-if="pending" class="loading-container">
+          <el-skeleton :rows="8" animated />
+        </div>
 
-      <div v-if="categories.length" class="categories-grid">
-        <NuxtLink
-          v-for="item in categories"
-          :key="item.id"
-          :to="{
-            path: item.url || `/category/${item.slug}`,
-            query: { name: item.name }
-          }"
-          class="category-card"
-        >
-          <div class="category-icon-label">
-            <span class="category-icon">
-              <IconMaterialSymbolsFolderOpenOutlineRounded />
-            </span>
-            <span class="category-name">{{ item.name }}</span>
+        <div v-else-if="pageError" class="error-container">
+          <el-alert :title="pageError" type="error" show-icon />
+        </div>
+
+        <template v-else>
+          <div class="category-header">
+            <h2 class="category-header-title">
+              文章分类
+              <span class="category-header-underline"></span>
+            </h2>
           </div>
-          <span class="category-count">{{ item.count }} 篇</span>
-        </NuxtLink>
-      </div>
 
-      <div v-else class="empty-state">
-        <el-empty description="暂无分类数据" />
+          <div v-if="sortedCategories.length === 0" class="empty-state">
+            <h3>还没有分类</h3>
+            <p>等文章接入更多分类后，这里会自动丰富起来。</p>
+          </div>
+
+          <div v-else class="category-grid">
+            <NuxtLink
+              v-for="category in sortedCategories"
+              :key="category.id"
+              :to="{
+                path: category.url || `/category/${category.slug}`,
+                query: { name: category.name }
+              }"
+              class="category-card"
+            >
+              <div class="category-card-inner">
+                <span class="category-total">共 {{ category.displayCount }} 篇文章</span>
+                <h3 class="category-name">{{ category.name }}</h3>
+                <span class="category-mark" aria-hidden="true">
+                  <IconMaterialSymbolsFolderOpenOutlineRounded />
+                </span>
+              </div>
+            </NuxtLink>
+          </div>
+        </template>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
 import IconMaterialSymbolsFolderOpenOutlineRounded from '~icons/material-symbols/folder-open-outline-rounded'
 import { getCategoryList } from '~/services/api/category'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
+import type { CategoryItem } from '~/types/api'
 
-const { data, pending } = await useAsyncData('categories-page', async () => {
-  const res = await getCategoryList({ page_size: 10 })
-  return res.data.list || []
-})
+interface CategoryCardItem extends CategoryItem {
+  displayCount: number
+}
 
-const categories = computed(() => data.value || [])
+const { data, pending } = await useAsyncData(
+  'categories-page',
+  async () => {
+    try {
+      const response = await getCategoryList({ page_size: 50 })
+      const list = response.data.list || []
+      const items: CategoryCardItem[] = list
+        .map((item) => ({
+          ...item,
+          displayCount: item.count || 0
+        }))
+        .sort((a, b) => b.displayCount - a.displayCount)
+
+      return {
+        categories: items,
+        error: ''
+      }
+    } catch (error) {
+      console.error(error)
+      return {
+        categories: [] as CategoryCardItem[],
+        error: '分类页加载失败，请稍后重试'
+      }
+    }
+  }
+)
+
+const sortedCategories = computed(() => data.value?.categories || [])
+const pageError = computed(() => data.value?.error || '')
 
 const isRevealed = ref(false)
 const curtainReady = ref(false)
@@ -60,9 +102,8 @@ const onCurtainOpened = () => {
   isRevealed.value = true
 }
 
-// 检查数据加载状态触发入场动画
-watch(pending, (val) => {
-  if (!val && import.meta.client) {
+watch(pending, (value) => {
+  if (!value && import.meta.client) {
     triggerReveal()
   }
 })
@@ -76,131 +117,200 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .categories-page {
-  padding: 104px 0 80px;
+  min-height: 100vh;
+  background: var(--home-surface);
+  color: var(--home-text);
 }
 
-.categories-wrapper {
+.content-section {
+  min-height: 100vh;
+  background: var(--home-surface);
+}
+
+.content-shell {
   width: min(1000px, calc(100% - 60px));
   margin: 0 auto;
+  padding: 104px 0 56px;
 }
 
-.page-head {
-  margin-bottom: 40px;
+.category-header {
+  margin-bottom: 32px;
 }
 
-.page-title {
-  margin: 0 0 10px;
-  font-size: 46px;
-  line-height: 1.02;
-  color: var(--home-text);
+.category-header-title {
   position: relative;
   display: inline-block;
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 4px;
-    bottom: 2px;
-    width: 72%;
-    height: 7px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--brand-accent), transparent);
-  }
+  margin: 0;
+  color: var(--home-text);
+  font-size: 32px;
+  font-weight: 700;
 }
 
-.page-subtitle {
-  margin: 16px 0 0;
-  font-size: 15px;
-  color: var(--text-muted);
+.category-header-underline {
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--brand-accent);
 }
 
-.categories-grid {
+.category-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 
 .category-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 22px 24px;
-  border-radius: 14px;
+  display: block;
+  overflow: hidden;
   border: 1px solid var(--home-border);
+  border-radius: 12px;
   background: var(--home-card-bg);
-  box-shadow: var(--home-shadow);
+  cursor: pointer;
   text-decoration: none;
   transition:
-    transform var(--transition-base),
-    border-color var(--transition-base),
-    background var(--transition-base);
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    border-radius 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 
   &:hover {
-    transform: translateY(-3px);
+    transform: scale(1.04);
     border-color: var(--brand-accent);
-    background: var(--home-card-hover);
+    border-radius: 6px;
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.24);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 3px;
   }
 }
 
-.category-icon-label {
+.category-card-inner {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 126px;
+  padding: 24px 24px 28px;
+  overflow: hidden;
 }
 
-.category-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: var(--brand-accent-soft);
-  color: var(--brand-accent);
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-
-  :deep(svg) {
-    width: 22px;
-    height: 22px;
-  }
+.category-total {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .category-name {
-  font-size: 16px;
-  font-weight: 600;
+  z-index: 1;
+  margin: 0;
   color: var(--home-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
-.category-count {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: var(--home-accent-soft);
-  flex-shrink: 0;
+.category-mark {
+  position: absolute;
+  right: 10px;
+  bottom: -10px;
+  color: var(--home-text);
+  opacity: 0.07;
+  pointer-events: none;
+
+  :deep(svg) {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+.loading-container,
+.error-container {
+  padding: 20px 0;
 }
 
 .empty-state {
-  min-height: 260px;
   display: grid;
+  min-height: 240px;
   place-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  text-align: center;
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  h3 {
+    color: var(--home-text);
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .content-shell {
+    width: min(760px, calc(100% - 60px));
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 820px) {
+  .content-shell {
+    width: min(760px, calc(100% - 40px));
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .category-name {
+    font-size: 22px;
+  }
 }
 
 @media (max-width: 768px) {
-  .categories-page {
+  .content-shell {
+    width: min(100%, calc(100% - 28px));
     padding: 96px 0 56px;
   }
+}
 
-  .page-title {
-    font-size: 36px;
+@media (max-width: 520px) {
+  .category-grid {
+    gap: 12px;
   }
 
-  .categories-grid {
+  .category-card-inner {
+    min-height: 112px;
+    padding: 18px 18px 22px;
+    gap: 8px;
+  }
+
+  .category-name {
+    font-size: 20px;
+  }
+
+  .category-total {
+    font-size: 12px;
+  }
+
+  .category-mark :deep(svg) {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+@media (max-width: 380px) {
+  .category-grid {
     grid-template-columns: 1fr;
   }
 }

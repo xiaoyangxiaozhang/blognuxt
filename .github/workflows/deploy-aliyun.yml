@@ -3,8 +3,8 @@ name: Deploy blognuxt to Aliyun ECS
 on:
   push:
     branches:
+      - main
       - master
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,6 +15,8 @@ concurrency:
 
 jobs:
   deploy:
+    # 发布 job 只允许仓库主分支执行；功能分支不会发布。
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
 
     steps:

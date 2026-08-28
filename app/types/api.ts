@@ -16,6 +16,8 @@ export interface ArticleListItem {
   slug?: string
   url?: string
   title: string
+  summary?: string
+  excerpt?: string
   cover: string
   location?: string
   comment_count?: number

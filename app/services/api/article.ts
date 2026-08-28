@@ -10,3 +10,11 @@ export const getArticleList = (params?: Record<string, unknown>) => {
 export const getArticleDetail = (slug: string, params?: Record<string, unknown>) => {
   return articleApi.detail<ArticleListItem>(slug, params)
 }
+
+export const searchArticles = (params: {
+  keyword: string
+  page?: number
+  page_size?: number
+}) => {
+  return articleApi.get<PaginationData<ArticleListItem>>('/articles/search', params)
+}

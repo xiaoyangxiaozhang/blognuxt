@@ -123,7 +123,7 @@ blognuxt/
 
 ## 自动部署
 
-推送到 `master` 分支或手动触发 `Deploy to Aliyun ECS` workflow 后，GitHub Actions 会使用 Node.js 22.19.0 安装依赖、构建 `.output`，再上传到阿里云 ECS，并通过 systemd 切换当前 release。
+合并并推送到 `main` 或 `master` 主分支后，GitHub Actions 会使用 Node.js 22.19.0 安装依赖、构建 `.output`，再上传到阿里云 ECS，并通过 systemd 切换当前 release。其他分支不会触发发布流程。
 
 部署所需的 SSH 密钥、主机和 API 配置通过 GitHub Actions Secrets/Variables 注入。不要把私钥、Token 或生产环境敏感配置提交到仓库。
 

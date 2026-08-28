@@ -14,6 +14,8 @@
 
     <Footer />
 
+    <ChatbotWidget />
+
     <button
       v-show="showBackToTop"
       class="back-to-top"
@@ -30,6 +32,7 @@
 import IconMaterialSymbolsKeyboardArrowUpRounded from '~icons/material-symbols/keyboard-arrow-up-rounded'
 import Header from '~/components/shell/Header.vue'
 import Footer from '~/components/shell/Footer.vue'
+import ChatbotWidget from '~/components/chat/ChatbotWidget.vue'
 
 const route = useRoute()
 const showBackToTop = ref(false)
