@@ -497,8 +497,8 @@ onUnmounted(() => {
   transition: filter 0.4s ease;
 }
 
-:global([data-theme='blue-white']) .brand-logo,
-:global([data-theme='blue-white']) .mini-logo-mark {
+:global([data-theme='blue-white'] .brand-logo),
+:global([data-theme='blue-white'] .mini-logo-mark) {
   filter: none;
 }
 

@@ -183,15 +183,6 @@
             class="comment-card board-card"
             :class="{ reply: Boolean(item.replyTo) }"
           >
-            <div class="comment-rendered">
-              <template v-for="(block, index) in renderCommentBlocks(item.content)" :key="`${item.id}-${block.type}-${index}`">
-                <p v-if="block.type === 'text'" class="comment-text">{{ block.content }}</p>
-                <div v-else class="comment-image-wrap">
-                  <img :src="block.src" alt="Comment image" class="comment-image" />
-                </div>
-              </template>
-            </div>
-
             <footer class="board-meta">
               <div class="board-author">
                 <div class="comment-avatar">
@@ -217,6 +208,15 @@
                 </div>
               </div>
             </footer>
+
+            <div class="comment-rendered">
+              <template v-for="(block, index) in renderCommentBlocks(item.content)" :key="`${item.id}-${block.type}-${index}`">
+                <p v-if="block.type === 'text'" class="comment-text">{{ block.content }}</p>
+                <div v-else class="comment-image-wrap">
+                  <img :src="block.src" alt="Comment image" class="comment-image" />
+                </div>
+              </template>
+            </div>
           </article>
         </template>
 

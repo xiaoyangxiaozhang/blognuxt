@@ -375,6 +375,7 @@ onBeforeUnmount(() => {
 }
 
 .article-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -384,10 +385,23 @@ onBeforeUnmount(() => {
   box-shadow: var(--home-shadow);
   transition:
     transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow var(--transition-base);
+    box-shadow var(--transition-base),
+    background var(--transition-base),
+    border-color var(--transition-base);
 
   &:hover {
     transform: scale(0.97);
+    background: var(--home-card-hover);
+    border-color: color-mix(in srgb, var(--home-text) 22%, var(--home-border));
+    box-shadow:
+      0 22px 44px -26px var(--shadow-color),
+      var(--home-shadow);
+  }
+
+  &:focus-within {
+    transform: scale(0.97);
+    border-color: color-mix(in srgb, var(--home-text) 30%, var(--home-border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--home-text) 10%, transparent), var(--home-shadow);
   }
 }
 
@@ -441,9 +455,21 @@ onBeforeUnmount(() => {
 }
 
 .article-cover {
+  position: relative;
+  isolation: isolate;
   height: 260px;
   overflow: hidden;
   background: var(--home-card-alt);
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+    pointer-events: none;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--home-text) 10%, transparent), transparent 42%);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+  }
 }
 
 .article-card:not(.featured) .article-cover {
@@ -461,12 +487,21 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(3px);
-  transition: transform var(--transition-slow), filter 0.4s ease;
+  transform: scale(1.015);
+  transform-origin: center;
+  transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), filter var(--transition-base);
+  filter: saturate(0.94);
 }
 
-.article-card:hover .article-cover img {
-  filter: blur(0);
+.article-card:hover .article-cover img,
+.article-card:focus-within .article-cover img {
+  transform: scale(1.08);
+  filter: saturate(1.04);
+}
+
+.article-card:hover .article-cover::after,
+.article-card:focus-within .article-cover::after {
+  opacity: 1;
 }
 
 .article-content {
@@ -650,6 +685,19 @@ onBeforeUnmount(() => {
   .article-card:hover,
   .article-card[data-scroll-reveal].is-revealed:hover {
     transform: none;
+  }
+
+  .article-card:focus-within {
+    transform: none;
+  }
+
+  .article-card .article-cover img {
+    transform: none;
+    transition: none;
+  }
+
+  .article-card .article-cover::after {
+    transition: none;
   }
 }
 </style>
