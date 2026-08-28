@@ -26,11 +26,18 @@
           class="year-section"
           :class="{ expanded: isYearExpanded(group.year) }"
         >
-          <button class="year-heading" type="button" @click="toggleYear(group.year)">
+          <button
+            class="year-heading"
+            type="button"
+            :aria-expanded="isYearExpanded(group.year)"
+            :aria-controls="`archive-year-${group.year}`"
+            @click="toggleYear(group.year)"
+          >
             <span class="year-value">{{ group.year }}年</span>
+            <span class="year-count">{{ group.monthGroups.reduce((total, month) => total + month.articles.length, 0) }} 篇</span>
           </button>
 
-          <div class="year-panel">
+          <div :id="`archive-year-${group.year}`" class="year-panel">
             <div class="month-groups">
               <section v-for="monthGroup in group.monthGroups" :key="monthGroup.month" class="month-section">
                 <h2 class="month-title">{{ monthGroup.month }}月</h2>
@@ -199,6 +206,12 @@ const archiveGroups = computed<ArchiveYearGroup[]>(() => {
 const totalArticles = computed(() => data.value?.total || 0)
 const pageError = computed(() => data.value?.error || '')
 
+watch(archiveGroups, (groups) => {
+  if (expandedYears.value.length === 0 && groups[0]) {
+    expandedYears.value = [groups[0].year]
+  }
+}, { immediate: true })
+
 // 检查数据加载状态触发入场动画
 watch(pending, (val) => {
   if (!val && import.meta.client) {
@@ -222,7 +235,7 @@ onMounted(() => {
 }
 
 .archive-content {
-  width: min(1000px, 100%);
+  width: min(1100px, calc(100% - 60px));
   margin: 0 auto;
 }
 
@@ -277,7 +290,6 @@ onMounted(() => {
     border-color 0.35s ease,
     background 0.35s ease,
     transform 0.35s ease;
-  padding: 0 44px;
 }
 
 .year-section:hover {
@@ -294,7 +306,7 @@ onMounted(() => {
   width: 100%;
   display: flex;
   align-items: center;
-  padding: 30px 44px;
+  padding: 30px 24px;
   margin: 0;
   border: none;
   background: transparent;
@@ -302,9 +314,19 @@ onMounted(() => {
   text-align: left;
 }
 
+.year-count {
+  color: var(--home-text-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.year-count {
+  margin-left: 14px;
+}
+
 .year-value {
-  font-size: 38px;
-  font-weight: 800;
+  font-size: 30px;
+  font-weight: 700;
   color: var(--home-text);
 }
 
@@ -321,7 +343,7 @@ onMounted(() => {
 .month-groups {
   min-height: 0;
   overflow: hidden;
-  padding: 0 44px;
+  padding: 0 24px;
   opacity: 0;
   transition:
     padding 0.82s cubic-bezier(0.22, 1, 0.36, 1),
@@ -372,24 +394,26 @@ onMounted(() => {
     position: absolute;
     left: 8px;
     top: 50%;
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background: var(--brand-accent);
+    background: var(--home-text-muted);
     transform: translateY(-50%);
-    box-shadow: 0 0 0 4px var(--brand-accent-soft);
   }
+}
+
+.article-item:hover .article-date::before {
+  background: var(--brand-accent);
 }
 
 .article-item + .article-item .article-date::after {
   content: '';
   position: absolute;
-  left: 13px;
+  left: 11px;
   top: -23px;
-  width: 3px;
+  width: 1px;
   height: 46px;
-  border-radius: 999px;
-  background: var(--brand-accent);
+  background: var(--home-border);
 }
 
 .article-day {
@@ -424,7 +448,7 @@ onMounted(() => {
 
 @media (max-width: 1200px) {
   .archive-content {
-    width: min(700px, 100%);
+    width: min(760px, calc(100% - 60px));
   }
 
   .archive-title {
@@ -432,7 +456,7 @@ onMounted(() => {
   }
 
   .year-value {
-    font-size: 32px;
+    font-size: 28px;
   }
 }
 
@@ -450,7 +474,7 @@ onMounted(() => {
   }
 
   .year-value {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .year-heading {
@@ -485,7 +509,7 @@ onMounted(() => {
   }
 
   .article-item + .article-item .article-date::after {
-    left: 12px;
+    left: 10px;
   }
 
   .article-title {
