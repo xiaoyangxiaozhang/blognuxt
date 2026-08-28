@@ -7,7 +7,7 @@ on:
       - master
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: blognuxt-production
@@ -42,8 +42,6 @@ jobs:
           npm run postinstall
 
       - name: Build Nuxt production output
-        env:
-          NUXT_PUBLIC_API_BASE: https://xiaoyangxiaozhang.xyz/api/v1
         run: npm run build
 
       - name: Check build output
@@ -88,3 +86,13 @@ jobs:
 
           ssh "$ALIYUN_USER@$ALIYUN_HOST" \
             "chmod 755 '$ALIYUN_DEPLOY_PATH/bin/activate.sh' && '$ALIYUN_DEPLOY_PATH/bin/activate.sh' '$ALIYUN_DEPLOY_PATH' '$RELEASE_ID'"
+
+      - name: Tag deployed release
+        run: |
+          set -Eeuo pipefail
+          RELEASE_TAG="release-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --annotate "$RELEASE_TAG" "$GITHUB_SHA" --message "Deploy $RELEASE_TAG"
+          git push origin "$RELEASE_TAG"
+          echo "Created release tag: $RELEASE_TAG"
