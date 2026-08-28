@@ -3,7 +3,7 @@
 这套配置适用于当前项目的 Nuxt 4 SSR 部署：
 
 ```text
-push master
+push main
     -> GitHub Actions: npm ci + npm run build
     -> SSH/rsync 上传 .output 到 ECS
     -> 切换 current 软链接
@@ -148,15 +148,16 @@ ssh-keyscan -H 你的 ECS 公网 IP
 
 ## 5. 发布
 
-工作流监听 `master` 分支。提交并推送后会自动执行：
+工作流监听 `main` 和 `master` 主分支。提交并推送到主分支后会自动执行；其他分支需要先合并到其中一个主分支：
 
 ```bash
 git add .
 git commit -m "deploy: update blognuxt"
-git push origin master
+git push origin main
+# 或：git push origin master
 ```
 
-也可以在 GitHub Actions 页面手动执行 `Deploy blognuxt to Aliyun ECS`。发布失败时，查看：
+发布失败时，查看 GitHub Actions 中的 `Deploy blognuxt to Aliyun ECS` 运行记录：
 
 ```bash
 sudo systemctl status blognuxt --no-pager
