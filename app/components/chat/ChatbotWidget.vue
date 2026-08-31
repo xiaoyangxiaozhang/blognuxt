@@ -71,7 +71,7 @@ import type { ChatbotMessage, PublicChatbotConfig } from '~/services/api/chatbot
 import { proxyImageUrl } from '~/utils/image'
 import logoUrl from '~/assets/img/logo-sheep.png'
 
-const STORAGE_KEY = 'blog-chatbot-session'
+const STORAGE_KEY = 'blog-chatbot-session-v2'
 
 const route = useRoute()
 const open = ref(false)
@@ -81,7 +81,7 @@ const errorMessage = ref('')
 const messageList = ref<HTMLElement | null>(null)
 const config = reactive<PublicChatbotConfig>({
   enabled: false,
-  display_name: '博主分身',
+  display_name: '博主',
   avatar: '',
   welcome: '',
   identity_notice: '',
@@ -90,7 +90,7 @@ const config = reactive<PublicChatbotConfig>({
 const messages = ref<ChatbotMessage[]>([])
 const sessionId = ref('')
 
-const displayName = computed(() => config.display_name || '博主分身')
+const displayName = computed(() => config.display_name || '博主')
 const avatar = computed(() => proxyImageUrl(config.avatar))
 const suggestions = computed(() => (config.suggestions || []).filter(Boolean).slice(0, 4))
 const articleSlug = computed(() => {
@@ -136,8 +136,7 @@ const loadSession = () => {
 
 const addWelcomeMessages = () => {
   if (messages.value.length > 0) return
-  if (config.identity_notice) messages.value.push({ role: 'assistant', content: config.identity_notice })
-  if (config.welcome) messages.value.push({ role: 'assistant', content: config.welcome })
+  messages.value.push({ role: 'assistant', content: config.welcome || '嗨，来啦。想聊点什么？' })
   saveSession()
 }
 
