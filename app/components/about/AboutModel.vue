@@ -55,7 +55,6 @@ const status = ref<'loading' | 'ready' | 'error'>('loading')
 
 let renderer: THREE.WebGLRenderer | null = null
 let controls: OrbitControls | null = null
-let mixer: THREE.AnimationMixer | null = null
 let model: THREE.Object3D | null = null
 let modelPivot: THREE.Group | null = null
 let resizeObserver: ResizeObserver | null = null
@@ -93,8 +92,6 @@ const cleanup = () => {
   resizeObserver = null
   controls?.dispose()
   controls = null
-  mixer?.stopAllAction()
-  mixer = null
   if (model) disposeModel(model)
   model = null
   modelPivot = null
@@ -209,11 +206,6 @@ onMounted(() => {
       modelPivot.updateMatrixWorld(true)
       fitCameraToModel(modelPivot)
 
-      if (gltf.animations.length) {
-        mixer = new THREE.AnimationMixer(model)
-        gltf.animations.forEach((clip) => mixer?.clipAction(clip).play())
-      }
-
       status.value = 'ready'
     },
     undefined,
@@ -226,7 +218,6 @@ onMounted(() => {
     animationFrame = window.requestAnimationFrame(animate)
     clock.update()
     const delta = clock.getDelta()
-    mixer?.update(delta)
     if (modelPivot && props.autoRotate && !reducedMotionQuery?.matches) modelPivot.rotation.y += delta * 0.18
     controls?.update()
     renderer.render(scene, camera)
