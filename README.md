@@ -123,7 +123,7 @@ blognuxt/
 
 ## 自动部署
 
-合并并推送到 `main` 或 `master` 主分支后，GitHub Actions 会使用 Node.js 22.19.0 安装依赖、构建 `.output`，再上传到阿里云 ECS，并通过 systemd 切换当前 release。部署成功后会在本次提交上自动创建带注释的 Git tag，格式为 `release-UTC时间-短SHA-运行ID`。其他分支不会触发发布流程。
+合并并推送到 `main` 或 `master` 主分支后，GitHub Actions 会使用 Node.js 22.19.0 安装依赖、构建 `.output`，再上传到阿里云 ECS，并通过 systemd 切换当前 release。部署成功后会在本次提交上自动创建递增的带注释 Git tag，格式为 `v1.0.0`、`v1.0.1`、`v1.0.2`……其他分支不会触发发布流程。
 
 部署所需的 SSH 密钥、主机和 API 配置通过 GitHub Actions Secrets/Variables 注入。不要把私钥、Token 或生产环境敏感配置提交到仓库。
 

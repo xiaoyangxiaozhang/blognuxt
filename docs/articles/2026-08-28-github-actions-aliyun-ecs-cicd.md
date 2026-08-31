@@ -158,6 +158,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -222,11 +224,26 @@ jobs:
       - name: Tag deployed release
         run: |
           set -Eeuo pipefail
-          RELEASE_TAG="release-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}-${GITHUB_RUN_ID}"
+          git fetch origin --tags
+          latest_patch="$(
+            git tag --list 'v1.0.*' |
+              sed -nE 's/^v1\.0\.([0-9]+)$/\1/p' |
+              sort -n |
+              tail -n 1
+          )"
+          next_patch=0
+          if [[ -n "$latest_patch" ]]; then
+            next_patch=$((latest_patch + 1))
+          fi
+          RELEASE_TAG="v1.0.${next_patch}"
+          if git show-ref --tags --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            echo "Tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag --annotate "$RELEASE_TAG" "$GITHUB_SHA" --message "Deploy $RELEASE_TAG"
-          git push origin "$RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"
 ```
 
 这里有几个容易被忽略的设计：
@@ -234,7 +251,7 @@ jobs:
 - `concurrency` 保证同一时间只有一个生产发布，新的提交会取消仍在排队或运行中的旧发布。
 - `RELEASE_ID` 使用 commit SHA，使线上目录和代码版本可以互相定位。
 - `--delete` 只作用于当前 release 的 `.output` 目录，不会删除服务器上的 `.env`、上传文件或日志。
-- 发布成功后创建带注释的 tag，方便在 GitHub 中快速定位“哪个提交已经上线”。
+- 发布成功后创建递增的 `v1.0.*` 带注释 tag，方便在 GitHub 中快速定位“哪个提交已经上线”。
 
 如果你的 `package-lock.json` 是在 macOS 上生成的，Linux runner 可能缺少 Rolldown 的可选原生 binding。上面的安装步骤保留了当前项目针对这一问题的兼容处理；新项目应优先在目标 CI 系统上重新生成并提交正确的 lockfile。
 

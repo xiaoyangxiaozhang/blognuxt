@@ -157,7 +157,7 @@ git push origin main
 # 或：git push origin master
 ```
 
-部署成功后，工作流会在已发布的提交上自动创建带注释的 Git tag，格式为 `release-UTC时间-短SHA-运行ID`，可用它定位线上对应版本。
+部署成功后，工作流会在已发布的提交上自动创建递增的带注释 Git tag，格式为 `v1.0.0`、`v1.0.1`、`v1.0.2`……可用它定位线上对应版本。
 
 发布失败时，查看 GitHub Actions 中的 `Deploy blognuxt to Aliyun ECS` 运行记录：
 
