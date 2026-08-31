@@ -34,7 +34,7 @@
               :alt="authorName || '博客作者'"
             />
             <template #fallback>
-              <img :src="authorAvatar || '/favicon.png'" :alt="authorName || '博客作者'" />
+              <span class="model-loading-fallback" role="status">正在加载 3D 模型…</span>
             </template>
           </ClientOnly>
         </div>
@@ -500,6 +500,11 @@ onMounted(() => { fetchComments(); fetchData() })
 
 .intro-model :deep(.about-model) {
   min-height: 100%;
+}
+
+.model-loading-fallback {
+  color: var(--home-text);
+  font-size: 14px;
 }
 
 .numbered-section {
