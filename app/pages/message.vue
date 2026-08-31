@@ -13,8 +13,30 @@
           </div>
         </div>
 
-        <div class="intro-portrait">
-          <img :src="authorAvatar || '~/assets/img/dashboard.png'" :alt="authorName || '博客作者'" />
+        <div
+          class="intro-portrait intro-model"
+          :title="aboutModelCredit || undefined"
+        >
+          <ClientOnly>
+            <AboutModel
+              v-if="aboutModelEnabled && aboutModelUrl"
+              :model-url="aboutModelUrl"
+              :fallback-image-url="authorAvatar || '/favicon.png'"
+              :fallback-alt="authorName || '博客作者'"
+              :auto-rotate="aboutModelRotate"
+              :enable-controls="aboutModelControl"
+              :enable-zoom="aboutModelZoom"
+              model-alt="博客作者的 3D 角色"
+            />
+            <img
+              v-else
+              :src="authorAvatar || '/favicon.png'"
+              :alt="authorName || '博客作者'"
+            />
+            <template #fallback>
+              <img :src="authorAvatar || '/favicon.png'" :alt="authorName || '博客作者'" />
+            </template>
+          </ClientOnly>
         </div>
       </section>
 
@@ -138,6 +160,7 @@
 
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
+import AboutModel from '~/components/about/AboutModel.vue'
 import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import { getCommentList, createComment } from '~/services/api/comments'
 import { normalizeCommentList } from '~/utils/comments'
@@ -221,6 +244,12 @@ const aboutDescribe = ref('')
 const aboutDescribeTips = ref('')
 const aboutExhibition = ref('')
 const aboutStory = ref('')
+const aboutModelEnabled = ref(true)
+const aboutModelUrl = ref('/models/cat/scene.gltf')
+const aboutModelCredit = ref('3D model: Cute Cat in Cute Banana by SOBOL, licensed under CC-BY-4.0')
+const aboutModelRotate = ref(true)
+const aboutModelControl = ref(true)
+const aboutModelZoom = ref(false)
 const profileList = ref<{ label: string; value: string }[]>([])
 const hometown = ref('')
 const mottoText = ref('')
@@ -313,6 +342,12 @@ const fetchData = async () => {
     aboutDescribeTips.value = blog['blog.about_describe_tips'] || ''
     aboutExhibition.value = proxyImageUrl(blog['blog.about_exhibition']) || ''
     aboutStory.value = blog['blog.about_story'] || ''
+    aboutModelEnabled.value = blog['blog.about_model_enabled'] !== 'false'
+    aboutModelUrl.value = blog['blog.about_model_url']?.trim() || '/models/cat/scene.gltf'
+    aboutModelCredit.value = blog['blog.about_model_credit']?.trim() || ''
+    aboutModelRotate.value = blog['blog.about_model_rotate'] !== 'false'
+    aboutModelControl.value = blog['blog.about_model_control'] !== 'false'
+    aboutModelZoom.value = blog['blog.about_model_zoom'] === 'true'
     try {
       const profiles = blog['blog.about_profile'] ? JSON.parse(blog['blog.about_profile']) : []
       const normalizedProfiles = Array.isArray(profiles)
@@ -452,6 +487,19 @@ onMounted(() => { fetchComments(); fetchData() })
     object-fit: cover;
     display: block;
   }
+}
+
+.intro-model {
+  position: relative;
+  display: flex;
+  min-height: 360px;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.intro-model :deep(.about-model) {
+  min-height: 100%;
 }
 
 .numbered-section {
@@ -908,6 +956,10 @@ onMounted(() => { fetchComments(); fetchData() })
     aspect-ratio: 1;
   }
 
+  .intro-model {
+    min-height: 320px;
+  }
+
   .numbered-section {
     grid-template-columns: 1fr;
     gap: 0;
@@ -972,6 +1024,10 @@ onMounted(() => { fetchComments(); fetchData() })
   .intro-description {
     margin-top: 24px;
     font-size: 16px;
+  }
+
+  .intro-model {
+    min-height: 280px;
   }
 
   .intro-actions {
