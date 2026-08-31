@@ -246,7 +246,7 @@ onMounted(() => {
 .archive-title {
   margin: 0;
   display: inline-block;
-  font-size: 48px;
+  font-size: 36px;
   line-height: 1.08;
   font-weight: 800;
   color: var(--home-text);
@@ -256,9 +256,9 @@ onMounted(() => {
     content: '';
     position: absolute;
     left: 0;
-    bottom: 6px;
+    bottom: 3px;
     width: 100%;
-    height: 10px;
+    height: 7px;
     border-radius: 999px;
     background: var(--brand-accent-soft);
     z-index: -1;
@@ -306,7 +306,7 @@ onMounted(() => {
   width: 100%;
   display: flex;
   align-items: center;
-  padding: 30px 24px;
+  padding: 22px 24px;
   margin: 0;
   border: none;
   background: transparent;
@@ -325,7 +325,7 @@ onMounted(() => {
 }
 
 .year-value {
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--home-text);
 }
@@ -356,20 +356,31 @@ onMounted(() => {
 }
 
 .month-section + .month-section {
-  margin-top: 34px;
+  margin-top: 28px;
 }
 
 .month-title {
-  margin: 0 0 18px;
-  font-size: 24px;
+  margin: 0 0 14px;
+  font-size: 19px;
   line-height: 1.2;
   font-weight: 800;
   color: var(--home-text);
 }
 
 .article-items {
+  position: relative;
   display: flex;
   flex-direction: column;
+}
+
+.article-items::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 14px;
+  bottom: 44px;
+  width: 1px;
+  background: var(--home-border);
 }
 
 .article-item {
@@ -386,7 +397,7 @@ onMounted(() => {
   position: relative;
   padding-left: 36px;
   color: var(--home-text-muted);
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1.8;
 
   &::before {
@@ -406,16 +417,6 @@ onMounted(() => {
   background: var(--brand-accent);
 }
 
-.article-item + .article-item .article-date::after {
-  content: '';
-  position: absolute;
-  left: 11px;
-  top: -23px;
-  width: 1px;
-  height: 46px;
-  background: var(--home-border);
-}
-
 .article-day {
   white-space: nowrap;
 }
@@ -427,7 +428,7 @@ onMounted(() => {
 
 .article-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.75;
   font-weight: 500;
   color: var(--home-text);
@@ -443,7 +444,7 @@ onMounted(() => {
   gap: 12px;
   margin-top: 2px;
   color: var(--home-text-muted);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 @media (max-width: 1200px) {
@@ -452,11 +453,11 @@ onMounted(() => {
   }
 
   .archive-title {
-    font-size: 40px;
+    font-size: 32px;
   }
 
   .year-value {
-    font-size: 28px;
+    font-size: 22px;
   }
 }
 
@@ -470,15 +471,15 @@ onMounted(() => {
   }
 
   .archive-title {
-    font-size: 32px;
+    font-size: 28px;
   }
 
   .year-value {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .year-heading {
-    padding: 24px 20px;
+    padding: 20px;
   }
 
   .month-groups {
@@ -494,8 +495,8 @@ onMounted(() => {
   }
 
   .month-title {
-    font-size: 20px;
-    margin-bottom: 14px;
+    font-size: 18px;
+    margin-bottom: 12px;
   }
 
   .article-item {
@@ -505,7 +506,7 @@ onMounted(() => {
 
   .article-date {
     padding-left: 28px;
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .article-item + .article-item .article-date::after {
@@ -513,7 +514,7 @@ onMounted(() => {
   }
 
   .article-title {
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.65;
   }
 }

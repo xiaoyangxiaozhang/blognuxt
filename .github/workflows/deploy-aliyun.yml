@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -90,9 +92,24 @@ jobs:
       - name: Tag deployed release
         run: |
           set -Eeuo pipefail
-          RELEASE_TAG="release-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}-${GITHUB_RUN_ID}"
+          git fetch origin --tags
+          latest_patch="$(
+            git tag --list 'v1.0.*' |
+              sed -nE 's/^v1\.0\.([0-9]+)$/\1/p' |
+              sort -n |
+              tail -n 1
+          )"
+          next_patch=0
+          if [[ -n "$latest_patch" ]]; then
+            next_patch=$((latest_patch + 1))
+          fi
+          RELEASE_TAG="v1.0.${next_patch}"
+          if git show-ref --tags --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            echo "Tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag --annotate "$RELEASE_TAG" "$GITHUB_SHA" --message "Deploy $RELEASE_TAG"
-          git push origin "$RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"
           echo "Created release tag: $RELEASE_TAG"

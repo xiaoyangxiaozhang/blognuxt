@@ -384,24 +384,14 @@ onBeforeUnmount(() => {
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
   transition:
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow var(--transition-base),
-    background var(--transition-base),
-    border-color var(--transition-base);
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 
   &:hover {
     transform: scale(0.97);
-    background: var(--home-card-hover);
-    border-color: color-mix(in srgb, var(--home-text) 22%, var(--home-border));
-    box-shadow:
-      0 22px 44px -26px var(--shadow-color),
-      var(--home-shadow);
   }
 
   &:focus-within {
     transform: scale(0.97);
-    border-color: color-mix(in srgb, var(--home-text) 30%, var(--home-border));
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--home-text) 10%, transparent), var(--home-shadow);
   }
 }
 
@@ -496,12 +486,6 @@ onBeforeUnmount(() => {
 .article-card:hover .article-cover img,
 .article-card:focus-within .article-cover img {
   transform: scale(1.08);
-  filter: saturate(1.04);
-}
-
-.article-card:hover .article-cover::after,
-.article-card:focus-within .article-cover::after {
-  opacity: 1;
 }
 
 .article-content {
