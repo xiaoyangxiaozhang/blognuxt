@@ -36,7 +36,6 @@ useSeoMeta({
   ogUrl: siteUrl,
   ogImage: shareImageUrl,
   ogImageAlt: siteTitle,
-  ogSiteName: siteTitle,
   twitterCard: 'summary_large_image',
   twitterTitle: siteTitle,
   twitterDescription: siteDescription,
@@ -46,7 +45,6 @@ useSeoMeta({
 useHead(() => ({
   link: [{ rel: 'canonical', href: siteUrl }],
   meta: [
-    { property: 'og:image:secure_url', content: shareImageUrl.value },
     ...(siteKeywords.value ? [{ name: 'keywords', content: siteKeywords.value }] : [])
   ]
 }))
