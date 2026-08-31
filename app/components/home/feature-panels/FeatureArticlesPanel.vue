@@ -64,23 +64,16 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
   box-shadow: var(--home-shadow);
   text-decoration: none;
   transition:
-    transform var(--transition-base),
-    background var(--transition-base),
-    border-color var(--transition-base),
-    box-shadow var(--transition-base);
+    transform var(--transition-base);
 
   &:hover {
     transform: scale(0.97);
-    background: var(--home-card-hover);
-    border-color: color-mix(in srgb, var(--home-text) 22%, var(--home-border));
-    box-shadow: 0 18px 36px -24px var(--shadow-color), var(--home-shadow);
   }
 
   &:focus-visible {
     transform: scale(0.97);
     outline: 2px solid var(--home-text);
     outline-offset: 4px;
-    border-color: color-mix(in srgb, var(--home-text) 30%, var(--home-border));
   }
 }
 
@@ -117,12 +110,6 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
 .article-card:hover .thumb img,
 .article-card:focus-visible .thumb img {
   transform: scale(1.1);
-  filter: saturate(1.04);
-}
-
-.article-card:hover .thumb::after,
-.article-card:focus-visible .thumb::after {
-  opacity: 1;
 }
 
 .card-body {
