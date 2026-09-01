@@ -3,7 +3,7 @@
     <!-- 骨架屏幕布 -->
     <PageCurtain v-model="curtainReady" @opened="onCurtainOpened" />
 
-    <section ref="heroVisualRef" class="page-top-visual">
+    <section v-if="heroBackgroundUrl" ref="heroVisualRef" class="page-top-visual">
 
       <div
         class="viewport-background"
@@ -13,6 +13,7 @@
         }"
       >
         <img
+          v-if="heroPosterUrl"
           class="viewport-bg-poster"
           :src="heroPosterUrl"
           alt=""
@@ -33,26 +34,6 @@
           @playing="onHeroVideoPlaying"
           @error="onHeroVideoError"
         />
-        <video
-          v-else-if="!heroBackgroundUrl"
-          ref="heroVideoRef"
-          class="viewport-bg-video"
-          loop
-          muted
-          playsinline
-          preload="none"
-          poster="~/assets/img/hero-poster.jpg"
-          aria-hidden="true"
-          @playing="onHeroVideoPlaying"
-          @error="onHeroVideoError"
-        >
-          <source
-            src="~/assets/img/hero-bg-mobile.mp4"
-            type="video/mp4"
-            media="(max-width: 768px)"
-          />
-          <source src="~/assets/img/hero-bg-optimized.mp4" type="video/mp4" />
-        </video>
       </div>
 
       <div class="hero-section">
@@ -126,7 +107,6 @@
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 import HomeFeaturePanel from '~/components/home/HomeFeaturePanel.vue'
 import HomeNewestSection from '~/components/home/HomeNewestSection.vue'
-import defaultHeroPoster from '~/assets/img/hero-poster.jpg'
 import { getArticleList } from '~/services/api/article'
 import { getCategoryList } from '~/services/api/category'
 import { getTagList } from '~/services/api/tag'
@@ -284,7 +264,7 @@ const heroPosterUrl = computed(() => {
     return proxyImageUrl(heroBackgroundUrl.value)
   }
 
-  return defaultHeroPoster
+  return ''
 })
 
 const isRevealed = ref(false)
