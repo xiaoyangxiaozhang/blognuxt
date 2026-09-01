@@ -169,8 +169,7 @@ onMounted(() => {
   scene.add(fillLight)
 
   controls = new OrbitControls(camera, renderer.domElement)
-  const coarsePointer = window.matchMedia('(pointer: coarse)').matches
-  controls.enabled = props.enableControls && !coarsePointer
+  controls.enabled = props.enableControls
   controls.enableDamping = true
   controls.dampingFactor = 0.08
   controls.enablePan = false
