@@ -69,9 +69,6 @@
                 <IconMaterialSymbolsDarkModeRounded v-if="theme === 'midnight-blue'"/>
                 <IconMaterialSymbolsWbSunnyRounded v-else />
               </button>
-              <button class="action-btn" type="button" title="RSS" aria-label="RSS">
-                <IconMaterialSymbolsRssFeed />
-              </button>
               <button
                 class="action-btn action-subscribe"
                 type="button"
@@ -81,9 +78,6 @@
               >
                 <IconMaterialSymbolsNotifications />
               </button>
-              <button class="action-btn" type="button" title="收藏" aria-label="收藏">
-                <IconMaterialSymbolsStarOutline />
-              </button>
               <button
                 class="action-btn action-search"
                 type="button"
@@ -92,9 +86,6 @@
                 @click="searchDialogOpen = true"
               >
                 <IconMaterialSymbolsSearch />
-              </button>
-              <button class="action-btn" type="button" title="菜单" aria-label="菜单">
-                <IconMaterialSymbolsMenu />
               </button>
             </div>
           </div>
@@ -166,11 +157,8 @@
 
 <script setup lang="ts">
 import IconMaterialSymbolsDarkModeRounded from '~icons/material-symbols/dark-mode-rounded'
-import IconMaterialSymbolsMenu from '~icons/material-symbols/menu'
 import IconMaterialSymbolsNotifications from '~icons/material-symbols/notifications'
-import IconMaterialSymbolsRssFeed from '~icons/material-symbols/rss-feed'
 import IconMaterialSymbolsSearch from '~icons/material-symbols/search'
-import IconMaterialSymbolsStarOutline from '~icons/material-symbols/star-outline'
 import IconMaterialSymbolsWbSunnyRounded from '~icons/material-symbols/wb-sunny-rounded'
 import SearchDialog from '~/components/shell/SearchDialog.vue'
 import SubscribeDialog from '~/components/shell/SubscribeDialog.vue'
@@ -958,10 +946,6 @@ onUnmounted(() => {
 
   .nav-menu {
     gap: 18px;
-  }
-
-  .header-actions .action-btn:not(.action-theme):not(.action-subscribe):not(.action-search) {
-    display: none;
   }
 
   .island-nav {
