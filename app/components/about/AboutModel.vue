@@ -55,8 +55,8 @@ const status = ref<'loading' | 'ready' | 'error'>('loading')
 
 let renderer: THREE.WebGLRenderer | null = null
 let controls: OrbitControls | null = null
+let mixer: THREE.AnimationMixer | null = null
 let model: THREE.Object3D | null = null
-let modelPivot: THREE.Group | null = null
 let resizeObserver: ResizeObserver | null = null
 let reducedMotionQuery: MediaQueryList | null = null
 let animationFrame = 0
@@ -92,9 +92,10 @@ const cleanup = () => {
   resizeObserver = null
   controls?.dispose()
   controls = null
+  mixer?.stopAllAction()
+  mixer = null
   if (model) disposeModel(model)
   model = null
-  modelPivot = null
   renderer?.dispose()
   renderer?.forceContextLoss()
   renderer = null
@@ -192,19 +193,21 @@ onMounted(() => {
 
       model = gltf.scene
       model.rotation.y = -0.35
-      modelPivot = new THREE.Group()
-      modelPivot.add(model)
-      scene.add(modelPivot)
+      scene.add(model)
 
-      // 模型文件自身的原点可能在脚底或偏离几何中心，先把包围盒中心放到旋转容器原点。
+      // 模型文件自身的原点可能在脚底或偏离几何中心，先把包围盒中心平移到场景原点。
       model.updateMatrixWorld(true)
       const box = new THREE.Box3().setFromObject(model)
       const center = new THREE.Vector3()
       box.getCenter(center)
-      modelPivot.worldToLocal(center)
-      modelPivot.position.sub(center)
-      modelPivot.updateMatrixWorld(true)
-      fitCameraToModel(modelPivot)
+      model.position.sub(center)
+      model.updateMatrixWorld(true)
+      fitCameraToModel(model)
+
+      if (gltf.animations.length) {
+        mixer = new THREE.AnimationMixer(model)
+        gltf.animations.forEach((clip) => mixer?.clipAction(clip).play())
+      }
 
       status.value = 'ready'
     },
@@ -218,7 +221,8 @@ onMounted(() => {
     animationFrame = window.requestAnimationFrame(animate)
     clock.update()
     const delta = clock.getDelta()
-    if (modelPivot && props.autoRotate && !reducedMotionQuery?.matches) modelPivot.rotation.y += delta * 0.18
+    mixer?.update(delta)
+    if (props.autoRotate && !reducedMotionQuery?.matches) scene.rotation.y += delta * 0.18
     controls?.update()
     renderer.render(scene, camera)
   }
