@@ -3,6 +3,7 @@ import { getBasicSettings } from '~/services/api/user'
 import { getArticleList } from '~/services/api/article'
 import { proxyImageUrl } from '~/utils/image'
 import { parseBlogJson, useBlogSettings } from '~/composables/useBlogSettings'
+import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import IconRiGithubLine from '~icons/ri/github-line'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'
 import IconRiMailLine from '~icons/ri/mail-line'
@@ -54,6 +55,7 @@ const footerLinks = computed<FooterLinkItem[]>(() =>
   parseBlogJson<FooterLinkItem[]>(blogSettings.value['blog.footer_links'], [])
     .filter((item) => item.name?.trim() && item.url?.trim())
 )
+const { openFeedback, openAccount } = useSiteOverlays()
 const footerIconMap: Record<string, any> = {
   'github-line': IconRiGithubLine,
   'bilibili-line': IconRiBilibiliLine,
@@ -157,9 +159,17 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
 
       <div class="footer-bottom">
         <nav v-if="footerLinks.length" class="footer-links" aria-label="页脚链接">
-          <NuxtLink v-for="item in footerLinks" :key="`${item.name}-${item.url}`" :to="item.url" class="footer-link">
-            {{ item.name }}
-          </NuxtLink>
+          <template v-for="item in footerLinks" :key="`${item.name}-${item.url}`">
+            <button v-if="item.url === '/feedback'" type="button" class="footer-link" @click="openFeedback">
+              {{ item.name }}
+            </button>
+            <button v-else-if="item.url === '/account'" type="button" class="footer-link" @click="openAccount()">
+              {{ item.name }}
+            </button>
+            <NuxtLink v-else :to="item.url" class="footer-link">
+              {{ item.name }}
+            </NuxtLink>
+          </template>
         </nav>
         <p class="copyright">
           Copyright &copy; {{ copyrightYear }} {{ authorName }}
@@ -302,9 +312,14 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
 }
 
 .footer-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: var(--text-muted);
+  font: inherit;
   font-size: 12px;
   text-decoration: none;
+  cursor: pointer;
 
   &:hover {
     color: var(--accent);

@@ -78,6 +78,12 @@
               >
                 <IconMaterialSymbolsNotifications />
               </button>
+              <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
+                <IconTablerFlag />
+              </button>
+              <button class="action-btn" type="button" title="账号" aria-label="账号" @click="openAccount()">
+                <IconTablerUser />
+              </button>
               <button
                 class="action-btn action-search"
                 type="button"
@@ -113,12 +119,17 @@
               <img class="mini-logo-mark" :src="logoUrl" alt="" aria-hidden="true" />
             </button>
 
-            <nav class="island-nav">
-              <NuxtLink to="/" class="island-link">首页</NuxtLink>
-              <NuxtLink to="/archive" class="island-link">归档</NuxtLink>
-              <NuxtLink to="/categories" class="island-link">分类</NuxtLink>
-              <NuxtLink to="/tags" class="island-link">标签</NuxtLink>
-              <NuxtLink to="/message" class="island-link">留言</NuxtLink>
+            <nav ref="islandNav" class="island-nav" @mouseleave="clearIslandHover">
+              <span
+                class="island-indicator"
+                aria-hidden="true"
+                :style="{ width: `${islandIndicator.width}px`, transform: `translateX(${islandIndicator.left}px)` }"
+              />
+              <NuxtLink to="/" class="island-link" @mouseenter="moveIslandIndicator(0)" @focus="moveIslandIndicator(0)">首页</NuxtLink>
+              <NuxtLink to="/archive" class="island-link" @mouseenter="moveIslandIndicator(1)" @focus="moveIslandIndicator(1)">归档</NuxtLink>
+              <NuxtLink to="/categories" class="island-link" @mouseenter="moveIslandIndicator(2)" @focus="moveIslandIndicator(2)">分类</NuxtLink>
+              <NuxtLink to="/tags" class="island-link" @mouseenter="moveIslandIndicator(3)" @focus="moveIslandIndicator(3)">标签</NuxtLink>
+              <NuxtLink to="/message" class="island-link" @mouseenter="moveIslandIndicator(4)" @focus="moveIslandIndicator(4)">留言</NuxtLink>
             </nav>
 
             <div class="island-actions">
@@ -130,6 +141,12 @@
                 @click="subscribeDialogOpen = true"
               >
                 <IconMaterialSymbolsNotifications />
+              </button>
+              <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
+                <IconTablerFlag />
+              </button>
+              <button class="action-btn" type="button" title="账号" aria-label="账号" @click="openAccount()">
+                <IconTablerUser />
               </button>
               <button
                 class="action-btn action-search"
@@ -153,6 +170,8 @@
 
   <SubscribeDialog v-model="subscribeDialogOpen" />
   <SearchDialog v-model="searchDialogOpen" />
+  <FeedbackDialog />
+  <AccountDialog />
 </template>
 
 <script setup lang="ts">
@@ -160,16 +179,22 @@ import IconMaterialSymbolsDarkModeRounded from '~icons/material-symbols/dark-mod
 import IconMaterialSymbolsNotifications from '~icons/material-symbols/notifications'
 import IconMaterialSymbolsSearch from '~icons/material-symbols/search'
 import IconMaterialSymbolsWbSunnyRounded from '~icons/material-symbols/wb-sunny-rounded'
+import IconTablerFlag from '~icons/tabler/flag'
+import IconTablerUser from '~icons/tabler/user'
+import AccountDialog from '~/components/shell/AccountDialog.vue'
+import FeedbackDialog from '~/components/shell/FeedbackDialog.vue'
 import SearchDialog from '~/components/shell/SearchDialog.vue'
 import SubscribeDialog from '~/components/shell/SubscribeDialog.vue'
 import logoUrl from '~/assets/img/logo-sheep.png'
 import { useBlogSettings } from '~/composables/useBlogSettings'
+import { useSiteOverlays } from '~/composables/useSiteOverlays'
 
 type ThemeMode = 'midnight-blue' | 'blue-white'
 type HeaderState = 'full' | 'logo' | 'island'
 
 const theme = ref<ThemeMode>('midnight-blue')
 const { settings: blogSettings } = useBlogSettings()
+const { openFeedback, openAccount } = useSiteOverlays()
 const siteTitle = computed(() => blogSettings.value['blog.title'] || '小羊嚣张')
 const headerState = ref<HeaderState>('full')
 const brandMenuOpen = ref(false)
@@ -250,9 +275,43 @@ const handleBrandMenuFocusOut = (event: FocusEvent) => {
 }
 
 const route = useRoute()
+const islandNav = ref<HTMLElement | null>(null)
+const islandHoverIndex = ref<number | null>(null)
+const islandIndicator = reactive({ left: 0, width: 50 })
+const islandRoutePaths = ['/', '/archive', '/categories', '/tags', '/message']
+const activeIslandIndex = computed(() => {
+  const index = islandRoutePaths.indexOf(route.path)
+  return index >= 0 ? index : 0
+})
+
+const updateIslandIndicator = async (index = islandHoverIndex.value ?? activeIslandIndex.value) => {
+  await nextTick()
+  const nav = islandNav.value
+  const link = nav?.querySelectorAll<HTMLElement>('.island-link')[index]
+  if (!nav || !link) return
+
+  const navRect = nav.getBoundingClientRect()
+  const linkRect = link.getBoundingClientRect()
+  islandIndicator.left = linkRect.left - navRect.left
+  islandIndicator.width = linkRect.width
+}
+
+const moveIslandIndicator = (index: number) => {
+  islandHoverIndex.value = index
+  updateIslandIndicator(index)
+}
+
+const clearIslandHover = () => {
+  islandHoverIndex.value = null
+  updateIslandIndicator(activeIslandIndex.value)
+}
+
+const handleIslandResize = () => updateIslandIndicator()
+
 watch(() => route.fullPath, () => {
   closeBrandMenu()
   searchDialogOpen.value = false
+  clearIslandHover()
 })
 
 const scrollToTop = () => {
@@ -305,12 +364,15 @@ onMounted(() => {
   applyTheme(savedTheme || 'midnight-blue')
   lastScrollY.value = window.scrollY
   window.addEventListener('scroll', handleScroll, { passive: true })
+  window.addEventListener('resize', handleIslandResize)
   handleScroll()
+  updateIslandIndicator()
 })
 
 onUnmounted(() => {
   cancelBrandMenuClose()
   window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('resize', handleIslandResize)
 })
 </script>
 
@@ -340,7 +402,7 @@ onUnmounted(() => {
 
 .header-stage {
   position: relative;
-  min-height: 86px;
+  min-height: 60px;
   overflow: visible;
 }
 
@@ -353,6 +415,7 @@ onUnmounted(() => {
   visibility: hidden;
   transform: translateY(-8px) scale(0.94);
   transform-origin: top center;
+  min-height: 60px;
   overflow: visible;
   transition:
     opacity 0.16s cubic-bezier(0.22, 1, 0.36, 1),
@@ -409,22 +472,18 @@ onUnmounted(() => {
 
 .header-layer-full {
   transition:
-    background-color 0.4s cubic-bezier(0.345, 0.045, 0.345, 1),
+    background 0.4s cubic-bezier(0.345, 0.045, 0.345, 1),
+    border-color 0.4s cubic-bezier(0.345, 0.045, 0.345, 1),
     backdrop-filter 0.4s cubic-bezier(0.345, 0.045, 0.345, 1);
 }
 
-.state-logo .header-layer-full.active,
-.state-island .header-layer-full.active {
-  background: var(--bg-header);
-  border-bottom: 1px solid var(--border-color);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-}
-
-.state-full .header-layer-full.active {
+.header-layer-full.active,
+.state-logo .header-layer-logo.active,
+.state-island .header-layer-island.active {
   background: transparent;
   border-bottom: none;
   backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .full-shell {
@@ -754,25 +813,24 @@ onUnmounted(() => {
 .action-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid transparent;
+  border: 0;
   background: transparent;
   color: var(--header-action-color);
   font-size: 16px;
-  border-radius: 999px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition:
-    background 0.28s ease,
-    color 0.28s ease,
-    border-color 0.28s ease,
-    transform 0.2s ease;
+  transition: color 0.2s ease, filter 0.2s ease;
 
-  &:hover {
-    background: var(--accent-soft);
+  &:hover,
+  &:focus-visible,
+  &:active {
+    background: transparent;
+    border-color: transparent;
     color: var(--brand-accent);
-    border-color: var(--accent-border);
+    outline: none;
+    filter: brightness(1.08);
   }
 }
 
@@ -804,9 +862,13 @@ onUnmounted(() => {
 .floating-center {
   display: flex;
   justify-content: center;
-  padding-top: 10px;
+  padding-top: 4px;
   width: 100%;
   overflow-x: clip;
+}
+
+.state-island .floating-center {
+  padding-top: 10px;
 }
 
 .mini-logo,
@@ -823,29 +885,11 @@ onUnmounted(() => {
   border-radius: 999px;
   background: transparent;
   color: var(--brand-accent);
-  backdrop-filter: none;
-  box-shadow: none;
   cursor: pointer;
-  position: relative;
-  isolation: isolate;
   transition:
     transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
     filter 0.2s ease,
     opacity 0.2s ease;
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 4px -2px;
-    border-radius: 999px;
-    background: rgba(129, 131, 255, 0.1);
-    box-shadow:
-      0 0 14px rgba(129, 131, 255, 0.12),
-      0 6px 16px rgba(6, 16, 28, 0.14);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    z-index: -1;
-  }
 
   &:hover {
     transform: translateY(-1px) scale(1.05);
@@ -857,10 +901,6 @@ onUnmounted(() => {
   padding: 8px 10px;
   background: transparent;
 
-  &::before {
-    display: none;
-  }
-
   &:hover {
     background: transparent;
   }
@@ -870,9 +910,11 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  min-height: 58px;
-  padding: 8px 10px 8px 12px;
-  border-radius: 999px;
+  box-sizing: border-box;
+  height: 52px;
+  min-height: 52px;
+  padding: 7px 8px 7px 10px;
+  border-radius: 0;
   background: transparent;
   border: 0;
   backdrop-filter: none;
@@ -889,10 +931,23 @@ onUnmounted(() => {
 }
 
 .island-nav {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 0 4px;
+}
+
+.island-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--brand-accent-soft);
+  pointer-events: none;
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .island-link {
@@ -903,10 +958,11 @@ onUnmounted(() => {
   padding: 0 14px;
   border-radius: 999px;
   white-space: nowrap;
+  position: relative;
+  z-index: 1;
 
   &:hover,
   &.router-link-active {
-    background: var(--brand-accent-soft);
     color: var(--brand-accent);
   }
 }
@@ -928,6 +984,10 @@ onUnmounted(() => {
 
 .state-island .island-shell {
   transform: scale(1);
+  height: auto;
+  min-height: 58px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 999px;
 }
 
 @media (max-width: 960px) {
@@ -964,7 +1024,7 @@ onUnmounted(() => {
   }
 
   .header-stage {
-    min-height: 72px;
+    min-height: 60px;
   }
 
   .full-shell {
@@ -973,7 +1033,7 @@ onUnmounted(() => {
 
   .header-content {
     justify-content: space-between;
-    height: 54px;
+    height: 56px;
   }
 
   .state-full .header-content {
@@ -999,13 +1059,13 @@ onUnmounted(() => {
   }
 
   .floating-center {
-    padding-top: 10px;
+    padding-top: 4px;
   }
 }
 
 @media (max-width: 480px) {
   .header-stage {
-    min-height: 68px;
+    min-height: 60px;
   }
 
   .container {
