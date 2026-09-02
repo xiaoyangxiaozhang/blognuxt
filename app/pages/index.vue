@@ -503,7 +503,7 @@ onBeforeUnmount(() => {
     width: 100%;
     height: 20%;
     min-height: 60px;
-    background: linear-gradient(to bottom, var(--hero-gradient-start, #000000) 0%, transparent 100%);
+    background: linear-gradient(to bottom, var(--hero-gradient-overlay-start, rgba(0, 0, 0, 0.08)), transparent);
     pointer-events: none;
     user-select: none;
     z-index: 3;
