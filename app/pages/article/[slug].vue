@@ -23,6 +23,7 @@
               <div class="article-meta">
                 <span v-if="article.publish_time">{{ formatDate(article.publish_time) }}</span>
                 <span v-if="article.category?.name">{{ article.category.name }}</span>
+                <button class="article-report-button" type="button" @click="openFeedback">举报页面</button>
               </div>
               <div v-if="article.tags.length" class="article-tags">
                 <span v-for="tag in article.tags" :key="tag.name" class="article-tag">#{{ tag.name }}</span>
@@ -99,6 +100,7 @@ import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import { normalizeCommentList } from '~/utils/comments'
 import { createComment, getCommentList } from '~/services/api/comments'
 import { useCommentAuth } from '~/composables/useCommentAuth'
+import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import { proxyImageUrl } from '~/utils/image'
 import { formatDate } from '~/utils/date'
 import { renderArticleMarkdown, type MarkdownHeading } from '~/utils/markdown'
@@ -134,6 +136,7 @@ interface ArticleCommentForm {
 
 const route = useRoute()
 const { isLoggedIn, fetchProfile } = useCommentAuth()
+const { openFeedback } = useSiteOverlays()
 
 const articleSlug = computed(() => String(route.params.slug || ''))
 
@@ -663,6 +666,19 @@ onBeforeUnmount(() => {
   gap: 12px;
   color: var(--text-muted);
   font-size: 14px;
+}
+
+.article-report-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--brand-accent);
+  }
 }
 
 .article-tags {
