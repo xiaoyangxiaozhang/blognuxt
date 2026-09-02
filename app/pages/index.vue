@@ -494,17 +494,18 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: var(--hero-gradient-start, #000000);
 
-  /* 顶部渐变叠加层 */
-  &::after {
+  /* 顶部渐变叠加层，导航栏保持透明 */
+  &::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
+    width: 100%;
     height: 20%;
     min-height: 60px;
     background: linear-gradient(to bottom, var(--hero-gradient-start, #000000) 0%, transparent 100%);
     pointer-events: none;
+    user-select: none;
     z-index: 3;
     transition: background 0.4s cubic-bezier(0.345, 0.045, 0.345, 1);
   }
