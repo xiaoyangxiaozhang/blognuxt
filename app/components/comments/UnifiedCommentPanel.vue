@@ -274,7 +274,11 @@
       @change="handleImageSelect"
     >
 
-    <LoginDialog v-model="loginDialogVisible" @login-success="handleLoginSuccess" />
+    <LoginDialog
+      v-model="loginDialogVisible"
+      @login-success="handleLoginSuccess"
+      @forgot-password="handleForgotPassword"
+    />
   </section>
 </template>
 
@@ -292,6 +296,7 @@ import { renderCommentContent, extractCommentImageUrls } from '~/utils/commentRe
 import { proxyImageUrl } from '~/utils/image'
 import { uploadFile } from '~/services/api/upload'
 import { useCommentAuth } from '~/composables/useCommentAuth'
+import { useSiteOverlays } from '~/composables/useSiteOverlays'
 
 export interface UnifiedCommentForm {
   nickname: string
@@ -357,6 +362,7 @@ const showPreview = ref(false)
 const localUploads = ref<AttachmentPreviewItem[]>([])
 
 const { currentUser, isLoggedIn, fetchProfile, logoutUser } = useCommentAuth()
+const { openAccount } = useSiteOverlays()
 
 const previewBlocks = computed(() => renderCommentContent(props.form.content))
 const uploadedImageUrls = computed(() => extractCommentImageUrls(props.form.content))
@@ -549,6 +555,10 @@ const handleLoginSuccess = async () => {
   if (isLoggedIn.value) {
     syncUserIntoForm()
   }
+}
+
+const handleForgotPassword = () => {
+  openAccount('reset')
 }
 
 const handleLogout = async () => {

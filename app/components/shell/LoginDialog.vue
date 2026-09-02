@@ -89,6 +89,10 @@
             </div>
           </div>
 
+          <p v-if="mode === 'login'" class="forgot-text">
+            <button class="switch-link" type="button" @click="goToForgotPassword">忘记密码？</button>
+          </p>
+
           <p class="switch-text">
             {{ mode === 'login' ? '还没有账号？' : '已有账号？' }}
             <button class="switch-link" type="button" @click="switchMode(mode === 'login' ? 'register' : 'login')">
@@ -113,6 +117,7 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'login-success'): void
+  (e: 'forgot-password'): void
 }>()
 
 type AuthMode = 'login' | 'register'
@@ -169,6 +174,11 @@ const closeModal = () => {
   mode.value = 'login'
   resetForm()
   emit('update:modelValue', false)
+}
+
+const goToForgotPassword = () => {
+  closeModal()
+  emit('forgot-password')
 }
 
 const normalizeWebsite = (value: string) => {
@@ -509,6 +519,11 @@ const handleSubmit = async () => {
   text-align: center;
   color: var(--text-muted);
   font-size: 14px;
+}
+
+.forgot-text {
+  margin: 14px 0 0;
+  text-align: right;
 }
 
 .switch-link {
