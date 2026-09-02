@@ -38,3 +38,27 @@ export const apiPost = async <T>(url: string, body?: Record<string, unknown>) =>
     body
   })
 }
+
+export const apiPatch = async <T>(url: string, body?: Record<string, unknown>) => {
+  const api = useApi()
+  return api<ApiResponse<T>>(url, {
+    method: 'PATCH',
+    body
+  })
+}
+
+export const apiPut = async <T>(url: string, body?: Record<string, unknown>) => {
+  const api = useApi()
+  return api<ApiResponse<T>>(url, {
+    method: 'PUT',
+    body
+  })
+}
+
+export const apiDelete = async <T>(url: string, body?: Record<string, unknown>) => {
+  const api = useApi()
+  return api<ApiResponse<T>>(url, {
+    method: 'DELETE',
+    body
+  })
+}
