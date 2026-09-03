@@ -298,6 +298,7 @@ onUpdated(refreshScrollReveal)
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
   transform: scale(1.015);
   transform-origin: center;
   transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), filter var(--transition-base);
