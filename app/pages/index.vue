@@ -214,24 +214,25 @@ const mapFeatureArticle = (item: ArticleListItem): FeatureArticleItem => mapBase
 
 const buildHomePayload = async (): Promise<HomePayload> => {
   try {
-    const [articlesResponse, categoriesResponse, tagsResponse, recentResponse, settingsResponse, blogSettingsResponse] = await Promise.all([
+    const [articlesResponse, categoriesResponse, tagsResponse, settingsResponse, blogSettingsResponse] = await Promise.all([
       getArticleList({
         page: currentPage.value,
         page_size: pageSize
       }),
       getCategoryList({ page_size: 10 }),
       getTagList({ page_size: 20 }),
-      getArticleList({ page_size: 6 }),
       getBasicSettings(),
       getSettings('blog')
     ])
 
+    const articleList = articlesResponse.data.list || []
+
     return {
-      articles: (articlesResponse.data.list || []).map(mapArticleCard),
+      articles: articleList.map(mapArticleCard),
       totalArticles: articlesResponse.data.total || 0,
       categories: categoriesResponse.data.list || [],
       tags: tagsResponse.data.list || [],
-      recentArticles: (recentResponse.data.list || []).map(mapFeatureArticle),
+      recentArticles: articleList.slice(0, 6).map(mapFeatureArticle),
       basicSettings: settingsResponse.data || {},
       blogSettings: blogSettingsResponse.data || {},
       error: ''
@@ -274,7 +275,7 @@ const curtainReady = ref(false)
 const triggerReveal = () => {
   setTimeout(() => {
     curtainReady.value = true
-  }, 200)
+  }, 50)
 }
 
 const onCurtainOpened = () => {

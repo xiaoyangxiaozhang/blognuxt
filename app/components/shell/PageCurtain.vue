@@ -24,7 +24,7 @@ watch(() => props.modelValue, (val) => {
     isOpen.value = true
     setTimeout(() => {
       emit('opened')
-    }, 900)
+    }, 400)
   }
 })
 
@@ -34,7 +34,7 @@ onMounted(() => {
     isOpen.value = true
     setTimeout(() => {
       emit('opened')
-    }, 900)
+    }, 400)
   }
 })
 </script>
@@ -51,7 +51,7 @@ onMounted(() => {
     width: 50%;
     height: 100%;
     background: var(--home-surface);
-    transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .curtain-left {
