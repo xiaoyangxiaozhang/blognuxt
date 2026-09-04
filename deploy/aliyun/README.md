@@ -54,7 +54,7 @@ sudo nano /etc/blognuxt/blognuxt.env
 内容示例：
 
 ```dotenv
-NUXT_PUBLIC_API_BASE=http://你的后端地址:8080/api/v1
+NUXT_PUBLIC_API_BASE=https://xiaoyangxiaozhang.xyz/api/v1
 ```
 
 ```bash

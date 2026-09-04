@@ -32,6 +32,8 @@ Authorization: Bearer <access_token>
 - 常规请求：`application/json`
 - 文件上传：`multipart/form-data`
 - 文件下载：二进制流
+- 登录态请求使用 `credentials: include`，Access Token 通过 `Authorization: Bearer` 发送
+- Refresh Token 由后端写入 `HttpOnly` Cookie，前端 JavaScript 不可读取
 
 成功响应的统一结构如下：
 
@@ -87,7 +89,7 @@ Authorization: Bearer <access_token>
 | OAuth 回调 | `GET`  | `/api/v1/auth/:provider/callback`    | 第三方登录回调                   |
 | 注册       | `POST` | `/api/v1/auth/register`              | 邮箱注册                      |
 | 登录       | `POST` | `/api/v1/auth/login`                 | 邮箱密码登录                    |
-| 刷新 Token | `POST` | `/api/v1/auth/refresh`               | 使用 refresh token 换新 token |
+| 刷新 Token | `POST` | `/api/v1/auth/refresh`               | 使用 HttpOnly Cookie 换新 Access Token |
 | 忘记密码     | `POST` | `/api/v1/auth/forgot-password`       | 发送重置密码邮件                  |
 | 重置密码     | `POST` | `/api/v1/auth/reset-password`        | 验证码重置密码                   |
 | 文章列表     | `GET`  | `/api/v1/articles`                   | 前台文章列表                    |
@@ -215,21 +217,11 @@ Authorization: Bearer <access_token>
 }
 ```
 
-成功后会返回：
-
-- `access_token`
-- `refresh_token`
-- `user`
+成功后返回 `access_token` 和 `user`，同时通过 `Set-Cookie` 写入 Refresh Token。
 
 #### `POST /api/v1/auth/refresh`
 
-请求体示例：
-
-```json
-{
-  "refresh_token": "xxxx"
-}
-```
+请求体为空。浏览器会自动携带 Refresh Cookie，成功后返回新的 `access_token` 并轮换 Cookie。
 
 ### 3.2 文章
 
@@ -469,4 +461,3 @@ GET /api/v1/settings/:group
 
 - 面向前端的“精简联调版”
 - 面向对外开放的“标准 OpenAPI/Swagger 注释版”
-

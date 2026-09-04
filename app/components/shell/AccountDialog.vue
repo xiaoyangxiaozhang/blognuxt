@@ -39,6 +39,12 @@
             </form>
           </template>
 
+          <template v-else-if="!authReady">
+            <div class="login-panel">
+              <span>正在恢复登录状态…</span>
+            </div>
+          </template>
+
           <template v-else-if="!isLoggedIn">
             <div class="login-panel">
               <span>登录后管理个人资料和安全设置</span>
@@ -139,7 +145,7 @@ import {
 } from '~/services/api/auth'
 
 const { accountOpen, accountMode } = useSiteOverlays()
-const { currentUser, isLoggedIn, fetchProfile, logoutUser } = useCommentAuth()
+const { currentUser, authReady, isLoggedIn, fetchProfile, logoutUser } = useCommentAuth()
 const loginDialogOpen = ref(false)
 const profileSaving = ref(false)
 const profileSaved = ref(false)

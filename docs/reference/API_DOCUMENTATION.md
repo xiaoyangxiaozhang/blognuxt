@@ -351,7 +351,6 @@
   "message": "success",
   "data": {
     "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
       "id": 1,
       "email": "user@example.com",
@@ -390,15 +389,9 @@
 ### 3. 刷新 Token
 
 - **路径**: `POST /auth/refresh`
-- **描述**: 使用 refresh token 获取新的 access token
+- **描述**: 从 HttpOnly Cookie 读取 Refresh Token，轮换 Cookie 并返回新的 access token
 
-**请求体**:
-
-```json
-{
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
+**请求体**: 空。浏览器需携带 Cookie（`credentials: include`）。
 
 ### 4. 忘记密码
 

@@ -17,7 +17,6 @@ export interface AuthUserProfile {
 
 export interface LoginResponseData {
   access_token: string
-  refresh_token?: string
   token_type?: string
   expires_in?: number
   user?: AuthUserProfile
@@ -33,10 +32,6 @@ export interface RegisterPayload {
   password: string
   nickname: string
   website?: string
-}
-
-export interface RefreshTokenPayload {
-  refresh_token: string
 }
 
 export interface ForgotPasswordPayload {
@@ -75,8 +70,8 @@ export const register = (body: RegisterPayload) => {
   return apiPost<LoginResponseData>('/auth/register', body)
 }
 
-export const refreshToken = (body: RefreshTokenPayload) => {
-  return apiPost<LoginResponseData>('/auth/refresh', body)
+export const refreshToken = () => {
+  return apiPost<LoginResponseData>('/auth/refresh')
 }
 
 export const logout = () => {

@@ -1,34 +1,27 @@
 import { ElMessage } from 'element-plus'
 import { getUserProfile, login, logout, register, type AuthUserProfile, type LoginResponseData } from '~/services/api/auth'
+import { clearLegacyAuthStorage, refreshAccessToken, useAccessToken } from '~/composables/useApi'
 import { proxyImageUrl } from '~/utils/image'
 
-const STORAGE_KEYS = {
-  accessToken: 'access_token',
-  refreshToken: 'refresh_token'
-}
-
 export const useCommentAuth = () => {
+  const accessToken = useAccessToken()
   const currentUser = useState<AuthUserProfile | null>('comment-auth-user', () => null)
   const authLoading = useState('comment-auth-loading', () => false)
   const authReady = useState('comment-auth-ready', () => false)
+  const restoreAttempted = useState('comment-auth-restore-attempted', () => false)
 
-  const hasToken = () => {
-    if (!import.meta.client) return false
-    return Boolean(localStorage.getItem(STORAGE_KEYS.accessToken))
-  }
+  const hasToken = () => Boolean(accessToken.value)
 
   const isLoggedIn = computed(() => Boolean(currentUser.value) && hasToken())
 
   const clearAuth = () => {
-    if (import.meta.client) {
-      localStorage.removeItem(STORAGE_KEYS.accessToken)
-      localStorage.removeItem(STORAGE_KEYS.refreshToken)
-    }
+    accessToken.value = null
+    clearLegacyAuthStorage()
     currentUser.value = null
   }
 
   const fetchProfile = async () => {
-    if (!import.meta.client || !hasToken()) {
+    if (!import.meta.client) {
       authReady.value = true
       return null
     }
@@ -36,6 +29,13 @@ export const useCommentAuth = () => {
     authLoading.value = true
 
     try {
+      if (!hasToken()) {
+        if (authReady.value || !await refreshAccessToken()) {
+          clearAuth()
+          return null
+        }
+      }
+
       const response = await getUserProfile()
       const user = response.data
       if (user?.avatar) {
@@ -53,18 +53,32 @@ export const useCommentAuth = () => {
     }
   }
 
+  const restoreSession = async () => {
+    clearLegacyAuthStorage()
+    if (!import.meta.client) {
+      authReady.value = true
+      return null
+    }
+
+    if (restoreAttempted.value) return currentUser.value
+    restoreAttempted.value = true
+
+    if (!hasToken() && !await refreshAccessToken()) {
+      clearAuth()
+      authReady.value = true
+      return null
+    }
+
+    return fetchProfile()
+  }
+
   const applyAuthResponse = async (response: { data: LoginResponseData, message: string }) => {
     if (!response.data?.access_token) {
       throw new Error(response.message || 'Authentication failed.')
     }
 
-    if (import.meta.client) {
-      localStorage.setItem(STORAGE_KEYS.accessToken, response.data.access_token)
-      if (response.data.refresh_token) {
-        localStorage.setItem(STORAGE_KEYS.refreshToken, response.data.refresh_token)
-      }
-    }
-
+    accessToken.value = response.data.access_token
+    clearLegacyAuthStorage()
     currentUser.value = response.data.user || null
     await fetchProfile()
     return currentUser.value
@@ -96,13 +110,12 @@ export const useCommentAuth = () => {
 
   const logoutUser = async () => {
     try {
-      if (hasToken()) {
-        await logout()
-      }
+      await logout()
     } catch (error) {
       console.error(error)
     } finally {
       clearAuth()
+      authReady.value = true
     }
   }
 
@@ -118,6 +131,7 @@ export const useCommentAuth = () => {
     authLoading,
     authReady,
     isLoggedIn,
+    restoreSession,
     fetchProfile,
     loginWithPassword,
     registerWithEmail,

@@ -279,7 +279,7 @@ export const useApi = () => {
 
 当前项目的 `onRequest` 里做了一个动作：
 
-- 如果浏览器里有 `access_token`
+- 如果当前页面内存里有 Access Token
 - 就自动在请求头里加 `Authorization`
 
 ### 6.3 为什么这里判断 `import.meta.client`
@@ -296,12 +296,12 @@ if (!import.meta.client) {
 
 因为 Nuxt 页面既可能在浏览器执行，也可能在服务端执行。
 
-而像 `localStorage` 这种东西：
+而像 `localStorage` 这种浏览器存储：
 
 - 浏览器里有
 - 服务端没有
 
-所以在读取 `localStorage` 之前，必须先确认当前是在客户端。
+当前认证不再从 `localStorage` 读取 Token；启动时只清理旧凭证，并在客户端通过 HttpOnly Cookie 恢复会话。
 
 这就是 Nuxt 比普通前端更容易遇到的“客户端 / 服务端环境差异”。
 

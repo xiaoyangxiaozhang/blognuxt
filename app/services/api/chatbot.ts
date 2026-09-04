@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '~/composables/useApi'
+import { apiGet, apiPost, refreshAccessToken, useAccessToken } from '~/composables/useApi'
 
 export interface PublicChatbotConfig {
   enabled: boolean
@@ -81,18 +81,24 @@ export const streamChatbotMessage = async (
 ) => {
   const config = useRuntimeConfig()
   const apiBase = String(config.public.apiBase || '').replace(/\/+$/, '')
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (import.meta.client) {
-    const accessToken = localStorage.getItem('access_token')
-    if (accessToken) headers.Authorization = `Bearer ${accessToken}`
+  const accessToken = useAccessToken()
+  const sendRequest = () => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (accessToken.value) headers.Authorization = `Bearer ${accessToken.value}`
+
+    return fetch(`${apiBase}/chatbot/chat/stream`, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify(body),
+      signal
+    })
   }
 
-  const response = await fetch(`${apiBase}/chatbot/chat/stream`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-    signal
-  })
+  let response = await sendRequest()
+  if (response.status === 401 && await refreshAccessToken()) {
+    response = await sendRequest()
+  }
   if (!response.ok) throw new Error(await getStreamErrorMessage(response))
   if (!response.body) throw new Error('当前浏览器不支持流式回复。')
 

@@ -12,7 +12,7 @@ import { ElMessage } from 'element-plus'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 
 const route = useRoute()
-const { fetchProfile, clearAuth } = useCommentAuth()
+const { restoreSession, clearAuth } = useCommentAuth()
 
 const resolveRedirectPath = (value?: string) => {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
@@ -23,28 +23,12 @@ const resolveRedirectPath = (value?: string) => {
 }
 
 onMounted(async () => {
-  const accessToken = typeof route.query.access_token === 'string' ? route.query.access_token : ''
-  const refreshToken = typeof route.query.refresh_token === 'string' ? route.query.refresh_token : ''
   const redirect = resolveRedirectPath(
     typeof route.query.redirect === 'string' ? route.query.redirect : '/'
   )
 
-  if (!accessToken) {
-    ElMessage.error('第三方登录失败，未获取到登录凭证。')
-    await navigateTo('/')
-    return
-  }
-
-  localStorage.setItem('access_token', accessToken)
-
-  if (refreshToken) {
-    localStorage.setItem('refresh_token', refreshToken)
-  } else {
-    localStorage.removeItem('refresh_token')
-  }
-
   try {
-    const profile = await fetchProfile()
+    const profile = await restoreSession()
 
     if (!profile) {
       throw new Error('Failed to fetch OAuth profile.')
