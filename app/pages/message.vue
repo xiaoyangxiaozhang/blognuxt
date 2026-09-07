@@ -7,7 +7,6 @@
         :tips="aboutDescribeTips"
         :model-enabled="model.enabled"
         :model-url="model.url"
-        :model-credit="model.credit"
         :model-rotate="model.rotate"
         :model-control="model.control"
         :model-zoom="model.zoom"
@@ -18,7 +17,20 @@
         {{ settingsError }}
       </p>
 
-      <MessageProfile :story="aboutStory" />
+      <MessageProfile
+        :author-name="authorName"
+        :profile-list="profileList"
+        :hometown="hometown"
+        :description="aboutDescribe"
+        :description-tips="aboutDescribeTips"
+        :story="aboutStory"
+        :motto="mottoText"
+        :motto-sub="mottoSub"
+        :personality="personality"
+        :social-links="socialLinks"
+        :exhibition="aboutExhibition"
+        :established="blogEstablished"
+      />
 
       <MessageGuestbook
         :comments="comments"
@@ -48,6 +60,14 @@ const {
   aboutDescribe,
   aboutDescribeTips,
   aboutStory,
+  blogEstablished,
+  aboutExhibition,
+  profileList,
+  hometown,
+  mottoText,
+  mottoSub,
+  personality,
+  socialLinks,
   model,
   comments,
   commentForm,
@@ -61,11 +81,14 @@ const {
   submitComment,
 } = useMessagePageData()
 
+const pageTitle = computed(() => `关于 | ${authorName.value || '小羊嚣张'}`)
+const pageDescription = computed(() => aboutDescribe.value || '这里记录技术、生活，以及一些仍在思考的问题。')
+
 useSeoMeta({
-  title: '关于 | 小羊嚣张',
-  description: '一个前端开发者的个人博客，记录技术、生活，以及一些仍在思考的问题。',
-  ogTitle: '关于 | 小羊嚣张',
-  ogDescription: '一个前端开发者的个人博客，记录技术、生活，以及一些仍在思考的问题。',
+  title: pageTitle,
+  description: pageDescription,
+  ogTitle: pageTitle,
+  ogDescription: pageDescription,
   ogType: 'website'
 })
 </script>

@@ -7,7 +7,6 @@ withDefaults(defineProps<{
   tips?: string
   modelEnabled?: boolean
   modelUrl?: string
-  modelCredit?: string
   modelRotate?: boolean
   modelControl?: boolean
   modelZoom?: boolean
@@ -18,22 +17,13 @@ withDefaults(defineProps<{
   tips: '',
   modelEnabled: true,
   modelUrl: '',
-  modelCredit: '',
   modelRotate: true,
   modelControl: true,
   modelZoom: false,
   fallbackImageUrl: ''
 })
 
-const defaultDescription = `我写前端，也折腾这个博客。
-偶尔记录一些技术，
-偶尔只是觉得某件事情值得留下来。
-
-这个博客大概从 2023 年开始存在。
-中间改过很多次版，删过一些东西，
-也留下了一些现在回头看觉得挺奇怪的文章。
-
-不过没关系，能一直写下去就挺好的。`
+const defaultDescription = '这里记录技术、生活，以及一些仍在思考的问题。'
 </script>
 
 <template>
@@ -72,7 +62,6 @@ const defaultDescription = `我写前端，也折腾这个博客。
         </ClientOnly>
       </div>
 
-      <figcaption v-if="modelCredit" class="model-credit">{{ modelCredit }}</figcaption>
     </figure>
   </section>
 </template>
@@ -167,13 +156,6 @@ const defaultDescription = `我写前端，也折腾这个博客。
 .model-unavailable {
   color: var(--home-text-muted);
   font-size: 13px;
-}
-
-.model-credit {
-  margin: 10px 0 0;
-  color: var(--home-text-muted);
-  font-size: 11px;
-  line-height: 1.5;
 }
 
 @keyframes message-rise {

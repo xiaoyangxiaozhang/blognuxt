@@ -22,7 +22,6 @@ export interface MessageSocialLink {
 export interface MessageModelSettings {
   enabled: boolean
   url: string
-  credit: string
   rotate: boolean
   control: boolean
   zoom: boolean
@@ -37,7 +36,6 @@ export interface MessageStats {
 
 const EMPTY_STAT = '—'
 const DEFAULT_MODEL_URL = '/models/cat/scene.gltf'
-const DEFAULT_MODEL_CREDIT = 'Cute Cat in Cute Banana · SOBOL · CC BY 4.0'
 const EMPTY_STATS: MessageStats = {
   totalArticles: EMPTY_STAT,
   totalComments: EMPTY_STAT,
@@ -133,7 +131,6 @@ export const useMessagePageData = () => {
   const model = reactive<MessageModelSettings>({
     enabled: true,
     url: DEFAULT_MODEL_URL,
-    credit: DEFAULT_MODEL_CREDIT,
     rotate: true,
     control: true,
     zoom: false
@@ -177,12 +174,11 @@ export const useMessagePageData = () => {
       .map((item) => item.trim())
       .filter(Boolean)[0] || ''
 
-    const configuredSocials = blogSettings['blog.sidebar_social'] || blogSettings['blog.about_socialize']
+    const configuredSocials = blogSettings['blog.about_socialize'] || blogSettings['blog.sidebar_social']
     socialLinks.value = parseSocialLinks(configuredSocials)
 
     model.enabled = blogSettings['blog.about_model_enabled'] !== 'false'
     model.url = blogSettings['blog.about_model_url']?.trim() || DEFAULT_MODEL_URL
-    model.credit = blogSettings['blog.about_model_credit']?.trim() || DEFAULT_MODEL_CREDIT
     model.rotate = blogSettings['blog.about_model_rotate'] !== 'false'
     model.control = blogSettings['blog.about_model_control'] !== 'false'
     model.zoom = blogSettings['blog.about_model_zoom'] === 'true'
@@ -343,6 +339,7 @@ export const useMessagePageData = () => {
     aboutDescribeTips,
     aboutExhibition,
     aboutStory,
+    blogEstablished,
     profileList,
     hometown,
     mottoText,
