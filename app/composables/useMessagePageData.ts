@@ -1,8 +1,9 @@
 import { ElMessage } from 'element-plus'
+import { onBeforeUnmount } from 'vue'
 import { getCommentList, createComment } from '~/services/api/comments'
 import { getSiteStats, type SiteStats } from '~/services/api/stats'
 import { getBasicSettings, getSettings } from '~/services/api/user'
-import type { UnifiedCommentForm, UnifiedCommentItem } from '~/components/comments/UnifiedCommentPanel.vue'
+import type { UnifiedCommentForm, UnifiedCommentItem, UnifiedCommentSubmitState } from '~/components/comments/UnifiedCommentPanel.vue'
 import { normalizeCommentList } from '~/utils/comments'
 import { parseBlogJson } from '~/composables/useBlogSettings'
 import { proxyImageUrl } from '~/utils/image'
@@ -35,6 +36,8 @@ export interface MessageStats {
 }
 
 const EMPTY_STAT = '—'
+const DEFAULT_MODEL_URL = '/models/cat/scene.gltf'
+const DEFAULT_MODEL_CREDIT = 'Cute Cat in Cute Banana · SOBOL · CC BY 4.0'
 const EMPTY_STATS: MessageStats = {
   totalArticles: EMPTY_STAT,
   totalComments: EMPTY_STAT,
@@ -114,7 +117,7 @@ const parseProfile = (value: string | undefined) => {
 }
 
 export const useMessagePageData = () => {
-  const authorName = ref('')
+  const authorName = ref('小羊嚣张')
   const authorAvatar = ref('')
   const aboutDescribe = ref('')
   const aboutDescribeTips = ref('')
@@ -129,8 +132,8 @@ export const useMessagePageData = () => {
   const socialLinks = ref<MessageSocialLink[]>([])
   const model = reactive<MessageModelSettings>({
     enabled: true,
-    url: '/models/cat/scene.gltf',
-    credit: '',
+    url: DEFAULT_MODEL_URL,
+    credit: DEFAULT_MODEL_CREDIT,
     rotate: true,
     control: true,
     zoom: false
@@ -144,6 +147,8 @@ export const useMessagePageData = () => {
   const loadingComments = ref(false)
   const loadingStats = ref(false)
   const submitting = ref(false)
+  const submitState = ref<UnifiedCommentSubmitState>('idle')
+  let successResetTimer: ReturnType<typeof setTimeout> | undefined
   const settingsError = ref('')
   const statsError = ref('')
   const commentsError = ref('')
@@ -152,7 +157,7 @@ export const useMessagePageData = () => {
     basicSettings: Record<string, string>,
     blogSettings: Record<string, string>
   ) => {
-    authorName.value = basicSettings['basic.author'] || '博客作者'
+    authorName.value = basicSettings['basic.author'] || '小羊嚣张'
     authorAvatar.value = proxyImageUrl(basicSettings['basic.author_avatar']) || ''
     aboutDescribe.value = blogSettings['blog.about_describe'] || ''
     aboutDescribeTips.value = blogSettings['blog.about_describe_tips'] || ''
@@ -176,8 +181,8 @@ export const useMessagePageData = () => {
     socialLinks.value = parseSocialLinks(configuredSocials)
 
     model.enabled = blogSettings['blog.about_model_enabled'] !== 'false'
-    model.url = blogSettings['blog.about_model_url']?.trim() || '/models/cat/scene.gltf'
-    model.credit = blogSettings['blog.about_model_credit']?.trim() || ''
+    model.url = blogSettings['blog.about_model_url']?.trim() || DEFAULT_MODEL_URL
+    model.credit = blogSettings['blog.about_model_credit']?.trim() || DEFAULT_MODEL_CREDIT
     model.rotate = blogSettings['blog.about_model_rotate'] !== 'false'
     model.control = blogSettings['blog.about_model_control'] !== 'false'
     model.zoom = blogSettings['blog.about_model_zoom'] === 'true'
@@ -269,6 +274,7 @@ export const useMessagePageData = () => {
     }
 
     submitting.value = true
+    submitState.value = 'submitting'
 
     try {
       const response = await createComment({
@@ -277,7 +283,8 @@ export const useMessagePageData = () => {
         content,
         nickname,
         email,
-        website: commentForm.value.website.trim() || undefined
+        website: commentForm.value.website.trim() || undefined,
+        parent_id: commentForm.value.parentId
       })
 
       if (response.code !== 0) {
@@ -286,18 +293,34 @@ export const useMessagePageData = () => {
 
       commentForm.value = { nickname: '', email: '', website: '', content: '' }
       await Promise.all([fetchComments(), fetchStats()])
+      submitState.value = 'success'
+      if (successResetTimer) clearTimeout(successResetTimer)
+      successResetTimer = setTimeout(() => {
+        submitState.value = 'idle'
+      }, 1800)
       ElMessage.success('留言发表成功。')
     } catch (error) {
       console.error(error)
       const apiMessage = error instanceof Error ? error.message : '留言发送失败，请稍后重试。'
       ElMessage.error(apiMessage)
+      submitState.value = 'idle'
     } finally {
       submitting.value = false
+      if (submitState.value === 'submitting') submitState.value = 'idle'
     }
   }
 
   const updateCommentForm = (value: UnifiedCommentForm) => {
     commentForm.value = value
+  }
+
+  const replyToComment = (item: UnifiedCommentItem) => {
+    const parentId = Number(item.id)
+    commentForm.value = {
+      ...commentForm.value,
+      content: `@${item.author} `,
+      parentId: Number.isFinite(parentId) ? parentId : undefined
+    }
   }
 
   const loadMessageData = async () => {
@@ -307,6 +330,10 @@ export const useMessagePageData = () => {
 
   onMounted(() => {
     void loadMessageData()
+  })
+
+  onBeforeUnmount(() => {
+    if (successResetTimer) clearTimeout(successResetTimer)
   })
 
   return {
@@ -329,10 +356,12 @@ export const useMessagePageData = () => {
     loadingComments,
     loadingStats,
     submitting,
+    submitState,
     settingsError,
     statsError,
     commentsError,
     updateCommentForm,
+    replyToComment,
     submitComment
   }
 }

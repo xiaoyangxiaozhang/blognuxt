@@ -56,6 +56,8 @@ const footerLinks = computed<FooterLinkItem[]>(() =>
     .filter((item) => item.name?.trim() && item.url?.trim())
 )
 const { openFeedback, openAccount } = useSiteOverlays()
+const route = useRoute()
+const isMessagePage = computed(() => route.path === '/message')
 const footerIconMap: Record<string, any> = {
   'github-line': IconRiGithubLine,
   'bilibili-line': IconRiBilibiliLine,
@@ -117,16 +119,16 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
 <template>
   <footer class="blog-footer">
     <div class="footer-content">
-      <div class="footer-brand">
+      <div class="footer-brand" :class="{ 'footer-brand-about': isMessagePage }">
         <div class="footer-author">
-          <img :src="authorAvatar" alt="作者头像" class="author-avatar" />
+          <img v-if="!isMessagePage" :src="authorAvatar" alt="作者头像" class="author-avatar" />
           <div>
             <span class="author-name">{{ authorName }}</span>
             <p class="author-tagline">{{ footerSlogan }}</p>
           </div>
         </div>
 
-        <div class="footer-socials">
+        <div v-if="!isMessagePage" class="footer-socials">
           <a
             v-for="item in footerSocials"
             :key="`${item.name}-${item.url}`"
@@ -140,9 +142,10 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
             <component :is="footerIcon(item.icon)" />
           </a>
         </div>
+        <p v-else class="about-footer-note">Thanks for stopping by.</p>
       </div>
 
-      <div class="footer-stats-grid">
+      <div v-if="!isMessagePage" class="footer-stats-grid">
         <div class="stat-item">
           <span class="stat-value">{{ totalArticles }}</span>
           <span class="stat-label">文章</span>
@@ -178,7 +181,7 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
             <a :href="`https://beian.miit.gov.cn`" target="_blank" rel="noopener noreferrer">{{ icp }}</a>
           </template>
         </p>
-        <p class="powered">Powered by Nuxt 4 &amp; Designed with care</p>
+        <p class="powered">{{ isMessagePage ? 'Powered by Nuxt 4' : 'Powered by Nuxt 4 & Designed with care' }}</p>
       </div>
     </div>
   </footer>
@@ -207,6 +210,10 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
   margin-bottom: 28px;
 }
 
+.footer-brand-about {
+  margin-bottom: 20px;
+}
+
 .footer-author {
   display: flex;
   align-items: center;
@@ -230,6 +237,12 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
   margin: 4px 0 0;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.about-footer-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .footer-socials {

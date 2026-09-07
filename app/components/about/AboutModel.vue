@@ -164,7 +164,7 @@ onMounted(() => {
   keyLight.position.set(4, 6, 8)
   scene.add(keyLight)
 
-  const fillLight = new THREE.DirectionalLight(0x9db7ff, 0.7)
+  const fillLight = new THREE.DirectionalLight(0x9db7a3, 0.7)
   fillLight.position.set(-4, 2, -3)
   scene.add(fillLight)
 
@@ -175,6 +175,7 @@ onMounted(() => {
   controls.enablePan = false
   controls.enableZoom = props.enableZoom
   controls.screenSpacePanning = false
+  renderer.domElement.style.touchAction = 'pan-y'
 
   reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
   resizeObserver = new ResizeObserver(resize)

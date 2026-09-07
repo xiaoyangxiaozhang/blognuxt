@@ -75,7 +75,8 @@
             ref="textareaRef"
             :value="form.content"
             rows="2"
-            placeholder="写下你的留言..."
+            aria-label="留言内容"
+            :placeholder="variant === 'board' ? '留点什么……' : '写下你的留言...'"
             @input="updateField('content', ($event.target as HTMLTextAreaElement).value)"
           ></textarea>
 
@@ -140,10 +141,15 @@
               登录
             </button>
 
-            <button type="submit" class="submit-button" :disabled="submitting || processingSubmit || uploadingCount > 0">
-              <span v-if="submitting">提交中...</span>
+            <button
+              type="submit"
+              class="submit-button"
+              :disabled="submitting || processingSubmit || uploadingCount > 0 || submitState === 'success'"
+            >
+              <span v-if="submitState === 'success'">{{ variant === 'board' ? '留下了 ✓' : '已提交 ✓' }}</span>
+              <span v-else-if="submitting">{{ variant === 'board' ? '正在留下……' : '提交中...' }}</span>
               <span v-else-if="processingSubmit || uploadingCount > 0">上传图片中...</span>
-              <span v-else>发表评论</span>
+              <span v-else>{{ variant === 'board' ? '发送留言' : '发表评论' }}</span>
             </button>
           </div>
         </footer>
@@ -183,6 +189,8 @@
             class="comment-card board-card"
             :class="{ reply: Boolean(item.replyTo) }"
           >
+            <div class="board-date">{{ formatPublishTime(item.publishTime) }}</div>
+
             <footer class="board-meta">
               <div class="board-author">
                 <div class="comment-avatar">
@@ -203,7 +211,9 @@
                       个人主页
                     </a>
                     <span v-if="item.replyTo" class="reply-pill">回复 {{ item.replyTo }}</span>
-                    <span>{{ formatPublishTime(item.publishTime) }}</span>
+                    <button type="button" class="reply-action" @click="startReply(item)">
+                      ↩ 回复
+                    </button>
                   </div>
                 </div>
               </div>
@@ -303,6 +313,7 @@ export interface UnifiedCommentForm {
   email: string
   website: string
   content: string
+  parentId?: number
 }
 
 export interface UnifiedCommentItem {
@@ -314,6 +325,8 @@ export interface UnifiedCommentItem {
   website?: string
   replyTo?: string
 }
+
+export type UnifiedCommentSubmitState = 'idle' | 'submitting' | 'success'
 
 interface AttachmentPreviewItem {
   file?: File
@@ -336,6 +349,8 @@ const props = withDefaults(defineProps<{
   errorText?: string
   variant?: 'default' | 'board'
   showHeader?: boolean
+  compactTime?: boolean
+  submitState?: UnifiedCommentSubmitState
 }>(), {
   loading: false,
   submitting: false,
@@ -344,11 +359,14 @@ const props = withDefaults(defineProps<{
   emptyText: '还没有评论，来留下第一条消息吧。',
   errorText: '',
   variant: 'default',
-  showHeader: true
+  showHeader: true,
+  compactTime: false,
+  submitState: 'idle'
 })
 
 const emit = defineEmits<{
   (e: 'update:form', value: UnifiedCommentForm): void
+  (e: 'reply', value: UnifiedCommentItem): void
   (e: 'submit'): void
 }>()
 
@@ -384,6 +402,12 @@ const updateField = (field: keyof UnifiedCommentForm, value: string) => {
     ...props.form,
     [field]: value
   })
+}
+
+const startReply = (item: UnifiedCommentItem) => {
+  updateField('content', `@${item.author} `)
+  emit('reply', item)
+  nextTick(() => textareaRef.value?.focus())
 }
 
 const syncUserIntoForm = () => {
@@ -571,6 +595,9 @@ const formatPublishTime = (value: string) => {
   const date = new Date(value.replace(/-/g, '/'))
   if (Number.isNaN(date.getTime())) return value
   const pad = (part: number) => String(part).padStart(2, '0')
+  if (props.compactTime) {
+    return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())}`
+  }
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
