@@ -51,29 +51,45 @@
         </section>
       </transition>
 
-      <button
+      <div
         v-if="!open"
-        type="button"
         class="chatbot-launcher"
+        role="button"
+        tabindex="0"
         :aria-label="`打开${displayName}的聊天窗口`"
         @click="open = true"
+        @keydown.enter.prevent="open = true"
+        @keydown.space.prevent="open = true"
       >
-        <img :src="avatar || logoUrl" :alt="displayName" />
-        <b>来聊两句</b>
-      </button>
+        <ClientOnly>
+          <AboutModel
+            :key="chatbotModelUrl"
+            :model-url="chatbotModelUrl"
+            :auto-rotate="chatbotModelRotate"
+            :enable-controls="false"
+            :enable-zoom="false"
+            model-alt="打开和博主聊天"
+          />
+          <template #fallback><span aria-hidden="true"></span></template>
+        </ClientOnly>
+      </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import AboutModel from '~/components/about/AboutModel.vue'
+import { useBlogSettings } from '~/composables/useBlogSettings'
 import { getChatbotConfig, streamChatbotMessage } from '~/services/api/chatbot'
 import type { ChatbotMessage, PublicChatbotConfig } from '~/services/api/chatbot'
 import { proxyImageUrl } from '~/utils/image'
 import logoUrl from '~/assets/img/logo-sheep.png'
 
 const STORAGE_KEY = 'blog-chatbot-session-v2'
+const DEFAULT_CHATBOT_MODEL_URL = '/models/cat/scene.gltf'
 
 const route = useRoute()
+const { settings: blogSettings } = useBlogSettings()
 const open = ref(false)
 const sending = ref(false)
 const draft = ref('')
@@ -92,6 +108,8 @@ const sessionId = ref('')
 
 const displayName = computed(() => config.display_name || '博主')
 const avatar = computed(() => proxyImageUrl(config.avatar))
+const chatbotModelUrl = computed(() => blogSettings.value['blog.about_model_url']?.trim() || DEFAULT_CHATBOT_MODEL_URL)
+const chatbotModelRotate = computed(() => blogSettings.value['blog.about_model_rotate'] !== 'false')
 const suggestions = computed(() => (config.suggestions || []).filter(Boolean).slice(0, 4))
 const articleSlug = computed(() => {
   const slug = route.params.slug
@@ -237,24 +255,21 @@ onMounted(async () => {
   position: fixed;
   right: 28px;
   bottom: 28px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 5px 12px 5px 5px;
-  border: 1px solid var(--home-border, rgba(129, 131, 255, .24));
-  border-radius: 15px;
-  color: var(--home-text, var(--text-primary));
-  background: var(--home-card-bg, var(--bg-secondary, #fff));
-  box-shadow: var(--home-shadow, 0 8px 28px rgba(0, 0, 0, .12));
+  display: block;
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
   cursor: pointer;
   font: inherit;
-  transition: transform .25s var(--ease-out-expo, ease), border-color .25s ease, box-shadow .25s ease;
+  transition: transform .25s var(--ease-out-expo, ease);
 
-  &:hover,
-  &:focus-visible {
-    border-color: var(--home-border, rgba(129, 131, 255, .24));
-    box-shadow: var(--home-shadow, 0 10px 28px rgba(20, 20, 50, .12));
-    transform: translateY(-3px);
+  &:hover {
+    transform: translateY(-3px) scale(1.04);
   }
 
   &:focus-visible {
@@ -262,14 +277,24 @@ onMounted(async () => {
     outline-offset: 3px;
   }
 
-  img {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    object-fit: cover;
+  :deep(.about-model) {
+    min-height: 0;
+    overflow: visible;
   }
 
-  b { font-size: 13px; font-weight: 500; }
+  :deep(canvas) { min-height: 0; }
+
+  :deep(.model-state) {
+    color: transparent;
+  }
+
+  :deep(.model-error) {
+    background: transparent;
+  }
+
+  :deep(.model-error span) {
+    display: none;
+  }
 }
 
 .chatbot-panel {
