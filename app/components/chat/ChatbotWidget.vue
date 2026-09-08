@@ -256,8 +256,8 @@ onMounted(async () => {
   right: 28px;
   bottom: 28px;
   display: block;
-  width: 76px;
-  height: 76px;
+  width: 100px;
+  height: 100px;
   padding: 0;
   border: 0;
   border-radius: 50%;
