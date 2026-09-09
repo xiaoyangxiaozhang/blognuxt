@@ -13,13 +13,28 @@
         <div class="reading-progress" :style="{ width: `${readingProgress}%` }" aria-hidden="true"></div>
 
         <div class="article-reading-layout">
-          <article class="article-card">
+          <article
+            ref="articleCardRef"
+            class="article-card"
+            :class="{ 'is-immersive': isImmersiveReading }"
+            @keydown.esc="closeImmersiveReading"
+          >
             <div v-if="article.cover" class="article-cover">
               <img :src="article.cover" :alt="article.title" />
             </div>
 
             <header class="article-header">
-              <h1 class="article-title">{{ article.title }}</h1>
+              <div class="article-header-main">
+                <h1 class="article-title">{{ article.title }}</h1>
+                <button
+                  type="button"
+                  class="article-fullscreen-button"
+                  :aria-pressed="isImmersiveReading"
+                  @click="toggleImmersiveReading"
+                >
+                  {{ isImmersiveReading ? '退出全屏' : '全屏阅读' }}
+                </button>
+              </div>
               <div class="article-meta">
                 <span v-if="article.publish_time">{{ formatDate(article.publish_time) }}</span>
                 <span v-if="article.category?.name">{{ article.category.name }}</span>
@@ -292,6 +307,45 @@ const relatedHref = (item: ArticleListItem) => `/article/${encodeURIComponent(re
 const readingProgress = ref(0)
 const activeHeadingId = ref('')
 const articleContentRef = ref<HTMLElement | null>(null)
+const articleCardRef = ref<HTMLElement | null>(null)
+const isImmersiveReading = ref(false)
+
+const toggleImmersiveReading = () => {
+  if (!import.meta.client) {
+    return
+  }
+
+  if (isImmersiveReading.value) {
+    closeImmersiveReading()
+    return
+  }
+
+  isImmersiveReading.value = true
+  const articleCard = articleCardRef.value
+  if (articleCard?.requestFullscreen) {
+    void articleCard.requestFullscreen().catch(() => {
+      // CSS 全屏样式会继续作为不支持原生 Fullscreen API 时的降级方案。
+    })
+  }
+}
+
+const closeImmersiveReading = () => {
+  if (!import.meta.client) {
+    return
+  }
+
+  const articleCard = articleCardRef.value
+  if (document.fullscreenElement === articleCard) {
+    void document.exitFullscreen().catch(() => undefined)
+  }
+  isImmersiveReading.value = false
+}
+
+const handleFullscreenChange = () => {
+  if (document.fullscreenElement !== articleCardRef.value) {
+    isImmersiveReading.value = false
+  }
+}
 
 const updateReadingProgress = () => {
   if (!import.meta.client) {
@@ -464,6 +518,7 @@ const handleCommentSubmit = async () => {
 
 onMounted(() => {
   fetchProfile()
+  document.addEventListener('fullscreenchange', handleFullscreenChange)
   nextTick(() => {
     updateReadingProgress()
     updateActiveHeading()
@@ -480,6 +535,10 @@ watch(articleContentHtml, () => {
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  if (document.fullscreenElement === articleCardRef.value) {
+    void document.exitFullscreen().catch(() => undefined)
+  }
   window.removeEventListener('scroll', updateReadingProgress)
   window.removeEventListener('scroll', updateActiveHeading)
 })
@@ -518,6 +577,44 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border: 1px solid var(--home-border);
   box-shadow: var(--home-shadow);
+}
+
+.article-card.is-immersive,
+.article-card:fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--home-surface);
+  box-shadow: none;
+}
+
+.article-card.is-immersive .article-cover,
+.article-card:fullscreen .article-cover {
+  display: none;
+}
+
+.article-card.is-immersive .article-header,
+.article-card.is-immersive .article-content,
+.article-card:fullscreen .article-header,
+.article-card:fullscreen .article-content {
+  width: min(860px, calc(100% - 40px));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.article-card.is-immersive .article-meta,
+.article-card.is-immersive .article-tags,
+.article-card:fullscreen .article-meta,
+.article-card:fullscreen .article-tags {
+  display: none;
 }
 
 .article-reading-layout {
@@ -653,6 +750,13 @@ onBeforeUnmount(() => {
   padding: 32px 32px 16px;
 }
 
+.article-header-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
 .article-title {
   margin: 0 0 6px;
   font-size: 34px;
@@ -679,6 +783,28 @@ onBeforeUnmount(() => {
   &:hover {
     color: var(--brand-accent);
   }
+}
+
+.article-fullscreen-button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--home-border);
+  border-radius: 999px;
+  color: var(--home-text-muted);
+  background: var(--home-card-bg);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.article-fullscreen-button:hover,
+.article-fullscreen-button:focus-visible {
+  border-color: var(--brand-accent);
+  color: var(--brand-accent);
+  background: var(--home-card-hover);
+  outline: none;
 }
 
 .article-tags {
@@ -736,6 +862,16 @@ onBeforeUnmount(() => {
 
   .article-title {
     font-size: 26px;
+  }
+
+  .article-header-main {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .article-fullscreen-button {
+    align-self: flex-start;
   }
 
   .article-comments {
