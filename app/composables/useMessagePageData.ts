@@ -19,6 +19,16 @@ export interface MessageSocialLink {
   icon: string
 }
 
+export interface MessageNamedLink {
+  name: string
+  url: string
+}
+
+export interface MessageVersion {
+  name: string
+  version: string
+}
+
 export interface MessageModelSettings {
   enabled: boolean
   url: string
@@ -100,6 +110,22 @@ const parseSocialLinks = (value: string | undefined): MessageSocialLink[] => {
     .filter((item) => item.name && item.url)
 }
 
+const parseNamedLinks = (value: string | undefined): MessageNamedLink[] => {
+  const raw = parseBlogJson<Array<Record<string, unknown>>>(value, [])
+
+  return raw
+    .map((item) => ({ name: toText(item.name), url: toText(item.url) }))
+    .filter((item) => item.name && item.url)
+}
+
+const parseVersions = (value: string | undefined): MessageVersion[] => {
+  const raw = parseBlogJson<Array<Record<string, unknown>>>(value, [])
+
+  return raw
+    .map((item) => ({ name: toText(item.name), version: toText(item.version) }))
+    .filter((item) => item.name && item.version)
+}
+
 const parseProfile = (value: string | undefined) => {
   const raw = parseBlogJson<Array<Record<string, unknown>>>(value, [])
   const hometownLabels = ['故乡', '家乡', '籍贯']
@@ -128,6 +154,13 @@ export const useMessagePageData = () => {
   const mottoSub = ref('')
   const personality = ref('')
   const socialLinks = ref<MessageSocialLink[]>([])
+  const creationLinks = ref<MessageNamedLink[]>([])
+  const versions = ref<MessageVersion[]>([])
+  const unionLinks = ref<MessageNamedLink[]>([])
+  const guestbookTitle = ref('留言簿')
+  const guestbookDescription = ref('来都来了，\n留句话再走吧。\n一个 👋 也可以。')
+  const guestbookTransition = ref('如果你愿意，\n留一句话再继续往下看。')
+  const guestbookEmptyText = ref('还没有留言，来说点什么吧。')
   const model = reactive<MessageModelSettings>({
     enabled: true,
     url: DEFAULT_MODEL_URL,
@@ -176,6 +209,17 @@ export const useMessagePageData = () => {
 
     const configuredSocials = blogSettings['blog.about_socialize'] || blogSettings['blog.sidebar_social']
     socialLinks.value = parseSocialLinks(configuredSocials)
+    creationLinks.value = parseNamedLinks(blogSettings['blog.about_creation'])
+    versions.value = parseVersions(blogSettings['blog.about_versions'])
+    unionLinks.value = parseNamedLinks(blogSettings['blog.about_unions'])
+
+    guestbookTitle.value = blogSettings['blog.about_guestbook_title']?.trim() || '留言簿'
+    guestbookDescription.value = blogSettings['blog.about_guestbook_description']?.trim()
+      || '来都来了，\n留句话再走吧。\n一个 👋 也可以。'
+    guestbookTransition.value = blogSettings['blog.about_guestbook_transition']?.trim()
+      || '如果你愿意，\n留一句话再继续往下看。'
+    guestbookEmptyText.value = blogSettings['blog.about_guestbook_empty_text']?.trim()
+      || '还没有留言，来说点什么吧。'
 
     model.enabled = blogSettings['blog.about_model_enabled'] !== 'false'
     model.url = blogSettings['blog.about_model_url']?.trim() || DEFAULT_MODEL_URL
@@ -346,6 +390,13 @@ export const useMessagePageData = () => {
     mottoSub,
     personality,
     socialLinks,
+    creationLinks,
+    versions,
+    unionLinks,
+    guestbookTitle,
+    guestbookDescription,
+    guestbookTransition,
+    guestbookEmptyText,
     model,
     stats,
     comments: normalizedComments,

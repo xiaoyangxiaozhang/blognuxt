@@ -12,6 +12,16 @@ interface SocialLink {
   icon: string
 }
 
+interface NamedLink {
+  name: string
+  url: string
+}
+
+interface VersionItem {
+  name: string
+  version: string
+}
+
 const props = defineProps<{
   authorName?: string
   profileList?: ProfileItem[]
@@ -23,8 +33,12 @@ const props = defineProps<{
   mottoSub?: string
   personality?: string
   socialLinks?: SocialLink[]
+  creationLinks?: NamedLink[]
+  versions?: VersionItem[]
+  unionLinks?: NamedLink[]
   exhibition?: string
   established?: string
+  guestbookTransition?: string
 }>()
 
 const profileItems = computed(() => [
@@ -38,6 +52,9 @@ const hasAboutText = computed(() => Boolean(storyText.value || props.description
 const hasCurrentInfo = computed(() => Boolean(
   mottoItems.value.length || props.mottoSub?.trim() || props.personality?.trim() ||
   props.socialLinks?.length || props.established?.trim()
+))
+const hasResources = computed(() => Boolean(
+  props.creationLinks?.length || props.versions?.length || props.unionLinks?.length
 ))
 </script>
 
@@ -77,16 +94,37 @@ const hasCurrentInfo = computed(() => Boolean(
       </section>
     </div>
 
+    <div v-if="hasResources" class="resource-grid">
+      <section v-if="creationLinks?.length" class="resource-block" aria-labelledby="creation-title">
+        <h2 id="creation-title">创作平台</h2>
+        <a v-for="link in creationLinks" :key="`${link.name}-${link.url}`" :href="link.url" target="_blank" rel="noreferrer">
+          {{ link.name }}
+        </a>
+      </section>
+
+      <section v-if="versions?.length" class="resource-block" aria-labelledby="versions-title">
+        <h2 id="versions-title">版本信息</h2>
+        <p v-for="item in versions" :key="`${item.name}-${item.version}`">
+          <span>{{ item.name }}</span>
+          <strong>{{ item.version }}</strong>
+        </p>
+      </section>
+
+      <section v-if="unionLinks?.length" class="resource-block" aria-labelledby="unions-title">
+        <h2 id="unions-title">站长联盟</h2>
+        <a v-for="link in unionLinks" :key="`${link.name}-${link.url}`" :href="link.url" target="_blank" rel="noreferrer">
+          {{ link.name }}
+        </a>
+      </section>
+    </div>
+
     <figure v-if="exhibition" class="exhibition">
       <img :src="exhibition" alt="关于本站的展示图片" loading="lazy" />
     </figure>
 
     <p v-if="authorName" class="signature" :aria-label="`${authorName}的签名`">—— {{ authorName }}</p>
 
-    <p class="guestbook-transition">
-      如果你愿意，<br />
-      留一句话再继续往下看。
-    </p>
+    <p v-if="guestbookTransition" class="guestbook-transition">{{ guestbookTransition }}</p>
   </section>
 </template>
 
@@ -116,7 +154,8 @@ const hasCurrentInfo = computed(() => Boolean(
 }
 
 .profile-list,
-.motto-list {
+.motto-list,
+.resource-block p {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -203,6 +242,50 @@ const hasCurrentInfo = computed(() => Boolean(
   color: var(--brand-accent);
 }
 
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 44px;
+  margin-top: 72px;
+  padding-top: 48px;
+  border-top: 1px solid var(--home-border);
+}
+
+.resource-block {
+  min-width: 0;
+}
+
+.resource-block h2 {
+  margin-bottom: 22px;
+}
+
+.resource-block a,
+.resource-block p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  color: var(--home-text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  text-decoration: none;
+}
+
+.resource-block a:hover,
+.resource-block a:focus-visible {
+  color: var(--brand-accent);
+}
+
+.resource-block strong {
+  color: var(--home-text);
+  font-weight: 500;
+  text-align: right;
+}
+
+.guestbook-transition {
+  white-space: pre-line;
+}
+
 .exhibition {
   max-width: 720px;
   margin: 64px 0 0 30%;
@@ -258,6 +341,13 @@ const hasCurrentInfo = computed(() => Boolean(
 
   .current-block {
     grid-column: auto;
+  }
+
+  .resource-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    margin-top: 54px;
+    padding-top: 40px;
   }
 
   .signature,

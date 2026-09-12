@@ -8,10 +8,14 @@ withDefaults(defineProps<{
   submitting: boolean
   submitState?: UnifiedCommentSubmitState
   form: UnifiedCommentForm
+  title?: string
+  description?: string
   emptyText?: string
   errorText?: string
 }>(), {
   emptyText: '还没有留言，来留下第一句问候吧。',
+  title: '留言簿',
+  description: '来都来了，\n留句话再走吧。\n一个 👋 也可以。',
   errorText: '',
   submitState: 'idle'
 })
@@ -26,8 +30,8 @@ const emit = defineEmits<{
 <template>
   <section id="message-board-section" class="guestbook-section" aria-labelledby="guestbook-title">
     <div class="guestbook-intro">
-      <h2 id="guestbook-title">留言簿</h2>
-      <p class="guestbook-description">来都来了，<br />留句话再走吧。<br />一个 👋 也可以。</p>
+      <h2 id="guestbook-title">{{ title }}</h2>
+      <p class="guestbook-description">{{ description }}</p>
     </div>
 
     <div class="guestbook-content">
@@ -75,6 +79,7 @@ const emit = defineEmits<{
   color: var(--home-text-muted);
   font-size: 15px;
   line-height: 1.9;
+  white-space: pre-line;
 }
 
 .guestbook-content {

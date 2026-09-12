@@ -28,8 +28,12 @@
         :motto-sub="mottoSub"
         :personality="personality"
         :social-links="socialLinks"
+        :creation-links="creationLinks"
+        :versions="versions"
+        :union-links="unionLinks"
         :exhibition="aboutExhibition"
         :established="blogEstablished"
+        :guestbook-transition="guestbookTransition"
       />
 
       <MessageGuestbook
@@ -38,7 +42,9 @@
         :submitting="submitting"
         :submit-state="submitState"
         :form="commentForm"
-        :empty-text="commentsError ? '暂时无法展示留言。' : '还没有留言，来说点什么吧。'"
+        :title="guestbookTitle"
+        :description="guestbookDescription"
+        :empty-text="commentsError ? '暂时无法展示留言。' : guestbookEmptyText"
         :error-text="commentsError"
         @update:form="updateCommentForm"
         @reply="replyToComment"
@@ -68,6 +74,13 @@ const {
   mottoSub,
   personality,
   socialLinks,
+  creationLinks,
+  versions,
+  unionLinks,
+  guestbookTitle,
+  guestbookDescription,
+  guestbookTransition,
+  guestbookEmptyText,
   model,
   comments,
   commentForm,
