@@ -1,9 +1,27 @@
 import MarkdownIt from 'markdown-it'
+import hljs from 'highlight.js/lib/common'
 
 export interface MarkdownHeading {
   id: string
   level: number
   text: string
+}
+
+const languageAliases: Record<string, string> = {
+  js: 'javascript',
+  jsx: 'javascript',
+  ts: 'typescript',
+  tsx: 'typescript',
+  vue: 'xml',
+  html: 'xml',
+  sh: 'bash',
+  shell: 'bash',
+  yml: 'yaml'
+}
+
+const normalizeLanguage = (info: string) => {
+  const rawLanguage = info.trim().split(/\s+/)[0]?.toLowerCase() || ''
+  return languageAliases[rawLanguage] || rawLanguage
 }
 
 const markdown = new MarkdownIt({
@@ -12,6 +30,34 @@ const markdown = new MarkdownIt({
   linkify: true,
   typographer: true
 })
+
+markdown.renderer.rules.fence = (tokens, index) => {
+  const token = tokens[index]
+  if (!token) return ''
+
+  const rawLanguage = token.info.trim().split(/\s+/)[0] || ''
+  const language = normalizeLanguage(token.info)
+  const canHighlight = Boolean(language && hljs.getLanguage(language))
+  let highlightedCode = markdown.utils.escapeHtml(token.content)
+
+  if (canHighlight) {
+    try {
+      highlightedCode = hljs.highlight(token.content, {
+        language,
+        ignoreIllegals: true
+      }).value
+    } catch {
+      // 高亮失败时保留转义后的原始代码。
+    }
+  }
+
+  const languageClass = language
+    ? ` language-${markdown.utils.escapeHtml(language)}`
+    : ''
+  const displayLanguage = rawLanguage || 'text'
+
+  return `<div class="code-block-container"><div class="code-toolbar"><span class="code-lang">${markdown.utils.escapeHtml(displayLanguage.toUpperCase())}</span></div><pre><code class="hljs${languageClass}">${highlightedCode}</code></pre></div>`
+}
 
 /**
  * 将文章 Markdown 转为安全的 HTML。

@@ -26,6 +26,13 @@
   --prose-codeblock-lang: #666666;
   --prose-codeblock-line-number: #999999;
   --prose-codeblock-line-border: #d1d5da;
+  --syntax-comment: #008000;
+  --syntax-keyword: #0000ff;
+  --syntax-type: #267f99;
+  --syntax-function: #795e26;
+  --syntax-variable: #001080;
+  --syntax-string: #a31515;
+  --syntax-number: #098658;
 
   // 引用块颜色
   --prose-quote-bg: linear-gradient(
@@ -109,6 +116,13 @@
   --prose-codeblock-lang: #cccccc;
   --prose-codeblock-line-number: #999999;
   --prose-codeblock-line-border: #444444;
+  --syntax-comment: #6a9955;
+  --syntax-keyword: #c586c0;
+  --syntax-type: #4ec9b0;
+  --syntax-function: #dcdcaa;
+  --syntax-variable: #9cdcfe;
+  --syntax-string: #ce9178;
+  --syntax-number: #b5cea8;
 
   // 引用块颜色
   --prose-quote-bg: linear-gradient(
@@ -495,6 +509,49 @@
         .line-content {
           display: inline;
           white-space: pre;
+        }
+
+        &.hljs {
+          color: var(--prose-codeblock-text);
+        }
+
+        .hljs-comment,
+        .hljs-quote {
+          color: var(--syntax-comment);
+        }
+
+        .hljs-keyword,
+        .hljs-selector-tag {
+          color: var(--syntax-keyword);
+        }
+
+        .hljs-type,
+        .hljs-built_in,
+        .hljs-title.class_ {
+          color: var(--syntax-type);
+        }
+
+        .hljs-title.function_,
+        .hljs-function .hljs-title {
+          color: var(--syntax-function);
+        }
+
+        .hljs-variable,
+        .hljs-params,
+        .hljs-template-variable,
+        .hljs-property {
+          color: var(--syntax-variable);
+        }
+
+        .hljs-string,
+        .hljs-attr,
+        .hljs-attribute {
+          color: var(--syntax-string);
+        }
+
+        .hljs-number,
+        .hljs-literal {
+          color: var(--syntax-number);
         }
       }
     }
