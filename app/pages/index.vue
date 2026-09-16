@@ -90,6 +90,7 @@
           :categories="homeData.categories"
           :tags="homeData.tags"
           :recent-articles="homeData.recentArticles"
+          :comments="homeData.comments"
           :loading="pending"
         />
 
@@ -109,9 +110,11 @@ import HomeFeaturePanel from '~/components/home/HomeFeaturePanel.vue'
 import HomeNewestSection from '~/components/home/HomeNewestSection.vue'
 import { getArticleList } from '~/services/api/article'
 import { getCategoryList } from '~/services/api/category'
+import { getCommentList } from '~/services/api/comments'
 import { getTagList } from '~/services/api/tag'
 import { getBasicSettings, getSettings } from '~/services/api/user'
 import type { ArticleListItem, CategoryItem, TagItem } from '~/types/api'
+import { normalizeCommentList, type NormalizedCommentItem } from '~/utils/comments'
 import { formatDate } from '~/utils/date'
 import { proxyImageUrl } from '~/utils/image'
 import { isVideoUrl, parseBlogJson } from '~/composables/useBlogSettings'
@@ -151,6 +154,7 @@ interface HomePayload {
   categories: CategoryItem[]
   tags: TagItem[]
   recentArticles: FeatureArticleItem[]
+  comments: NormalizedCommentItem[]
   basicSettings: Record<string, string>
   blogSettings: Record<string, string>
   error: string
@@ -164,6 +168,7 @@ const EMPTY_HOME_PAYLOAD: HomePayload = {
   categories: [],
   tags: [],
   recentArticles: [],
+  comments: [],
   basicSettings: {},
   blogSettings: {},
   error: ''
@@ -214,7 +219,7 @@ const mapFeatureArticle = (item: ArticleListItem): FeatureArticleItem => mapBase
 
 const buildHomePayload = async (): Promise<HomePayload> => {
   try {
-    const [articlesResponse, categoriesResponse, tagsResponse, settingsResponse, blogSettingsResponse] = await Promise.all([
+    const [articlesResponse, categoriesResponse, tagsResponse, settingsResponse, blogSettingsResponse, commentsResponse] = await Promise.all([
       getArticleList({
         page: currentPage.value,
         page_size: pageSize
@@ -222,7 +227,13 @@ const buildHomePayload = async (): Promise<HomePayload> => {
       getCategoryList({ page_size: 10 }),
       getTagList({ page_size: 20 }),
       getBasicSettings(),
-      getSettings('blog')
+      getSettings('blog'),
+      getCommentList({
+        target_type: 'page',
+        target_key: 'message',
+        page: 1,
+        page_size: 6
+      }).catch(() => null)
     ])
 
     const articleList = articlesResponse.data.list || []
@@ -233,6 +244,7 @@ const buildHomePayload = async (): Promise<HomePayload> => {
       categories: categoriesResponse.data.list || [],
       tags: tagsResponse.data.list || [],
       recentArticles: articleList.slice(0, 6).map(mapFeatureArticle),
+      comments: normalizeCommentList(commentsResponse?.data?.list || []),
       basicSettings: settingsResponse.data || {},
       blogSettings: blogSettingsResponse.data || {},
       error: ''

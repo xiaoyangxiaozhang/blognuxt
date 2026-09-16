@@ -41,7 +41,7 @@
         </div>
 
         <template v-else>
-          <article v-for="item in moments" :key="item.id" class="moment-row">
+          <article v-for="item in moments" :id="`moment-${item.id}`" :key="item.id" class="moment-row">
             <div class="row-avatar">
               <img :src="authorAvatar" :alt="authorName" loading="lazy" />
             </div>
@@ -87,8 +87,8 @@
                       <button
                         type="button"
                         class="action-button mini-action"
-                        aria-label="Scroll to comments"
-                        @click="scrollToCommentPanel"
+                        aria-label="Open comments"
+                        @click="openCommentPanel(item.id)"
                       >
                         <IconMaterialSymbolsChatBubbleRounded />
                       </button>
@@ -102,23 +102,30 @@
                   </div>
                 </div>
               </footer>
+
+              <div
+                v-if="activeCommentMomentId === item.id"
+                :id="`moment-comments-${item.id}`"
+                class="moment-comment-panel"
+              >
+                <UnifiedCommentPanel
+                  variant="moment"
+                  :defer-identity="true"
+                  :show-header="false"
+                  :comments="commentStates[item.id]?.comments || []"
+                  :loading="commentStates[item.id]?.loading || false"
+                  :submitting="commentSubmitting"
+                  :form="commentForm"
+                  :error-text="commentStates[item.id]?.error || ''"
+                  empty-text="还没有评论，来说点什么吧。"
+                  @update:form="handleFormUpdate"
+                  @reply="replyToMomentComment"
+                  @submit="handleCommentSubmit"
+                />
+              </div>
             </div>
           </article>
         </template>
-
-        <div ref="commentPanelRef" class="page-comment-panel">
-          <UnifiedCommentPanel
-            :comments="commentList"
-            :loading="commentsPending"
-            :submitting="commentSubmitting"
-            :form="commentForm"
-            :error-text="commentError"
-            description="Page-level comments stay available even when the list is empty."
-            empty-text="No comments yet. Be the first to leave one."
-            @update:form="handleFormUpdate"
-            @submit="handleCommentSubmit"
-          />
-        </div>
       </section>
     </div>
   </section>
@@ -129,7 +136,8 @@ import { ElMessage } from 'element-plus'
 import IconMaterialSymbolsChatBubbleRounded from '~icons/material-symbols/chat-bubble-rounded'
 import IconMaterialSymbolsLocationOnRounded from '~icons/material-symbols/location-on-rounded'
 import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
-import { COMMENT_TARGETS, normalizeCommentList } from '~/utils/comments'
+import type { UnifiedCommentForm, UnifiedCommentItem, UnifiedCommentSubmitMode } from '~/components/comments/UnifiedCommentPanel.vue'
+import { normalizeCommentList } from '~/utils/comments'
 import { createComment, getCommentList } from '~/services/api/comments'
 import { getMomentList } from '~/services/api/moments'
 import { getBasicSettings, getSettings } from '~/services/api/user'
@@ -147,14 +155,15 @@ interface DynamicMomentItem {
   location: string
 }
 
-interface DynamicCommentForm {
-  nickname: string
-  email: string
-  website: string
-  content: string
+type DynamicCommentForm = UnifiedCommentForm
+
+interface MomentCommentState {
+  comments: UnifiedCommentItem[]
+  loading: boolean
+  loaded: boolean
+  error: string
 }
 
-const commentTarget = COMMENT_TARGETS.dynamicPage
 const DEFAULT_AVATAR = 'https://picsum.photos/200/200?random=7'
 const { isLoggedIn, fetchProfile } = useCommentAuth()
 
@@ -194,41 +203,10 @@ const { data, pending } = await useAsyncData(
   }
 )
 
-const {
-  data: commentsPayload,
-  pending: commentsPending,
-  refresh: refreshComments
-} = await useAsyncData(
-  'dynamic-page-comments',
-  async () => {
-    try {
-      const response = await getCommentList({
-        target_type: commentTarget.targetType,
-        target_key: commentTarget.targetKey,
-        page: 1,
-        page_size: 10
-      })
-
-      return {
-        response,
-        error: ''
-      }
-    } catch (error) {
-      console.error(error)
-      return {
-        response: null,
-        error: 'Failed to load comments.'
-      }
-    }
-  }
-)
-
 const moments = computed<DynamicMomentItem[]>(() => data.value?.moments || [])
 const settings = computed<Record<string, string>>(() => data.value?.settings || {})
 const blogSettings = computed<Record<string, string>>(() => data.value?.blogSettings || {})
 const pageError = computed(() => data.value?.error || '')
-const commentError = computed(() => commentsPayload.value?.error || '')
-
 const authorName = computed(() => settings.value['basic.author'] || 'XiaoLin')
 const authorDesc = computed(() => settings.value['basic.author_desc'] || 'Collecting daily notes and small inspirations.')
 const authorAvatar = computed(() => proxyImageUrl(settings.value['basic.author_avatar']) || DEFAULT_AVATAR)
@@ -241,7 +219,8 @@ const typingSignatureText = computed(() => {
 })
 
 const commentSubmitting = ref(false)
-const commentPanelRef = ref<HTMLElement | null>(null)
+const activeCommentMomentId = ref<number | null>(null)
+const commentStates = reactive<Record<number, MomentCommentState>>({})
 const commentForm = reactive<DynamicCommentForm>({
   nickname: '',
   email: '',
@@ -269,28 +248,85 @@ watch(pending, (val) => {
   }
 })
 
-const commentList = computed(() => normalizeCommentList(commentsPayload.value?.response?.data?.list))
+const ensureCommentState = (momentId: number) => {
+  if (!commentStates[momentId]) {
+    commentStates[momentId] = {
+      comments: [],
+      loading: false,
+      loaded: false,
+      error: ''
+    }
+  }
+
+  return commentStates[momentId]
+}
+
+const loadMomentComments = async (momentId: number) => {
+  const state = ensureCommentState(momentId)
+  if (state.loaded || state.loading) return
+
+  state.loading = true
+  state.error = ''
+
+  try {
+    const response = await getCommentList({
+      target_type: 'moment',
+      target_key: String(momentId),
+      page: 1,
+      page_size: 10
+    })
+    state.comments = normalizeCommentList(response.data?.list || []) as UnifiedCommentItem[]
+    state.loaded = true
+  } catch (error) {
+    console.error(error)
+    state.comments = []
+    state.error = 'Failed to load comments.'
+  } finally {
+    state.loading = false
+  }
+}
 
 const handleFormUpdate = (nextForm: DynamicCommentForm) => {
   commentForm.nickname = nextForm.nickname
   commentForm.email = nextForm.email
   commentForm.website = nextForm.website
   commentForm.content = nextForm.content
+  commentForm.parentId = nextForm.parentId
 }
 
-const handleCommentSubmit = async () => {
-  if (!isLoggedIn.value && !commentForm.nickname.trim()) {
-    ElMessage.warning('Please enter a nickname.')
+const replyToMomentComment = (item: UnifiedCommentItem) => {
+  const parentId = Number(item.id)
+  commentForm.content = `@${item.author} `
+  commentForm.parentId = Number.isFinite(parentId) ? parentId : undefined
+}
+
+const openCommentPanel = async (momentId: number) => {
+  if (activeCommentMomentId.value === momentId) {
+    activeCommentMomentId.value = null
     return
   }
 
-  if (!isLoggedIn.value && !commentForm.email.trim()) {
-    ElMessage.warning('Please enter an email.')
-    return
-  }
+  activeCommentMomentId.value = momentId
+  commentForm.content = ''
+  commentForm.parentId = undefined
+  await loadMomentComments(momentId)
+  await nextTick()
+  document.getElementById(`moment-comments-${momentId}`)?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  })
+}
+
+const handleCommentSubmit = async (mode?: UnifiedCommentSubmitMode) => {
+  const momentId = activeCommentMomentId.value
+  if (momentId === null) return
 
   if (!commentForm.content.trim()) {
-    ElMessage.warning('Please enter your comment.')
+    ElMessage.warning('请先填写评论内容。')
+    return
+  }
+
+  if (!isLoggedIn.value && mode !== 'anonymous') {
     return
   }
 
@@ -298,20 +334,25 @@ const handleCommentSubmit = async () => {
 
   try {
     await createComment({
-      target_type: commentTarget.targetType,
-      target_key: commentTarget.targetKey,
+      target_type: 'moment',
+      target_key: String(momentId),
       content: commentForm.content.trim(),
-      nickname: isLoggedIn.value ? undefined : commentForm.nickname.trim(),
-      email: isLoggedIn.value ? undefined : commentForm.email.trim(),
-      website: commentForm.website.trim() || undefined
+      nickname: mode === 'anonymous' ? undefined : commentForm.nickname.trim() || undefined,
+      email: mode === 'anonymous' ? undefined : commentForm.email.trim() || undefined,
+      website: mode === 'anonymous' ? undefined : commentForm.website.trim() || undefined,
+      parent_id: commentForm.parentId,
+      anonymous: mode === 'anonymous'
     })
 
     commentForm.content = ''
-    await refreshComments()
-    ElMessage.success('Comment submitted.')
+    commentForm.parentId = undefined
+    const state = ensureCommentState(momentId)
+    state.loaded = false
+    await loadMomentComments(momentId)
+    ElMessage.success('评论发表成功。')
   } catch (error) {
     console.error(error)
-    ElMessage.error('Failed to submit comment.')
+    ElMessage.error('评论发表失败，请稍后重试。')
   } finally {
     commentSubmitting.value = false
   }
@@ -323,14 +364,6 @@ onMounted(() => {
   }
   fetchProfile()
 })
-
-const scrollToCommentPanel = async () => {
-  await nextTick()
-  commentPanelRef.value?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start'
-  })
-}
 
 const formatMomentDate = formatDate
 </script>
@@ -649,7 +682,7 @@ const formatMomentDate = formatDate
   }
 }
 
-.page-comment-panel {
+.moment-comment-panel {
   margin-top: 28px;
 }
 

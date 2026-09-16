@@ -8,7 +8,10 @@
 
     <div v-else class="comment-grid">
       <article v-for="item in commentCards" :key="item.id" class="comment-card">
-        <p class="comment-date">发布于：{{ item.publishDate }}</p>
+        <div class="comment-meta">
+          <span class="comment-author">{{ item.author }}</span>
+          <span class="comment-date">发布于：{{ item.publishDate }}</span>
+        </div>
         <div class="comment-divider"></div>
         <p class="comment-text">{{ item.text }}</p>
       </article>
@@ -17,36 +20,21 @@
 </template>
 
 <script setup lang="ts">
-interface RecentArticleItem {
-  id: number
-  slug: string
-  title: string
-  publishDate: string
-  categoryName: string
-  cover: string
-}
-
-interface TagItem {
-  id: number
-  name: string
-  slug: string
-  count: number
-}
+import type { NormalizedCommentItem } from '~/utils/comments'
+import { formatDate } from '~/utils/date'
 
 const props = defineProps<{
-  recentArticles: RecentArticleItem[]
-  tags: TagItem[]
+  comments: NormalizedCommentItem[]
   loading: boolean
 }>()
 
 const commentCards = computed(() => {
-  const fromArticles = props.recentArticles.slice(0, 6).map((article) => ({
-    id: `comment-${article.id}`,
-    publishDate: article.publishDate,
-    text: `${article.categoryName} · ${article.title}`
+  return props.comments.slice(0, 6).map((comment) => ({
+    id: `comment-${comment.id}`,
+    author: comment.author || '匿名用户',
+    publishDate: formatDate(comment.publishTime),
+    text: comment.content
   }))
-
-  return [...fromArticles]
 })
 </script>
 
@@ -70,9 +58,20 @@ const commentCards = computed(() => {
 }
 
 .comment-date {
-  margin: 0;
   color: var(--home-text-muted);
   font-size: 14px;
+}
+
+.comment-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comment-author {
+  color: var(--home-text);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .comment-divider {

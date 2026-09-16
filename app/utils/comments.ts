@@ -1,10 +1,5 @@
-import type { CommentListItem, CommentTargetType } from '~/services/api/comments'
+import type { CommentListItem } from '~/services/api/comments'
 import { proxyImageUrl } from '~/utils/image'
-
-export interface CommentTargetConfig {
-  targetType: CommentTargetType
-  targetKey: string
-}
 
 export interface NormalizedCommentItem {
   id: number | string
@@ -15,17 +10,6 @@ export interface NormalizedCommentItem {
   website?: string
   replyTo?: string
 }
-
-export const COMMENT_TARGETS = {
-  dynamicPage: {
-    targetType: 'page',
-    targetKey: 'moment'
-  },
-  messagePage: {
-    targetType: 'page',
-    targetKey: 'message'
-  }
-} satisfies Record<string, CommentTargetConfig>
 
 const fallbackAuthor = 'Anonymous Visitor'
 

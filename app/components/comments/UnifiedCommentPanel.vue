@@ -10,7 +10,7 @@
 
     <form class="comment-composer" @submit.prevent="handleSubmit">
       <div class="composer-card">
-        <div class="composer-topline">
+        <div v-if="!deferIdentity" class="composer-topline">
           <label class="info-field">
             <input
               :value="form.nickname"
@@ -55,7 +55,7 @@
           </button>
         </div>
 
-        <div v-if="isLoggedIn && currentUser" class="login-banner">
+        <div v-if="isLoggedIn && currentUser && !deferIdentity" class="login-banner">
           <div class="login-profile">
             <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.nickname || 'user'" />
             <span v-else>{{ (currentUser.nickname || currentUser.email || 'U').slice(0, 1) }}</span>
@@ -76,7 +76,7 @@
             :value="form.content"
             rows="2"
             aria-label="留言内容"
-            :placeholder="variant === 'board' ? '留点什么……' : '写下你的留言...'"
+            :placeholder="variant === 'board' ? '留点什么……' : variant === 'moment' ? '评论' : '写下你的留言...'"
             @input="updateField('content', ($event.target as HTMLTextAreaElement).value)"
           ></textarea>
 
@@ -130,13 +130,13 @@
               <IconTablerPhoto />
             </button>
 
-            <button type="button" class="plain-icon" aria-label="Toggle preview" @click="showPreview = !showPreview">
+            <button v-if="!deferIdentity" type="button" class="plain-icon" aria-label="Toggle preview" @click="showPreview = !showPreview">
               <IconTablerEye />
             </button>
           </div>
 
           <div class="action-group">
-            <button v-if="!isLoggedIn" type="button" class="login-button" @click="loginDialogVisible = true">
+            <button v-if="!isLoggedIn && !deferIdentity" type="button" class="login-button" @click="loginDialogVisible = true">
               <IconTablerLogin />
               登录
             </button>
@@ -149,7 +149,7 @@
               <span v-if="submitState === 'success'">{{ variant === 'board' ? '留下了 ✓' : '已提交 ✓' }}</span>
               <span v-else-if="submitting">{{ variant === 'board' ? '正在留下……' : '提交中...' }}</span>
               <span v-else-if="processingSubmit || uploadingCount > 0">上传图片中...</span>
-              <span v-else>{{ variant === 'board' ? '发送留言' : '发表评论' }}</span>
+              <span v-else>{{ variant === 'board' ? '发送留言' : deferIdentity ? '发送' : '发表评论' }}</span>
             </button>
           </div>
         </footer>
@@ -284,8 +284,30 @@
       @change="handleImageSelect"
     >
 
+    <Teleport to="body">
+      <div
+        v-if="identityChoiceVisible"
+        class="identity-choice-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="identity-choice-title"
+        @click.self="identityChoiceVisible = false"
+      >
+        <div class="identity-choice-dialog">
+          <button type="button" class="identity-choice-close" aria-label="关闭" @click="identityChoiceVisible = false">×</button>
+          <h2 id="identity-choice-title">发表评论</h2>
+          <p>请选择评论方式，评论内容会保留。</p>
+          <div class="identity-choice-actions">
+            <button type="button" class="identity-choice-login" @click="chooseLogin">登录后评论</button>
+            <button type="button" class="identity-choice-guest" @click="chooseAnonymous">匿名评论</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <LoginDialog
       v-model="loginDialogVisible"
+      @update:model-value="handleLoginDialogState"
       @login-success="handleLoginSuccess"
       @forgot-password="handleForgotPassword"
     />
@@ -326,6 +348,7 @@ export interface UnifiedCommentItem {
   replyTo?: string
 }
 
+export type UnifiedCommentSubmitMode = 'authenticated' | 'anonymous'
 export type UnifiedCommentSubmitState = 'idle' | 'submitting' | 'success'
 
 interface AttachmentPreviewItem {
@@ -347,7 +370,8 @@ const props = withDefaults(defineProps<{
   tip?: string
   emptyText?: string
   errorText?: string
-  variant?: 'default' | 'board'
+  variant?: 'default' | 'board' | 'moment'
+  deferIdentity?: boolean
   showHeader?: boolean
   compactTime?: boolean
   submitState?: UnifiedCommentSubmitState
@@ -359,6 +383,7 @@ const props = withDefaults(defineProps<{
   emptyText: '还没有评论，来留下第一条消息吧。',
   errorText: '',
   variant: 'default',
+  deferIdentity: false,
   showHeader: true,
   compactTime: false,
   submitState: 'idle'
@@ -367,7 +392,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'update:form', value: UnifiedCommentForm): void
   (e: 'reply', value: UnifiedCommentItem): void
-  (e: 'submit'): void
+  (e: 'submit', mode?: UnifiedCommentSubmitMode): void
 }>()
 
 const emojiList = ['😀', '😉', '😊', '😏', '🤝', '🙂', '👏', '🎉', '🔥', '✨', '🙌', '❤️']
@@ -375,6 +400,9 @@ const emojiList = ['😀', '😉', '😊', '😏', '🤝', '🙂', '👏', '🎉
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const loginDialogVisible = ref(false)
+const identityChoiceVisible = ref(false)
+const pendingLoginSubmit = ref(false)
+const submitMode = ref<UnifiedCommentSubmitMode>()
 const showEmojiPanel = ref(false)
 const showPreview = ref(false)
 const localUploads = ref<AttachmentPreviewItem[]>([])
@@ -402,6 +430,18 @@ const updateField = (field: keyof UnifiedCommentForm, value: string) => {
     ...props.form,
     [field]: value
   })
+}
+
+const chooseLogin = () => {
+  identityChoiceVisible.value = false
+  pendingLoginSubmit.value = true
+  loginDialogVisible.value = true
+}
+
+const chooseAnonymous = () => {
+  identityChoiceVisible.value = false
+  submitMode.value = 'anonymous'
+  void handleSubmit()
 }
 
 const startReply = (item: UnifiedCommentItem) => {
@@ -548,14 +588,27 @@ const handleSubmit = async () => {
     return
   }
 
+  if (props.deferIdentity && !isLoggedIn.value && !submitMode.value) {
+    if (!props.form.content.trim()) {
+      emit('submit')
+      return
+    }
+
+    identityChoiceVisible.value = true
+    return
+  }
+
   // 先让父页面做昵称、邮箱等校验，避免明显无效时提前上传图片。
-  if (!isLoggedIn.value && (!props.form.nickname.trim() || !props.form.email.trim())) {
+  if (!props.deferIdentity && !isLoggedIn.value && (!props.form.nickname.trim() || !props.form.email.trim())) {
     emit('submit')
     return
   }
 
+  const mode = submitMode.value
+
   if (localUploads.value.length === 0) {
-    emit('submit')
+    emit('submit', mode)
+    submitMode.value = undefined
     return
   }
 
@@ -563,7 +616,8 @@ const handleSubmit = async () => {
 
   try {
     await uploadPendingImages()
-    emit('submit')
+    emit('submit', mode)
+    submitMode.value = undefined
   } catch (error) {
     console.error(error)
     ElMessage.error('图片上传失败，请检查网络后重试。')
@@ -574,10 +628,24 @@ const handleSubmit = async () => {
 
 const renderCommentBlocks = (content: string) => renderCommentContent(content)
 
+const handleLoginDialogState = (visible: boolean) => {
+  loginDialogVisible.value = visible
+  if (!visible && !isLoggedIn.value) {
+    pendingLoginSubmit.value = false
+  }
+}
+
 const handleLoginSuccess = async () => {
   await fetchProfile()
   if (isLoggedIn.value) {
     syncUserIntoForm()
+
+    if (pendingLoginSubmit.value) {
+      pendingLoginSubmit.value = false
+      submitMode.value = 'authenticated'
+      await nextTick()
+      void handleSubmit()
+    }
   }
 }
 
@@ -1135,6 +1203,189 @@ onMounted(async () => {
   font-size: 10px;
   line-height: 1.3;
   color: rgba(83, 94, 90, 0.74);
+}
+
+.variant-moment {
+  gap: 0;
+
+  .comment-list-section {
+    order: 1;
+  }
+
+  .comment-composer {
+    order: 2;
+    margin-top: 10px;
+  }
+
+  .composer-card {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .composer-body {
+    padding: 0;
+  }
+
+  .composer-body textarea {
+    min-height: 88px;
+    padding: 12px 14px;
+    border: 1px solid var(--brand-accent);
+    border-radius: 10px;
+    background: var(--home-card-bg);
+    resize: vertical;
+    box-sizing: border-box;
+  }
+
+  .composer-footer {
+    padding: 10px 0 0;
+  }
+
+  .submit-button {
+    min-width: 64px;
+    height: 34px;
+    padding: 0 16px;
+    border-radius: 8px;
+    background: #07c160;
+    color: #fff;
+  }
+
+  .comment-list {
+    gap: 0;
+    padding: 7px 14px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--home-text) 7%, var(--home-card-bg));
+  }
+
+  .comment-card {
+    display: block;
+    padding: 2px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+
+    &.reply {
+      margin-left: 0;
+    }
+  }
+
+  .comment-avatar,
+  .meta-link,
+  .meta-separator,
+  .meta-line > span:not(.reply-pill) {
+    display: none;
+  }
+
+  .comment-main,
+  .comment-meta,
+  .comment-rendered {
+    display: inline;
+  }
+
+  .meta-line {
+    display: inline;
+    color: var(--home-text);
+    font-size: 13px;
+    line-height: 1.7;
+
+    strong {
+      margin-right: 4px;
+      color: #576b95;
+      font-size: 13px;
+    }
+  }
+
+  .comment-text {
+    display: inline;
+    margin: 0;
+    color: var(--home-text);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  .comment-empty {
+    border: 0;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--home-text) 7%, var(--home-card-bg));
+    box-shadow: none;
+    padding: 8px 14px;
+  }
+}
+
+.identity-choice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 30%);
+  backdrop-filter: blur(5px);
+}
+
+.identity-choice-dialog {
+  position: relative;
+  width: min(100%, 360px);
+  padding: 28px 24px 24px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 16%);
+  text-align: center;
+
+  h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 20px;
+  }
+
+  p {
+    margin: 10px 0 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+}
+
+.identity-choice-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.identity-choice-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+
+  button {
+    height: 40px;
+    border: 0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
+.identity-choice-login {
+  background: var(--brand-accent);
+  color: var(--brand-accent-text);
+}
+
+.identity-choice-guest {
+  background: var(--brand-accent-soft);
+  color: var(--brand-accent-hover);
 }
 
 @media (max-width: 768px) {

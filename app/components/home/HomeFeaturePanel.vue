@@ -41,6 +41,7 @@ import FeatureCommentsPanel from '~/components/home/feature-panels/FeatureCommen
 import FeatureMomentsPanel from '~/components/home/feature-panels/FeatureMomentsPanel.vue'
 import FeatureNoticePanel from '~/components/home/feature-panels/FeatureNoticePanel.vue'
 import { useScrollReveal } from '~/composables/useScrollReveal'
+import type { NormalizedCommentItem } from '~/utils/comments'
 
 interface CategoryItem {
   id: number
@@ -86,6 +87,7 @@ const props = defineProps<{
   categories: CategoryItem[]
   tags: TagItem[]
   recentArticles: RecentArticleItem[]
+  comments: NormalizedCommentItem[]
   loading: boolean
 }>()
 
@@ -172,8 +174,7 @@ const activeProps = computed(() => {
       }
     case 'comments':
       return {
-        recentArticles: props.recentArticles,
-        tags: props.tags,
+        comments: props.comments,
         loading: props.loading
       }
     case 'notice':

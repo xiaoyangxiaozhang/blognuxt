@@ -49,6 +49,7 @@ export interface CreateCommentPayload {
   email?: string
   website?: string
   parent_id?: number
+  anonymous?: boolean
 }
 
 export const getCommentList = (params: GetCommentListParams) => {
