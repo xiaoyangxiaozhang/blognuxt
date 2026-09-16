@@ -12,11 +12,11 @@
           <div class="cover-meta">
             <div class="profile-row">
               <div class="cover-copy">
-                <h1>基米斗社区</h1>
+                <h1>{{ communityName }}</h1>
               </div>
 
               <div class="profile-avatar">
-                <img :src="communityAvatar" alt="基米斗社区" />
+                <img :src="communityAvatar" :alt="communityName" />
               </div>
             </div>
 
@@ -170,7 +170,7 @@ interface KimidouPageData {
 }
 
 const DEFAULT_AVATAR = 'https://picsum.photos/200/200?random=7'
-const { isLoggedIn, fetchProfile } = useCommentAuth()
+const { currentUser, isLoggedIn, fetchProfile } = useCommentAuth()
 
 const { data, pending } = await useAsyncData<KimidouPageData>('kimidou-page', async () => {
   try {
@@ -207,7 +207,10 @@ const currentPage = ref(1)
 const loadingMore = ref(false)
 const hasMore = computed(() => moments.value.length < Number(data.value?.total || 0))
 const coverImage = computed(() => proxyImageUrl(blogSettings.value['blog.kimidou_cover']) || fallbackCover)
-const communityAvatar = computed(() => proxyImageUrl(settings.value['basic.author_avatar']) || DEFAULT_AVATAR)
+const communityName = computed(() => currentUser.value?.nickname || '基米斗社区')
+const communityAvatar = computed(() => {
+  return proxyImageUrl(currentUser.value?.avatar) || proxyImageUrl(settings.value['basic.author_avatar']) || DEFAULT_AVATAR
+})
 const communitySignature = computed(() => {
   const typingTexts = parseBlogJson<string[]>(blogSettings.value['blog.typing_texts'], [])
     .map(item => item.trim())

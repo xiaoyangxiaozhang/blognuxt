@@ -95,12 +95,13 @@ export const useCommentAuth = () => {
     return currentUser.value
   }
 
-  const registerWithEmail = async (email: string, password: string, nickname: string, website?: string) => {
+  const registerWithEmail = async (email: string, password: string, nickname: string, website?: string, avatar?: string) => {
     const response = await register({
       email,
       password,
       nickname: nickname.trim(),
-      website: website?.trim() || undefined
+      website: website?.trim() || undefined,
+      avatar: avatar?.trim() || undefined
     })
 
     await applyAuthResponse(response)

@@ -33,6 +33,29 @@
               </div>
             </div>
 
+            <div v-if="mode === 'register'" class="form-group avatar-group">
+              <label for="register-avatar">头像（可选）</label>
+              <div class="avatar-picker">
+                <div class="avatar-preview">
+                  <img v-if="avatarPreviewUrl" :src="avatarPreviewUrl" alt="头像预览">
+                  <PersonIcon v-else aria-hidden="true" />
+                </div>
+                <div class="avatar-actions">
+                  <label class="avatar-upload-btn" for="register-avatar">选择图片</label>
+                  <button v-if="avatarFile" class="avatar-remove-btn" type="button" @click="clearAvatar">移除</button>
+                  <input
+                    id="register-avatar"
+                    ref="avatarInput"
+                    class="avatar-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    @change="handleAvatarChange"
+                  >
+                  <span>支持 JPG、PNG、GIF、WebP，最大 5MB</span>
+                </div>
+              </div>
+            </div>
+
             <div class="form-group">
               <label for="password">密码</label>
               <div class="password-field">
@@ -123,6 +146,7 @@ import { Cross1Icon, EyeClosedIcon, EyeOpenIcon, PersonIcon } from '@svg-animate
 import { ElMessage } from 'element-plus'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { useSysConfig, type OAuthProvider } from '~/composables/useSysConfig'
+import { uploadFile } from '~/services/api/upload'
 
 defineProps<{
   modelValue: boolean
@@ -145,6 +169,9 @@ const mode = ref<AuthMode>('login')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const loading = ref(false)
+const avatarFile = ref<File | null>(null)
+const avatarPreviewUrl = ref('')
+const avatarInput = ref<HTMLInputElement | null>(null)
 
 const formState = reactive({
   email: '',
@@ -166,12 +193,22 @@ const submitText = computed(() => {
 
 const hasOAuthProviders = computed(() => enabledOAuthProviders.value.length > 0)
 
+const clearAvatar = () => {
+  if (avatarPreviewUrl.value) {
+    URL.revokeObjectURL(avatarPreviewUrl.value)
+  }
+  avatarFile.value = null
+  avatarPreviewUrl.value = ''
+  if (avatarInput.value) avatarInput.value.value = ''
+}
+
 const resetForm = () => {
   formState.email = ''
   formState.nickname = ''
   formState.website = ''
   formState.password = ''
   formState.confirmPassword = ''
+  clearAvatar()
   showPassword.value = false
   showConfirmPassword.value = false
 }
@@ -180,8 +217,31 @@ const switchMode = (nextMode: AuthMode) => {
   mode.value = nextMode
   formState.password = ''
   formState.confirmPassword = ''
+  if (nextMode === 'login') clearAvatar()
   showPassword.value = false
   showConfirmPassword.value = false
+}
+
+const handleAvatarChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+    ElMessage.warning('头像只支持 JPG、PNG、GIF 或 WebP 图片。')
+    clearAvatar()
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.warning('头像大小不能超过 5MB。')
+    clearAvatar()
+    return
+  }
+
+  if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+  avatarFile.value = file
+  avatarPreviewUrl.value = URL.createObjectURL(file)
 }
 
 const closeModal = () => {
@@ -293,7 +353,12 @@ const handleSubmit = async () => {
     if (mode.value === 'login') {
       await loginWithPassword(payload.email, payload.password)
     } else {
-      await registerWithEmail(payload.email, payload.password, payload.nickname, payload.website)
+      let avatarUrl: string | undefined
+      if (avatarFile.value) {
+        const response = await uploadFile(avatarFile.value, 'register_avatar')
+        avatarUrl = response.data?.file_url
+      }
+      await registerWithEmail(payload.email, payload.password, payload.nickname, payload.website, avatarUrl)
     }
 
     emit('login-success')
@@ -431,6 +496,73 @@ const handleSubmit = async () => {
       box-shadow: 0 0 0 3px var(--brand-accent-soft);
     }
   }
+}
+
+.avatar-picker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar-preview {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg-panel-solid);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  :deep(svg) {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.avatar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  span {
+    width: 100%;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+}
+
+.avatar-upload-btn,
+.avatar-remove-btn {
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.avatar-upload-btn {
+  background: var(--brand-accent-soft);
+  color: var(--brand-accent-hover);
+}
+
+.avatar-remove-btn {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.form-group .avatar-input {
+  display: none;
 }
 
 .password-field {

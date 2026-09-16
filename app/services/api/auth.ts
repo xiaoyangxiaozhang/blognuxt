@@ -32,6 +32,7 @@ export interface RegisterPayload {
   email: string
   password: string
   nickname: string
+  avatar?: string
   website?: string
 }
 
