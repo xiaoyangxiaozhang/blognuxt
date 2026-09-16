@@ -11,16 +11,65 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid url' })
   }
 
-  try {
-    const response = await $fetch.raw(imageUrl, {
-      responseType: 'stream',
-      headers: {
-        // 模拟浏览器请求，避免部分服务器拒绝
-        'User-Agent': 'Mozilla/5.0',
-        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
-      }
-    })
+  const fetchImage = (url: string) => $fetch.raw(url, {
+    responseType: 'stream',
+    headers: {
+      // 模拟浏览器请求，避免部分服务器拒绝
+      'User-Agent': 'Mozilla/5.0',
+      'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+    }
+  })
 
+  const resolveUploadFallback = async () => {
+    const source = new URL(imageUrl)
+    if (!source.pathname.startsWith('/uploads/')) {
+      return ''
+    }
+
+    const config = useRuntimeConfig(event)
+    const configuredBase = String(config.public.uploadBase || '').trim()
+    if (configuredBase) {
+      return `${configuredBase.replace(/\/+$/, '')}${source.pathname}${source.search}`
+    }
+
+    const apiBase = String(config.public.apiBase || '').trim()
+    if (!apiBase) {
+      return ''
+    }
+
+    const apiURL = new URL(`${apiBase.replace(/\/+$/, '')}/settings/basic`, getRequestURL(event)).toString()
+    const settings = await $fetch<{ data?: Record<string, unknown> }>(apiURL)
+    const authorAvatar = settings.data?.['basic.author_avatar']
+    if (typeof authorAvatar !== 'string' || !authorAvatar.trim()) {
+      return ''
+    }
+
+    const assetOrigin = new URL(authorAvatar).origin
+    if (assetOrigin === source.origin) {
+      return ''
+    }
+    return `${assetOrigin}${source.pathname}${source.search}`
+  }
+
+  let response
+  let resolvedImageUrl = imageUrl
+  try {
+    response = await fetchImage(imageUrl)
+  } catch (originalError: any) {
+    try {
+      const fallbackUrl = await resolveUploadFallback()
+      if (!fallbackUrl) {
+        throw originalError
+      }
+      resolvedImageUrl = fallbackUrl
+      response = await fetchImage(fallbackUrl)
+    } catch (fallbackError: any) {
+      console.error(`[proxy-image] Failed to fetch: ${imageUrl}`, fallbackError.message)
+      throw createError({ statusCode: 502, statusMessage: `Failed to fetch image: ${fallbackError.message}` })
+    }
+  }
+
+  try {
     // 透传 Content-Type
     const contentType = response.headers.get('content-type')
     if (contentType) {
@@ -40,7 +89,7 @@ export default defineEventHandler(async (event) => {
 
     return response.body
   } catch (err: any) {
-    console.error(`[proxy-image] Failed to fetch: ${imageUrl}`, err.message)
+    console.error(`[proxy-image] Failed to return: ${resolvedImageUrl}`, err.message)
     throw createError({ statusCode: 502, statusMessage: `Failed to fetch image: ${err.message}` })
   }
 })

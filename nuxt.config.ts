@@ -72,6 +72,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080/api/v1',
+      uploadBase: process.env.NUXT_PUBLIC_UPLOAD_BASE || '',
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://xiaoyangxiaozhang.xyz',
       analyticsEnabled: process.env.NUXT_PUBLIC_ANALYTICS_ENABLED
         ? process.env.NUXT_PUBLIC_ANALYTICS_ENABLED === 'true'
