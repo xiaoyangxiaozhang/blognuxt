@@ -7,6 +7,7 @@ export interface AuthUserProfile {
   avatar?: string
   badge?: string
   website?: string
+  can_post_moments?: boolean
   role?: string
   email_hash?: string
   is_virtual_email?: boolean

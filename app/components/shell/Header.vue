@@ -61,6 +61,7 @@
               </div>
               <NuxtLink to="/friends" class="nav-item">友链</NuxtLink>
               <NuxtLink to="/dynamic" class="nav-item">动态</NuxtLink>
+              <NuxtLink to="/kimidou" class="nav-item">基米斗</NuxtLink>
               <NuxtLink to="/message" class="nav-item">留言</NuxtLink>
             </nav>
 
@@ -130,6 +131,7 @@
               <NuxtLink to="/categories" class="island-link" @mouseenter="moveIslandIndicator(2)" @focus="moveIslandIndicator(2)">分类</NuxtLink>
               <NuxtLink to="/tags" class="island-link" @mouseenter="moveIslandIndicator(3)" @focus="moveIslandIndicator(3)">标签</NuxtLink>
               <NuxtLink to="/message" class="island-link" @mouseenter="moveIslandIndicator(4)" @focus="moveIslandIndicator(4)">留言</NuxtLink>
+              <NuxtLink to="/kimidou" class="island-link" @mouseenter="moveIslandIndicator(5)" @focus="moveIslandIndicator(5)">基米斗</NuxtLink>
             </nav>
 
             <div class="island-actions">
@@ -214,6 +216,7 @@ const brandRoutes = [
   { label: '标签', to: '/tags' },
   { label: '友链', to: '/friends' },
   { label: '动态', to: '/dynamic' },
+  { label: '基米斗', to: '/kimidou' },
   { label: '留言', to: '/message' }
 ]
 
@@ -281,7 +284,7 @@ const route = useRoute()
 const islandNav = ref<HTMLElement | null>(null)
 const islandHoverIndex = ref<number | null>(null)
 const islandIndicator = reactive({ left: 0, width: 50 })
-const islandRoutePaths = ['/', '/archive', '/categories', '/tags', '/message']
+const islandRoutePaths = ['/', '/archive', '/categories', '/tags', '/message', '/kimidou']
 const activeIslandIndex = computed(() => {
   const index = islandRoutePaths.indexOf(route.path)
   return index >= 0 ? index : 0
