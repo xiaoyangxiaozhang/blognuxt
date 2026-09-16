@@ -376,23 +376,25 @@ const handleSubmit = async () => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
   padding: 16px;
+  overflow-y: auto;
 }
 
 .modal-container {
   position: relative;
   width: min(100%, 500px);
   padding: 28px 24px 22px;
-  border-radius: 15px;
+  border-radius: 18px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
   color: var(--text-primary);
 }
 
@@ -407,13 +409,23 @@ const handleSubmit = async () => {
   display: grid;
   place-items: center;
   background: transparent;
-  color: var(--text-primary);
+  color: var(--text-muted);
   font-size: 24px;
   cursor: pointer;
 
   :deep(svg) {
-    width: 20px;
-    height: 20px;
+    width: 21px;
+    height: 21px;
+  }
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--accent-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
   }
 }
 

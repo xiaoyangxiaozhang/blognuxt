@@ -416,18 +416,14 @@ const logout = async () => {
   place-items: center;
   padding: 16px;
   overflow-y: auto;
-  background: rgba(0, 0, 0, 0.88);
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 :global(:root) {
-  --account-dialog-bg: #000;
-  --account-dialog-text: #fff;
-  --account-dialog-shadow: 0 24px 70px #000;
-}
-
-:global([data-theme='blue-white']) {
-  --account-dialog-bg: #fff;
-  --account-dialog-text: #000;
+  --account-dialog-bg: var(--bg-elevated);
+  --account-dialog-text: var(--text-primary);
   --account-dialog-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
 }
 
@@ -437,11 +433,11 @@ const logout = async () => {
   max-height: min(780px, calc(100vh - 32px));
   overflow-y: auto;
   padding: 34px;
-  border: 0;
+  border: 1px solid var(--border-color);
   border-radius: 18px;
-  background: var(--account-dialog-bg, #000);
-  color: var(--account-dialog-text, #fff);
-  box-shadow: var(--account-dialog-shadow, 0 24px 70px #000);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--account-dialog-shadow);
 }
 
 .close-button {
@@ -453,14 +449,26 @@ const logout = async () => {
   width: 32px;
   height: 32px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
-  color: var(--account-dialog-text);
+  color: var(--text-muted);
   font-size: 24px;
   cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
 
   :deep(svg) {
-    width: 18px;
-    height: 18px;
+    width: 21px;
+    height: 21px;
+  }
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--accent-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
   }
 }
 
