@@ -3,7 +3,9 @@
     <Transition name="site-dialog">
       <div v-if="feedbackOpen" class="dialog-overlay" role="presentation" @click.self="close">
         <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="feedback-dialog-title">
-          <button class="close-button" type="button" aria-label="关闭" @click="close">×</button>
+          <button class="close-button" type="button" aria-label="关闭" @click="close">
+            <Cross1Icon aria-hidden="true" />
+          </button>
 
           <div class="dialog-header">
             <h2 id="feedback-dialog-title">{{ mode === 'submit' ? '反馈与举报' : '查询工单' }}</h2>
@@ -88,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import { Cross1Icon } from '@svg-animated-icons/vue'
 import { ElMessage } from 'element-plus'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import { getFeedbackByTicket, submitFeedback, type FeedbackResponse, type FeedbackStatus, type ReportType } from '~/services/api/feedback'
@@ -239,6 +242,8 @@ const statusLabel = (status: FeedbackStatus) => ({ pending: '处理中', resolve
 }
 
 .close-button {
+  display: grid;
+  place-items: center;
   position: absolute;
   top: 12px;
   right: 12px;
@@ -249,6 +254,11 @@ const statusLabel = (status: FeedbackStatus) => ({ pending: '处理中', resolve
   color: var(--text-muted);
   font-size: 24px;
   cursor: pointer;
+
+  :deep(svg) {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .dialog-header {

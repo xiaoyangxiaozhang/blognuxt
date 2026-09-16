@@ -4,13 +4,12 @@
       <div v-if="modelValue" class="modal-overlay" @click.self="closeModal">
         <div class="modal-container">
           <button class="close-btn" type="button" aria-label="Close login dialog" @click="closeModal">
-            ×
+            <Cross1Icon aria-hidden="true" />
           </button>
 
           <div class="modal-header">
             <div class="header-icon">
-              <span v-if="mode === 'login'">◌</span>
-              <span v-else>◎</span>
+              <PersonIcon aria-hidden="true" />
             </div>
             <h2>{{ mode === 'login' ? '登录账号' : '创建账户' }}</h2>
             <p>{{ mode === 'login' ? '使用你的邮箱和密码继续登录' : '注册一个新账户' }}</p>
@@ -43,8 +42,15 @@
                   :type="showPassword ? 'text' : 'password'"
                   :placeholder="mode === 'login' ? '请输入密码' : '请输入 7 位以上密码'"
                 >
-                <button class="eye-btn" type="button" @click="showPassword = !showPassword">
-                  {{ showPassword ? '◉' : '○' }}
+                <button
+                  class="eye-btn"
+                  type="button"
+                  :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                  :aria-pressed="showPassword"
+                  @click="showPassword = !showPassword"
+                >
+                  <EyeOpenIcon v-if="showPassword" aria-hidden="true" />
+                  <EyeClosedIcon v-else aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -58,8 +64,15 @@
                   :type="showConfirmPassword ? 'text' : 'password'"
                   placeholder="请再次输入密码"
                 >
-                <button class="eye-btn" type="button" @click="showConfirmPassword = !showConfirmPassword">
-                  {{ showConfirmPassword ? '◉' : '○' }}
+                <button
+                  class="eye-btn"
+                  type="button"
+                  :aria-label="showConfirmPassword ? '隐藏确认密码' : '显示确认密码'"
+                  :aria-pressed="showConfirmPassword"
+                  @click="showConfirmPassword = !showConfirmPassword"
+                >
+                  <EyeOpenIcon v-if="showConfirmPassword" aria-hidden="true" />
+                  <EyeClosedIcon v-else aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -106,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import { Cross1Icon, EyeClosedIcon, EyeOpenIcon, PersonIcon } from '@svg-animated-icons/vue'
 import { ElMessage } from 'element-plus'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { useSysConfig, type OAuthProvider } from '~/composables/useSysConfig'
@@ -331,6 +345,11 @@ const handleSubmit = async () => {
   color: var(--text-primary);
   font-size: 24px;
   cursor: pointer;
+
+  :deep(svg) {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 .modal-header {
@@ -360,9 +379,14 @@ const handleSubmit = async () => {
   border-radius: 50%;
   display: grid;
   place-items: center;
+  padding: 13px;
+  background: transparent;
   color: var(--brand-accent-hover);
-  font-size: 40px;
-  line-height: 1;
+
+  :deep(svg) {
+    width: 30px;
+    height: 30px;
+  }
 }
 
 .auth-form {
@@ -427,9 +451,19 @@ const handleSubmit = async () => {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--text-muted);
-  font-size: 16px;
+  color: var(--brand-accent);
+  display: grid;
+  place-items: center;
   cursor: pointer;
+
+  :deep(svg) {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background: var(--brand-accent-soft);
+  }
 }
 
 .submit-btn {

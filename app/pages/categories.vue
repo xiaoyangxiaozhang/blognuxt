@@ -38,7 +38,7 @@
                 <span class="category-total">共 {{ category.displayCount }} 篇文章</span>
                 <h3 class="category-name">{{ category.name }}</h3>
                 <span class="category-mark" aria-hidden="true">
-                  <IconMaterialSymbolsFolderOpenOutlineRounded />
+                  <ArchiveIcon aria-hidden="true" />
                 </span>
               </div>
             </NuxtLink>
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import IconMaterialSymbolsFolderOpenOutlineRounded from '~icons/material-symbols/folder-open-outline-rounded'
+import { ArchiveIcon } from '@svg-animated-icons/vue'
 import { getCategoryList } from '~/services/api/category'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 import type { CategoryItem } from '~/types/api'

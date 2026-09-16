@@ -77,16 +77,14 @@
                     <div class="footer-leading">
                       <span class="row-time">{{ formatMomentDate(item.publishTime) }}</span>
                       <span v-if="item.location" class="footer-badge">
-                        <IconMaterialSymbolsLocationOnRounded />
+                        <SewingPinIcon aria-hidden="true" />
                         {{ item.location }}
                       </span>
                     </div>
 
                     <div class="footer-side">
                       <button type="button" class="more-button" aria-label="More actions">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                        <DotsHorizontalIcon aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -103,7 +101,8 @@
                     aria-label="点赞"
                     @click="toggleMomentLike(item.id)"
                   >
-                    <span aria-hidden="true">{{ isMomentLiked(item.id) ? '♥' : '♡' }}</span>
+                    <HeartFilledIcon v-if="isMomentLiked(item.id)" aria-hidden="true" />
+                    <HeartIcon v-else aria-hidden="true" />
                   </button>
                   <button
                     type="button"
@@ -142,7 +141,7 @@
 
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import IconMaterialSymbolsLocationOnRounded from '~icons/material-symbols/location-on-rounded'
+import { HeartIcon, HeartFilledIcon, DotsHorizontalIcon, SewingPinIcon } from '@svg-animated-icons/vue'
 import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import type { UnifiedCommentForm, UnifiedCommentItem, UnifiedCommentSubmitMode } from '~/components/comments/UnifiedCommentPanel.vue'
 import { normalizeCommentList } from '~/utils/comments'
@@ -660,11 +659,10 @@ const formatMomentDate = formatDate
     outline-offset: 2px;
   }
 
-  span {
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: var(--text-muted);
+  :deep(svg) {
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
   }
 }
 
@@ -712,9 +710,12 @@ const formatMomentDate = formatDate
   padding: 0;
   background: transparent;
   color: var(--brand-accent);
-  font-size: 28px;
-  line-height: 1;
   cursor: pointer;
+
+  :deep(svg) {
+    width: 18px;
+    height: 18px;
+  }
 
   &:hover,
   &:focus-visible,

@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import IconMdiGithub from '~icons/mdi/github'
+import { GithubLogoIcon } from '@svg-animated-icons/vue'
 import IconMdiGoogle from '~icons/mdi/google'
 import IconMdiMicrosoftWindows from '~icons/mdi/microsoft-windows'
 import IconSimpleIconsQq from '~icons/simple-icons/qq'
@@ -27,7 +27,7 @@ const OAUTH_PROVIDER_META: OAuthProviderOption[] = [
   {
     provider: 'github',
     label: 'GitHub',
-    icon: IconMdiGithub,
+    icon: GithubLogoIcon,
     fallbackText: 'GH'
   },
   {

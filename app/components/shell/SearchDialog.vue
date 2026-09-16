@@ -19,12 +19,12 @@
             <h2 id="search-dialog-title">搜索文章</h2>
           </div>
           <button class="search-dialog-close" type="button" aria-label="关闭搜索" @click="close">
-            <IconMaterialSymbolsClose />
+            <Cross1Icon aria-hidden="true" />
           </button>
         </header>
 
         <form class="search-form" role="search" @submit.prevent="search">
-          <IconMaterialSymbolsSearch class="search-form-icon" aria-hidden="true" />
+          <MagnifyingGlassIcon class="search-form-icon" aria-hidden="true" />
           <input
             ref="inputRef"
             v-model="keyword"
@@ -34,7 +34,7 @@
             aria-label="搜索标题或正文"
           />
           <button v-if="keyword" class="search-clear" type="button" aria-label="清空搜索" @click="clearSearch">
-            <IconMaterialSymbolsClose />
+            <Cross1Icon aria-hidden="true" />
           </button>
         </form>
 
@@ -76,8 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import IconMaterialSymbolsClose from '~icons/material-symbols/close'
-import IconMaterialSymbolsSearch from '~icons/material-symbols/search'
+import { Cross1Icon, MagnifyingGlassIcon } from '@svg-animated-icons/vue'
 import { searchArticles } from '~/services/api/article'
 import type { ArticleListItem } from '~/types/api'
 import { formatDate } from '~/utils/date'
@@ -266,12 +265,18 @@ onBeforeUnmount(() => {
   border-radius: 6px;
 }
 
+.search-dialog-close :deep(svg),
+.search-clear :deep(svg) {
+  width: 17px;
+  height: 17px;
+}
+
 .search-dialog-close:hover,
 .search-dialog-close:focus-visible,
 .search-clear:hover,
 .search-clear:focus-visible {
   color: var(--brand-accent);
-  background: var(--home-accent-soft);
+  background: var(--brand-accent-soft);
 }
 
 .search-dialog-close:focus-visible,

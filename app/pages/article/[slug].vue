@@ -14,10 +14,7 @@
 
         <div class="article-reading-layout">
           <article
-            ref="articleCardRef"
             class="article-card"
-            :class="{ 'is-immersive': isImmersiveReading }"
-            @keydown.esc="closeImmersiveReading"
           >
             <div v-if="article.cover" class="article-cover">
               <img :src="article.cover" :alt="article.title" />
@@ -29,10 +26,10 @@
                 <button
                   type="button"
                   class="article-fullscreen-button"
-                  :aria-pressed="isImmersiveReading"
-                  @click="toggleImmersiveReading"
+                  :aria-pressed="showReader"
+                  @click="openReader"
                 >
-                  {{ isImmersiveReading ? '退出全屏' : '全屏阅读' }}
+                  全屏阅读
                 </button>
               </div>
               <div class="article-meta">
@@ -51,6 +48,19 @@
               v-html="articleContentHtml"
             ></div>
           </article>
+
+          <ClientOnly>
+            <ArticleReaderPlayer
+              v-if="showReader && article"
+              :article="article"
+              :blocks="articleDocument.blocks"
+              :article-list="readerArticleList"
+              :author-name="authorName"
+              @close="closeReader"
+              @next="handleReaderNext"
+              @previous="handleReaderNext"
+            />
+          </ClientOnly>
 
           <aside v-if="tocHeadings.length" class="article-toc" aria-label="文章目录">
             <div class="article-toc-title">目录</div>
@@ -120,10 +130,13 @@ import { proxyImageUrl } from '~/utils/image'
 import { formatDate } from '~/utils/date'
 import { renderArticleMarkdown, type MarkdownHeading } from '~/utils/markdown'
 import { getArticleList } from '~/services/api/article'
+import { getBasicSettings } from '~/services/api/user'
 import type { ArticleListItem } from '~/types/api'
 import defaultShareImage from '~/assets/img/hero-poster.jpg'
+import ArticleReaderPlayer from '~/components/article/ArticleReaderPlayer.client.vue'
 
 interface ArticleDetailData {
+  id?: number
   title: string
   slug: string
   url?: string
@@ -250,6 +263,42 @@ const tocHeadings = computed<MarkdownHeading[]>(() =>
   articleDocument.value.headings.filter((heading) => heading.level >= 2 && heading.level <= 4)
 )
 const commentList = computed(() => normalizeCommentList(commentsPayload.value?.response?.data?.list))
+const showReader = ref(false)
+let readerOwnsFullscreen = false
+
+const openReader = async () => {
+  showReader.value = true
+
+  if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+    try {
+      await document.documentElement.requestFullscreen()
+      readerOwnsFullscreen = true
+    } catch (error) {
+      console.warn('[ArticleReader] Fullscreen API unavailable:', error)
+    }
+  }
+}
+
+const closeReader = async () => {
+  showReader.value = false
+
+  if (readerOwnsFullscreen && document.fullscreenElement) {
+    try {
+      await document.exitFullscreen()
+    } catch (error) {
+      console.warn('[ArticleReader] Failed to exit fullscreen:', error)
+    }
+  }
+
+  readerOwnsFullscreen = false
+}
+
+const handleFullscreenChange = () => {
+  if (!document.fullscreenElement && readerOwnsFullscreen) {
+    readerOwnsFullscreen = false
+    showReader.value = false
+  }
+}
 
 const resolveArticleSlug = (item: Pick<ArticleListItem, 'id' | 'slug' | 'url'>) => {
   if (item.slug) {
@@ -273,6 +322,23 @@ const { data: relatedPayload } = await useAsyncData('article-related-list', asyn
     return { list: [] as ArticleListItem[], error: '获取相关文章失败' }
   }
 })
+
+const { data: basicSettingsPayload } = await useAsyncData('article-basic-settings', async () => {
+  try {
+    const response = await getBasicSettings()
+    return response.data || {}
+  } catch (error) {
+    console.error(error)
+    return {}
+  }
+})
+
+const authorName = computed(() => basicSettingsPayload.value?.['basic.author'] || '')
+const readerArticleList = computed(() => relatedPayload.value?.list || [])
+const handleReaderNext = async (slug: string) => {
+  await closeReader()
+  await navigateTo(`/article/${encodeURIComponent(slug)}`)
+}
 
 const relatedArticles = computed(() => {
   const current = article.value
@@ -307,45 +373,6 @@ const relatedHref = (item: ArticleListItem) => `/article/${encodeURIComponent(re
 const readingProgress = ref(0)
 const activeHeadingId = ref('')
 const articleContentRef = ref<HTMLElement | null>(null)
-const articleCardRef = ref<HTMLElement | null>(null)
-const isImmersiveReading = ref(false)
-
-const toggleImmersiveReading = () => {
-  if (!import.meta.client) {
-    return
-  }
-
-  if (isImmersiveReading.value) {
-    closeImmersiveReading()
-    return
-  }
-
-  isImmersiveReading.value = true
-  const articleCard = articleCardRef.value
-  if (articleCard?.requestFullscreen) {
-    void articleCard.requestFullscreen().catch(() => {
-      // CSS 全屏样式会继续作为不支持原生 Fullscreen API 时的降级方案。
-    })
-  }
-}
-
-const closeImmersiveReading = () => {
-  if (!import.meta.client) {
-    return
-  }
-
-  const articleCard = articleCardRef.value
-  if (document.fullscreenElement === articleCard) {
-    void document.exitFullscreen().catch(() => undefined)
-  }
-  isImmersiveReading.value = false
-}
-
-const handleFullscreenChange = () => {
-  if (document.fullscreenElement !== articleCardRef.value) {
-    isImmersiveReading.value = false
-  }
-}
 
 const updateReadingProgress = () => {
   if (!import.meta.client) {
@@ -536,9 +563,6 @@ watch(articleContentHtml, () => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
-  if (document.fullscreenElement === articleCardRef.value) {
-    void document.exitFullscreen().catch(() => undefined)
-  }
   window.removeEventListener('scroll', updateReadingProgress)
   window.removeEventListener('scroll', updateActiveHeading)
 })
@@ -577,44 +601,6 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border: 1px solid var(--home-border);
   box-shadow: var(--home-shadow);
-}
-
-.article-card.is-immersive,
-.article-card:fullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 500;
-  width: 100%;
-  max-width: none;
-  height: 100dvh;
-  margin: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border: 0;
-  border-radius: 0;
-  background: var(--home-surface);
-  box-shadow: none;
-}
-
-.article-card.is-immersive .article-cover,
-.article-card:fullscreen .article-cover {
-  display: none;
-}
-
-.article-card.is-immersive .article-header,
-.article-card.is-immersive .article-content,
-.article-card:fullscreen .article-header,
-.article-card:fullscreen .article-content {
-  width: min(860px, calc(100% - 40px));
-  margin-right: auto;
-  margin-left: auto;
-}
-
-.article-card.is-immersive .article-meta,
-.article-card.is-immersive .article-tags,
-.article-card:fullscreen .article-meta,
-.article-card:fullscreen .article-tags {
-  display: none;
 }
 
 .article-reading-layout {

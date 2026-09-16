@@ -57,15 +57,15 @@
   /* Header 导航字体颜色 */
   --header-nav-color: #ffffff;
   --header-action-color: #ffffff;
-  /* 品牌交互色（oyiso: #8183ff 紫蓝 + #67c3d3 青色） */
-  --brand-accent: #8183ff;
-  --brand-accent-soft: rgba(129, 131, 255, 0.12);
-  --brand-accent-hover: #6b6de6;
+  /* 品牌交互色由站点设置覆盖，未加载时跟随当前明暗主题 */
+  --brand-accent: var(--accent);
+  --brand-accent-soft: color-mix(in srgb, var(--brand-accent) 12%, transparent);
+  --brand-accent-hover: color-mix(in srgb, var(--brand-accent) 82%, #000000);
   --brand-accent-text: #ffffff;
   /* 评论区 token */
   --comment-input-text: #ffffff;
   --comment-input-placeholder: #999999;
-  --comment-login-bg: rgba(129, 131, 255, 0.08);
+  --comment-login-bg: color-mix(in srgb, var(--brand-accent) 8%, transparent);
   --comment-toolbar-btn: #999999;
   --comment-toolbar-btn-hover: #cccccc;
   --comment-separator: rgba(255, 255, 255, 0.08);
@@ -111,15 +111,15 @@
   /* Header 导航字体颜色（亮色主题变黑） */
   --header-nav-color: #000000;
   --header-action-color: #000000;
-  /* 品牌交互色 */
-  --brand-accent: #8183ff;
-  --brand-accent-soft: rgba(129, 131, 255, 0.08);
-  --brand-accent-hover: #6b6de6;
+  /* 品牌交互色由站点设置覆盖，未加载时跟随当前明暗主题 */
+  --brand-accent: var(--accent);
+  --brand-accent-soft: color-mix(in srgb, var(--brand-accent) 8%, transparent);
+  --brand-accent-hover: color-mix(in srgb, var(--brand-accent) 82%, #000000);
   --brand-accent-text: #ffffff;
   /* 评论区 token */
   --comment-input-text: #000000;
   --comment-input-placeholder: #999999;
-  --comment-login-bg: rgba(129, 131, 255, 0.06);
+  --comment-login-bg: color-mix(in srgb, var(--brand-accent) 6%, transparent);
   --comment-toolbar-btn: #999999;
   --comment-toolbar-btn-hover: #555555;
   --comment-separator: rgba(0, 0, 0, 0.06);
@@ -192,7 +192,7 @@ html {
   --el-table-header-background-color: #f5f7fa;
 }
 
-/* 紫色主题 - Element Plus 菜单样式 */
+/* Element Plus 菜单样式覆盖 */
 
 /* 修复表格中图片列的省略号问题 */
 .el-table .cell {

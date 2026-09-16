@@ -118,9 +118,6 @@ import { normalizeCommentList, type NormalizedCommentItem } from '~/utils/commen
 import { formatDate } from '~/utils/date'
 import { proxyImageUrl } from '~/utils/image'
 import { isVideoUrl, parseBlogJson } from '~/composables/useBlogSettings'
-import IconMaterialSymbolsMailOutlineRounded from '~icons/material-symbols/mail-outline-rounded'
-import IconMdiEarth from '~icons/mdi/earth'
-
 interface ArticleTag {
   name: string
   url?: string

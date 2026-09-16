@@ -4,11 +4,8 @@ import { getArticleList } from '~/services/api/article'
 import { proxyImageUrl } from '~/utils/image'
 import { parseBlogJson, useBlogSettings } from '~/composables/useBlogSettings'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
-import IconRiGithubLine from '~icons/ri/github-line'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'
-import IconRiMailLine from '~icons/ri/mail-line'
-import IconRiTwitterXLine from '~icons/ri/twitter-x-line'
-import IconMdiEarth from '~icons/mdi/earth'
+import { EnvelopeClosedIcon, GithubLogoIcon, GlobeIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
 
 const { data: settingsData } = await useAsyncData('footer-settings', () => getBasicSettings())
 const { settings: blogSettings } = useBlogSettings()
@@ -59,12 +56,12 @@ const { openFeedback, openAccount } = useSiteOverlays()
 const route = useRoute()
 const isMessagePage = computed(() => route.path === '/message')
 const footerIconMap: Record<string, any> = {
-  'github-line': IconRiGithubLine,
+  'github-line': GithubLogoIcon,
   'bilibili-line': IconRiBilibiliLine,
-  'mail-line': IconRiMailLine,
-  'twitter-x-line': IconRiTwitterXLine
+  'mail-line': EnvelopeClosedIcon,
+  'twitter-x-line': TwitterLogoIcon
 }
-const footerIcon = (icon: string) => footerIconMap[icon] || IconMdiEarth
+const footerIcon = (icon: string) => footerIconMap[icon] || GlobeIcon
 
 interface FooterBrandColor {
   bg: string

@@ -7,6 +7,25 @@ export interface MarkdownHeading {
   text: string
 }
 
+export type MarkdownBlockType =
+  | 'heading'
+  | 'paragraph'
+  | 'blockquote'
+  | 'list'
+  | 'code'
+  | 'table'
+  | 'image'
+  | 'hr'
+  | 'other'
+
+export interface MarkdownBlock {
+  key: string
+  type: MarkdownBlockType
+  html: string
+  text: string
+  headingId?: string
+}
+
 const languageAliases: Record<string, string> = {
   js: 'javascript',
   jsx: 'javascript',
@@ -93,10 +112,78 @@ const createHeadingId = (text: string, index: number, usedIds: Set<string>) => {
   return id
 }
 
+const getBlockType = (token: MarkdownIt.Token): MarkdownBlockType => {
+  if (token.type === 'heading_open') return 'heading'
+  if (token.type === 'paragraph_open') return 'paragraph'
+  if (token.type === 'blockquote_open') return 'blockquote'
+  if (token.type === 'bullet_list_open' || token.type === 'ordered_list_open') return 'list'
+  if (token.type === 'fence' || token.type === 'code_block') return 'code'
+  if (token.type === 'table_open') return 'table'
+  if (token.type === 'hr') return 'hr'
+  if (token.type === 'image') return 'image'
+  return 'other'
+}
+
+const getBlockText = (tokens: MarkdownIt.Token[]) =>
+  tokens
+    .filter((token) => ['inline', 'fence', 'code_block', 'text'].includes(token.type))
+    .map((token) => token.content)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const renderMarkdownBlocks = (tokens: MarkdownIt.Token[]): MarkdownBlock[] => {
+  const blocks: MarkdownBlock[] = []
+  let currentTokens: MarkdownIt.Token[] = []
+  let currentRoot: MarkdownIt.Token | null = null
+  let depth = 0
+  let blockIndex = 0
+
+  const pushBlock = () => {
+    if (!currentRoot || !currentTokens.length) return
+
+    const sourceLine = currentRoot.map?.[0]
+    blocks.push({
+      key: `block-${sourceLine ?? blockIndex}-${currentRoot.type}`,
+      type: getBlockType(currentRoot),
+      html: markdown.renderer.render(currentTokens, markdown.options, {}),
+      text: getBlockText(currentTokens),
+      headingId: currentRoot.type === 'heading_open' ? currentRoot.attrGet('id') || undefined : undefined
+    })
+    blockIndex += 1
+    currentTokens = []
+    currentRoot = null
+    depth = 0
+  }
+
+  for (const token of tokens) {
+    const isOpening = token.type.endsWith('_open')
+    const isClosing = token.type.endsWith('_close')
+
+    if (!currentRoot && token.level === 0 && (isOpening || token.type === 'hr' || token.type === 'fence' || token.type === 'code_block')) {
+      currentRoot = token
+      currentTokens = [token]
+      depth = isOpening ? 1 : 0
+      if (!isOpening) pushBlock()
+      continue
+    }
+
+    if (!currentRoot) continue
+
+    currentTokens.push(token)
+    if (isOpening) depth += 1
+    if (isClosing) depth -= 1
+    if (depth === 0) pushBlock()
+  }
+
+  pushBlock()
+  return blocks
+}
+
 /** 渲染文章并为标题生成目录所需的稳定锚点。 */
 export const renderArticleMarkdown = (content?: string | null) => {
   if (!content?.trim()) {
-    return { html: '', headings: [] as MarkdownHeading[] }
+    return { html: '', headings: [] as MarkdownHeading[], blocks: [] as MarkdownBlock[] }
   }
 
   const tokens = markdown.parse(content, {})
@@ -121,6 +208,7 @@ export const renderArticleMarkdown = (content?: string | null) => {
 
   return {
     html: markdown.renderer.render(tokens, markdown.options, {}),
-    headings
+    headings,
+    blocks: renderMarkdownBlocks(tokens)
   }
 }

@@ -2,7 +2,7 @@
   <section class="unified-comment-panel" :class="`variant-${variant}`">
     <header v-if="showHeader" class="comment-header">
       <div class="header-title">
-        <IconTablerMessage />
+        <ChatBubbleIcon aria-hidden="true" />
         <h2>{{ title }}</h2>
         <span>({{ comments.length }})</span>
       </div>
@@ -51,7 +51,7 @@
             aria-label="Comment tips"
             :title="tip"
           >
-            <IconTablerInfoCircle />
+            <InfoCircledIcon aria-hidden="true" />
           </button>
         </div>
 
@@ -123,21 +123,21 @@
         <footer class="composer-footer">
           <div class="toolbar-group">
             <button type="button" class="plain-icon" aria-label="Insert emoji" @click="toggleEmojiPanel">
-              <IconTablerMoodSmile />
+              <FaceIcon aria-hidden="true" />
             </button>
 
             <button type="button" class="plain-icon" aria-label="Upload image" @click="triggerImagePicker">
-              <IconTablerPhoto />
+              <ImageIcon aria-hidden="true" />
             </button>
 
             <button v-if="!deferIdentity" type="button" class="plain-icon" aria-label="Toggle preview" @click="showPreview = !showPreview">
-              <IconTablerEye />
+              <EyeOpenIcon aria-hidden="true" />
             </button>
           </div>
 
           <div class="action-group">
             <button v-if="!isLoggedIn && !deferIdentity" type="button" class="login-button" @click="loginDialogVisible = true">
-              <IconTablerLogin />
+              <PersonIcon aria-hidden="true" />
               登录
             </button>
 
@@ -294,7 +294,9 @@
         @click.self="identityChoiceVisible = false"
       >
         <div class="identity-choice-dialog">
-          <button type="button" class="identity-choice-close" aria-label="关闭" @click="identityChoiceVisible = false">×</button>
+          <button type="button" class="identity-choice-close" aria-label="关闭" @click="identityChoiceVisible = false">
+            <Cross1Icon aria-hidden="true" />
+          </button>
           <h2 id="identity-choice-title">发表评论</h2>
           <p>请选择评论方式，评论内容会保留。</p>
           <div class="identity-choice-actions">
@@ -317,12 +319,15 @@
 <script setup lang="ts">
 import { markRaw } from 'vue'
 import { ElMessage } from 'element-plus'
-import IconTablerMessage from '~icons/tabler/message'
-import IconTablerPhoto from '~icons/tabler/photo'
-import IconTablerInfoCircle from '~icons/tabler/info-circle'
-import IconTablerLogin from '~icons/tabler/login'
-import IconTablerMoodSmile from '~icons/tabler/mood-smile'
-import IconTablerEye from '~icons/tabler/eye'
+import {
+  ChatBubbleIcon,
+  Cross1Icon,
+  EyeOpenIcon,
+  FaceIcon,
+  ImageIcon,
+  InfoCircledIcon,
+  PersonIcon
+} from '@svg-animated-icons/vue'
 import LoginDialog from '~/components/shell/LoginDialog.vue'
 import { renderCommentContent, extractCommentImageUrls } from '~/utils/commentRenderer'
 import { proxyImageUrl } from '~/utils/image'
@@ -1352,6 +1357,8 @@ onMounted(async () => {
 }
 
 .identity-choice-close {
+  display: grid;
+  place-items: center;
   position: absolute;
   top: 8px;
   right: 10px;
@@ -1363,6 +1370,11 @@ onMounted(async () => {
   color: var(--text-muted);
   font-size: 22px;
   cursor: pointer;
+
+  :deep(svg) {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .identity-choice-actions {

@@ -7,7 +7,7 @@
       </div>
 
       <label class="search-shell" for="article-feed-search">
-        <IconMaterialSymbolsSearchRounded class="search-icon" />
+        <MagnifyingGlassIcon class="search-icon" aria-hidden="true" />
         <input
           id="article-feed-search"
           v-model.trim="searchKeyword"
@@ -47,7 +47,7 @@
           <div class="article-content">
             <div data-reveal-child class="article-meta">
               <span class="category">
-                <IconMaterialSymbolsFolderOpenRounded />
+                <ArchiveIcon aria-hidden="true" />
                 {{ article.categoryName }}
               </span>
               <span
@@ -84,8 +84,7 @@
 
 <script setup lang="ts">
 import { nextTick } from 'vue'
-import IconMaterialSymbolsFolderOpenRounded from '~icons/material-symbols/folder-open-rounded'
-import IconMaterialSymbolsSearchRounded from '~icons/material-symbols/search-rounded'
+import { ArchiveIcon, MagnifyingGlassIcon } from '@svg-animated-icons/vue'
 import { getArticleList } from '~/services/api/article'
 import { mapArticleCard, type DisplayArticleCard } from '~/utils/article'
 import { getDominantColor } from '~/utils/dominantColor'

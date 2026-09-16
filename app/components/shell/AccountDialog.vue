@@ -3,7 +3,9 @@
     <Transition name="site-dialog">
       <div v-if="accountOpen" class="dialog-overlay" role="presentation" @click.self="close">
         <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="account-dialog-title">
-          <button class="close-button" type="button" aria-label="关闭" @click="close">×</button>
+          <button class="close-button" type="button" aria-label="关闭" @click="close">
+            <Cross1Icon aria-hidden="true" />
+          </button>
 
           <div class="dialog-header">
             <h2 id="account-dialog-title">{{ accountMode === 'reset' ? '重置密码' : '账号' }}</h2>
@@ -130,6 +132,7 @@
 </template>
 
 <script setup lang="ts">
+import { Cross1Icon } from '@svg-animated-icons/vue'
 import { ElMessage } from 'element-plus'
 import LoginDialog from '~/components/shell/LoginDialog.vue'
 import { useCommentAuth } from '~/composables/useCommentAuth'
@@ -334,6 +337,8 @@ const logout = async () => {
 }
 
 .close-button {
+  display: grid;
+  place-items: center;
   position: absolute;
   top: 12px;
   right: 12px;
@@ -344,6 +349,11 @@ const logout = async () => {
   color: var(--text-muted);
   font-size: 24px;
   cursor: pointer;
+
+  :deep(svg) {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .dialog-header {

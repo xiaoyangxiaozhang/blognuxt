@@ -2,7 +2,7 @@
   <div class="filtered-page">
     <div class="filtered-shell">
       <NuxtLink to="/categories" class="back-link">
-        <span aria-hidden="true">←</span>
+        <ArrowLeftIcon aria-hidden="true" />
         返回分类
       </NuxtLink>
 
@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import ArticleMasonryFeed from '~/components/articles/ArticleMasonryFeed.vue'
+import { ArrowLeftIcon } from '@svg-animated-icons/vue'
 
 const route = useRoute()
 

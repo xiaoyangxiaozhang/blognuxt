@@ -35,33 +35,30 @@
 </template>
 
 <script setup lang="ts">
-import IconMdiEarth from '~icons/mdi/earth'
+import { EnvelopeClosedIcon, GithubLogoIcon, GlobeIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
 
 // 图标映射：ri 图标名 → Vue 组件
-import IconRiGithubLine from '~icons/ri/github-line'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'
-import IconRiTwitterXLine from '~icons/ri/twitter-x-line'
 import IconRiNeteaseCloudMusicLine from '~icons/ri/netease-cloud-music-line'
 import IconRiTelegram2Line from '~icons/ri/telegram-2-line'
 import IconRiWeiboLine from '~icons/ri/weibo-line'
 import IconRiZhihuLine from '~icons/ri/zhihu-line'
 import IconRiTiktokLine from '~icons/ri/tiktok-line'
-import IconMaterialSymbolsMailOutlineRounded from '~icons/material-symbols/mail-outline-rounded'
 
 const iconMap: Record<string, any> = {
-  'github-line': IconRiGithubLine,
+  'github-line': GithubLogoIcon,
   'bilibili-line': IconRiBilibiliLine,
-  'twitter-x-line': IconRiTwitterXLine,
+  'twitter-x-line': TwitterLogoIcon,
   'netease-cloud-music-line': IconRiNeteaseCloudMusicLine,
   'telegram-2-line': IconRiTelegram2Line,
   'weibo-line': IconRiWeiboLine,
   'zhihu-line': IconRiZhihuLine,
   'tiktok-line': IconRiTiktokLine,
   'tiktok-fill': IconRiTiktokLine,
-  'mail-line': IconMaterialSymbolsMailOutlineRounded
+  'mail-line': EnvelopeClosedIcon
 }
 
-const fallbackIcon = IconMdiEarth
+const fallbackIcon = GlobeIcon
 
 // 各平台品牌色
 interface BrandColor {

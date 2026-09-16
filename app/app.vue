@@ -32,6 +32,23 @@ const themeStyles = computed<Record<string, string>>(() => {
     '--brand-accent-hover': `color-mix(in srgb, ${themeColor.value} 82%, #000000)`
   }
 })
+const themeStyleKeys = ['--brand-accent', '--brand-accent-soft', '--brand-accent-hover'] as const
+
+watchEffect(() => {
+  if (!import.meta.client) return
+
+  const root = document.documentElement
+  const styles = themeStyles.value
+
+  for (const key of themeStyleKeys) {
+    const value = styles[key]
+    if (value) {
+      root.style.setProperty(key, value)
+    } else {
+      root.style.removeProperty(key)
+    }
+  }
+})
 const shareImageUrl = computed(() => {
   if (!configuredScreenshot.value || isVideoUrl(configuredScreenshot.value)) {
     return defaultShareImageUrl

@@ -24,7 +24,7 @@
               >
                 <img class="brand-logo" :src="logoUrl" alt="" aria-hidden="true" />
                 <span>{{ siteTitle }}</span>
-                <span class="brand-menu-arrow" :class="{ open: brandMenuOpen }">▾</span>
+                <ChevronDownIcon class="brand-menu-arrow" :class="{ open: brandMenuOpen }" aria-hidden="true" />
               </button>
               <Transition name="brand-menu">
                 <nav
@@ -51,7 +51,7 @@
               <NuxtLink to="/" class="nav-item">首页</NuxtLink>
               <div class="nav-dropdown">
                 <button class="nav-dropdown-toggle" type="button">
-                  文章 <span class="dropdown-arrow">▾</span>
+                  文章 <ChevronDownIcon class="dropdown-arrow" aria-hidden="true" />
                 </button>
                 <div class="nav-dropdown-menu">
                   <NuxtLink to="/archive" class="nav-dropdown-item">归档</NuxtLink>
@@ -66,8 +66,8 @@
 
             <div class="header-actions">
               <button class="action-btn action-theme island-theme-btn" :title="themeButtonTitle" type="button" @click="toggleTheme">
-                <IconMaterialSymbolsDarkModeRounded v-if="theme === 'midnight-blue'"/>
-                <IconMaterialSymbolsWbSunnyRounded v-else />
+                <MoonIcon v-if="theme === 'midnight-blue'" aria-hidden="true" />
+                <SunIcon v-else aria-hidden="true" />
               </button>
               <button
                 class="action-btn action-subscribe"
@@ -76,13 +76,13 @@
                 aria-label="订阅更新"
                 @click="subscribeDialogOpen = true"
               >
-                <IconMaterialSymbolsNotifications />
+                <BellIcon aria-hidden="true" />
               </button>
               <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
-                <IconTablerFlag />
+                <ExclamationTriangleIcon aria-hidden="true" />
               </button>
               <button class="action-btn" type="button" title="账号" aria-label="账号" @click="openAccount()">
-                <IconTablerUser />
+                <PersonIcon aria-hidden="true" />
               </button>
               <button
                 class="action-btn action-search"
@@ -91,7 +91,7 @@
                 aria-label="搜索"
                 @click="searchDialogOpen = true"
               >
-                <IconMaterialSymbolsSearch />
+                <MagnifyingGlassIcon aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -140,13 +140,13 @@
                 aria-label="订阅更新"
                 @click="subscribeDialogOpen = true"
               >
-                <IconMaterialSymbolsNotifications />
+                <BellIcon aria-hidden="true" />
               </button>
               <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
-                <IconTablerFlag />
+                <ExclamationTriangleIcon aria-hidden="true" />
               </button>
               <button class="action-btn" type="button" title="账号" aria-label="账号" @click="openAccount()">
-                <IconTablerUser />
+                <PersonIcon aria-hidden="true" />
               </button>
               <button
                 class="action-btn action-search"
@@ -155,11 +155,11 @@
                 aria-label="搜索"
                 @click="searchDialogOpen = true"
               >
-                <IconMaterialSymbolsSearch />
+                <MagnifyingGlassIcon aria-hidden="true" />
               </button>
               <button class="action-btn action-theme" :title="themeButtonTitle" type="button" @click="toggleTheme">
-                <IconMaterialSymbolsDarkModeRounded v-if="theme === 'midnight-blue'"  /> 
-                <IconMaterialSymbolsWbSunnyRounded  v-else/>
+                <MoonIcon v-if="theme === 'midnight-blue'" aria-hidden="true" />
+                <SunIcon v-else aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -175,12 +175,15 @@
 </template>
 
 <script setup lang="ts">
-import IconMaterialSymbolsDarkModeRounded from '~icons/material-symbols/dark-mode-rounded'
-import IconMaterialSymbolsNotifications from '~icons/material-symbols/notifications'
-import IconMaterialSymbolsSearch from '~icons/material-symbols/search'
-import IconMaterialSymbolsWbSunnyRounded from '~icons/material-symbols/wb-sunny-rounded'
-import IconTablerFlag from '~icons/tabler/flag'
-import IconTablerUser from '~icons/tabler/user'
+import {
+  BellIcon,
+  ChevronDownIcon,
+  ExclamationTriangleIcon,
+  MagnifyingGlassIcon,
+  MoonIcon,
+  PersonIcon,
+  SunIcon
+} from '@svg-animated-icons/vue'
 import AccountDialog from '~/components/shell/AccountDialog.vue'
 import FeedbackDialog from '~/components/shell/FeedbackDialog.vue'
 import SearchDialog from '~/components/shell/SearchDialog.vue'
@@ -571,8 +574,8 @@ onUnmounted(() => {
 }
 
 .brand-menu-arrow {
-  font-size: 11px;
-  line-height: 1;
+  width: 12px;
+  height: 12px;
   transition: transform 0.2s ease;
 
   &.open {
@@ -637,12 +640,12 @@ onUnmounted(() => {
   &:hover,
   &:focus-visible,
   &.router-link-active {
-    color: #8183ff;
+    color: var(--brand-accent);
     background: transparent;
   }
 
   &:focus-visible {
-    outline: 2px solid #8183ff;
+    outline: 2px solid var(--brand-accent);
     outline-offset: -2px;
   }
 }
@@ -746,10 +749,9 @@ onUnmounted(() => {
 }
 
 .dropdown-arrow {
-  display: inline-block;
-  font-size: 10px;
+  width: 12px;
+  height: 12px;
   transition: transform 0.2s ease;
-  line-height: 1;
 }
 
 .nav-dropdown:hover .dropdown-arrow {

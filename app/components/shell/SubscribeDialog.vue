@@ -13,11 +13,12 @@
       >
         <section class="subscribe-dialog">
           <button class="close-button" type="button" aria-label="关闭订阅弹窗" @click="closeDialog">
-            <IconMaterialSymbolsCloseRounded />
+            <Cross1Icon aria-hidden="true" />
           </button>
 
           <div class="dialog-icon" aria-hidden="true">
-            <IconMaterialSymbolsNotificationsActiveRounded />
+            <CheckCircledIcon v-if="submitState === 'success' || submitState === 'already-subscribed'" />
+            <BellIcon v-else />
           </div>
 
           <template v-if="submitState === 'success' || submitState === 'already-subscribed'">
@@ -73,8 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import IconMaterialSymbolsCloseRounded from '~icons/material-symbols/close-rounded'
-import IconMaterialSymbolsNotificationsActiveRounded from '~icons/material-symbols/notifications-active-rounded'
+import { BellIcon, CheckCircledIcon, Cross1Icon } from '@svg-animated-icons/vue'
 import { subscribeToUpdates } from '~/services/api/subscription'
 
 const props = defineProps<{
@@ -280,7 +280,7 @@ onUnmounted(() => {
   height: 58px;
   margin: 2px auto 18px;
   border-radius: 18px;
-  background: var(--brand-accent-soft);
+  background: transparent;
   color: var(--brand-accent);
 
   :deep(svg) {
@@ -390,7 +390,7 @@ onUnmounted(() => {
 
   &:hover:not(:disabled) {
     filter: brightness(1.08);
-    box-shadow: 0 10px 24px rgba(107, 109, 230, 0.2);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--brand-accent) 20%, transparent);
   }
 
   &:focus-visible {

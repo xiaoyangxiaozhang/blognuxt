@@ -37,7 +37,7 @@
             <div class="article-content">
               <div data-reveal-child class="article-meta">
                 <span class="category">
-                  <IconMaterialSymbolsFolderOpenRounded />
+                  <ArchiveIcon aria-hidden="true" />
                   {{ article.categoryName }}
                 </span>
                 <span
@@ -68,7 +68,7 @@
 
 <script setup lang="ts">
 import { nextTick } from 'vue'
-import IconMaterialSymbolsFolderOpenRounded from '~icons/material-symbols/folder-open-rounded'
+import { ArchiveIcon } from '@svg-animated-icons/vue'
 import { getDominantColor } from '~/utils/dominantColor'
 import { useScrollReveal } from '~/composables/useScrollReveal'
 

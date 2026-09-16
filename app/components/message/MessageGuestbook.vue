@@ -137,7 +137,7 @@ const emit = defineEmits<{
 
 .guestbook-content :deep(.variant-board .info-field input:focus) {
   border-color: var(--brand-accent);
-  box-shadow: 0 0 0 3px rgb(129 131 255 / 10%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 10%, transparent);
 }
 
 .guestbook-content :deep(.variant-board .composer-body textarea) {
@@ -158,7 +158,7 @@ const emit = defineEmits<{
   min-height: 140px;
   border-color: var(--brand-accent);
   outline: none;
-  box-shadow: 0 0 0 3px rgb(129 131 255 / 10%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 10%, transparent);
 }
 
 .guestbook-content :deep(.variant-board .submit-button) {
