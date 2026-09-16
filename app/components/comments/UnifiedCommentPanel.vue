@@ -177,7 +177,7 @@
         <el-alert :title="errorText" type="error" show-icon />
       </div>
 
-      <div v-else-if="comments.length === 0" class="comment-empty">
+      <div v-else-if="comments.length === 0 && showEmpty" class="comment-empty">
         <p>{{ emptyText }}</p>
       </div>
 
@@ -379,6 +379,7 @@ const props = withDefaults(defineProps<{
   deferIdentity?: boolean
   showComposer?: boolean
   showHeader?: boolean
+  showEmpty?: boolean
   compactTime?: boolean
   submitState?: UnifiedCommentSubmitState
 }>(), {
@@ -392,6 +393,7 @@ const props = withDefaults(defineProps<{
   deferIdentity: false,
   showComposer: true,
   showHeader: true,
+  showEmpty: true,
   compactTime: false,
   submitState: 'idle'
 })

@@ -83,7 +83,40 @@
                     </div>
 
                     <div class="footer-side">
-                      <button type="button" class="more-button" aria-label="More actions">
+                      <div
+                        v-if="commentStates[item.id]?.actionsExpanded"
+                        :id="`moment-actions-${item.id}`"
+                        class="moment-like-row"
+                      >
+                        <button
+                          type="button"
+                          class="moment-like-button"
+                          :class="{ liked: isMomentLiked(item.id) }"
+                          :aria-pressed="isMomentLiked(item.id)"
+                          aria-label="点赞"
+                          @click="toggleMomentLike(item.id)"
+                        >
+                          <HeartFilledIcon v-if="isMomentLiked(item.id)" aria-hidden="true" />
+                          <HeartIcon v-else aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          class="moment-comment-button"
+                          :aria-expanded="commentStates[item.id]?.composerExpanded || false"
+                          aria-label="评论"
+                          @click="toggleMomentComposer(item.id)"
+                        >
+                          评论
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        class="more-button"
+                        aria-label="More actions"
+                        :aria-expanded="commentStates[item.id]?.actionsExpanded || false"
+                        :aria-controls="`moment-actions-${item.id}`"
+                        @click="toggleMomentActions(item.id)"
+                      >
                         <DotsHorizontalIcon aria-hidden="true" />
                       </button>
                     </div>
@@ -91,30 +124,11 @@
                 </div>
               </footer>
 
-              <div :id="`moment-comments-${item.id}`" class="moment-comment-panel">
-                <div class="moment-like-row">
-                  <button
-                    type="button"
-                    class="moment-like-button"
-                    :class="{ liked: isMomentLiked(item.id) }"
-                    :aria-pressed="isMomentLiked(item.id)"
-                    aria-label="点赞"
-                    @click="toggleMomentLike(item.id)"
-                  >
-                    <HeartFilledIcon v-if="isMomentLiked(item.id)" aria-hidden="true" />
-                    <HeartIcon v-else aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    class="moment-comment-button"
-                    :aria-expanded="commentStates[item.id]?.composerExpanded || false"
-                    aria-label="评论"
-                    @click="toggleMomentComposer(item.id)"
-                  >
-                    评论
-                  </button>
-                </div>
-
+              <div
+                v-if="commentStates[item.id]?.composerExpanded || commentStates[item.id]?.comments.length"
+                :id="`moment-comments-${item.id}`"
+                class="moment-comment-panel"
+              >
                 <UnifiedCommentPanel
                   variant="moment"
                   :defer-identity="true"
@@ -125,6 +139,7 @@
                   :submitting="commentStates[item.id]?.submitting || false"
                   :form="commentStates[item.id]?.form || emptyCommentForm"
                   :error-text="commentStates[item.id]?.error || ''"
+                  :show-empty="false"
                   empty-text="还没有评论，来说点什么吧。"
                   @update:form="handleFormUpdate(item.id, $event)"
                   @reply="replyToMomentComment(item.id, $event)"
@@ -171,6 +186,7 @@ interface MomentCommentState {
   loaded: boolean
   error: string
   submitting: boolean
+  actionsExpanded: boolean
   composerExpanded: boolean
 }
 
@@ -266,6 +282,7 @@ const ensureCommentState = (momentId: number) => {
       loaded: false,
       error: '',
       submitting: false,
+      actionsExpanded: false,
       composerExpanded: false
     }
   }
@@ -308,6 +325,11 @@ const handleFormUpdate = (momentId: number, nextForm: DynamicCommentForm) => {
   ensureCommentState(momentId).form = nextForm
 }
 
+const toggleMomentActions = (momentId: number) => {
+  const state = ensureCommentState(momentId)
+  state.actionsExpanded = !state.actionsExpanded
+}
+
 const replyToMomentComment = (momentId: number, item: UnifiedCommentItem) => {
   const parentId = Number(item.id)
   const state = ensureCommentState(momentId)
@@ -321,6 +343,7 @@ const replyToMomentComment = (momentId: number, item: UnifiedCommentItem) => {
 
 const toggleMomentComposer = (momentId: number) => {
   const state = ensureCommentState(momentId)
+  state.actionsExpanded = true
   state.composerExpanded = !state.composerExpanded
 }
 
@@ -643,8 +666,8 @@ const formatMomentDate = formatDate
 }
 
 .more-button {
-  min-width: 26px;
-  height: 22px;
+  min-width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -674,8 +697,9 @@ const formatMomentDate = formatDate
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px 0;
-  border-radius: 4px 4px 0 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--home-text) 7%, var(--home-card-bg));
 }
 
@@ -709,7 +733,7 @@ const formatMomentDate = formatDate
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--brand-accent);
+  color: var(--text-muted);
   cursor: pointer;
 
   :deep(svg) {
@@ -718,8 +742,16 @@ const formatMomentDate = formatDate
   }
 
   &:hover,
-  &:focus-visible,
+  &:focus-visible {
+    color: var(--text-muted);
+  }
+
   &.liked {
+    color: var(--brand-accent);
+  }
+
+  &.liked:hover,
+  &.liked:focus-visible {
     color: var(--brand-accent-hover);
   }
 
