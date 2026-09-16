@@ -8,7 +8,7 @@
       </div>
     </header>
 
-    <form class="comment-composer" @submit.prevent="handleSubmit">
+    <form v-if="showComposer" class="comment-composer" @submit.prevent="handleSubmit">
       <div class="composer-card">
         <div v-if="!deferIdentity" class="composer-topline">
           <label class="info-field">
@@ -372,6 +372,7 @@ const props = withDefaults(defineProps<{
   errorText?: string
   variant?: 'default' | 'board' | 'moment'
   deferIdentity?: boolean
+  showComposer?: boolean
   showHeader?: boolean
   compactTime?: boolean
   submitState?: UnifiedCommentSubmitState
@@ -384,6 +385,7 @@ const props = withDefaults(defineProps<{
   errorText: '',
   variant: 'default',
   deferIdentity: false,
+  showComposer: true,
   showHeader: true,
   compactTime: false,
   submitState: 'idle'

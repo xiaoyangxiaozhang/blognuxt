@@ -105,11 +105,21 @@
                   >
                     <span aria-hidden="true">{{ isMomentLiked(item.id) ? '♥' : '♡' }}</span>
                   </button>
+                  <button
+                    type="button"
+                    class="moment-comment-button"
+                    :aria-expanded="commentStates[item.id]?.composerExpanded || false"
+                    aria-label="评论"
+                    @click="toggleMomentComposer(item.id)"
+                  >
+                    评论
+                  </button>
                 </div>
 
                 <UnifiedCommentPanel
                   variant="moment"
                   :defer-identity="true"
+                  :show-composer="commentStates[item.id]?.composerExpanded || false"
                   :show-header="false"
                   :comments="commentStates[item.id]?.comments || []"
                   :loading="commentStates[item.id]?.loading || false"
@@ -162,6 +172,7 @@ interface MomentCommentState {
   loaded: boolean
   error: string
   submitting: boolean
+  composerExpanded: boolean
 }
 
 const DEFAULT_AVATAR = 'https://picsum.photos/200/200?random=7'
@@ -255,7 +266,8 @@ const ensureCommentState = (momentId: number) => {
       loading: false,
       loaded: false,
       error: '',
-      submitting: false
+      submitting: false,
+      composerExpanded: false
     }
   }
 
@@ -305,6 +317,12 @@ const replyToMomentComment = (momentId: number, item: UnifiedCommentItem) => {
     content: `@${item.author} `,
     parentId: Number.isFinite(parentId) ? parentId : undefined
   }
+  state.composerExpanded = true
+}
+
+const toggleMomentComposer = (momentId: number) => {
+  const state = ensureCommentState(momentId)
+  state.composerExpanded = !state.composerExpanded
 }
 
 const isMomentLiked = (momentId: number) => likedMomentIds.has(momentId)
@@ -655,9 +673,33 @@ const formatMomentDate = formatDate
 }
 
 .moment-like-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 14px 0;
   border-radius: 4px 4px 0 0;
   background: color-mix(in srgb, var(--home-text) 7%, var(--home-card-bg));
+}
+
+.moment-comment-button {
+  height: 28px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--brand-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 .moment-like-button {
