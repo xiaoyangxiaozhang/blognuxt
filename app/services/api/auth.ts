@@ -13,6 +13,8 @@ export interface AuthUserProfile {
   is_virtual_email?: boolean
   has_password?: boolean
   linked_oauths?: string[]
+  moment_count?: number
+  comment_count?: number
   created_at?: string
 }
 

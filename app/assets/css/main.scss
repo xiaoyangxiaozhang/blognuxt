@@ -8,6 +8,13 @@
 /* Markdown 排版系统 */
 @import './_prose.scss';
 
+/* 全站链接统一使用无下划线样式 */
+a,
+a:hover,
+a:focus-visible {
+  text-decoration: none;
+}
+
 /* ========== 动效 token（对齐 oyiso） ========== */
 :root {
   --ease-out-expo: cubic-bezier(0.345, 0.045, 0.345, 1);

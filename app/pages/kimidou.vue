@@ -1,5 +1,6 @@
 <template>
-  <section class="moments-page">
+  <NuxtPage v-if="isMinePage" />
+  <section v-else class="moments-page">
     <PageCurtain v-model="curtainReady" />
     <div class="moments-shell">
       <header class="moments-header">
@@ -146,7 +147,6 @@ import { getBasicSettings, getSettings } from '~/services/api/user'
 import { normalizeCommentList } from '~/utils/comments'
 import { proxyImageUrl } from '~/utils/image'
 import { formatDate } from '~/utils/date'
-import { parseBlogJson } from '~/composables/useBlogSettings'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 import fallbackCover from '~/assets/img/background.png'
@@ -171,6 +171,8 @@ interface KimidouPageData {
 
 const DEFAULT_AVATAR = 'https://picsum.photos/200/200?random=7'
 const { currentUser, isLoggedIn, fetchProfile } = useCommentAuth()
+const route = useRoute()
+const isMinePage = computed(() => route.path === '/kimidou/mine')
 
 const { data, pending } = await useAsyncData<KimidouPageData>('kimidou-page', async () => {
   try {
@@ -212,11 +214,7 @@ const communityAvatar = computed(() => {
   return proxyImageUrl(currentUser.value?.avatar) || proxyImageUrl(settings.value['basic.author_avatar']) || DEFAULT_AVATAR
 })
 const communitySignature = computed(() => {
-  const typingTexts = parseBlogJson<string[]>(blogSettings.value['blog.typing_texts'], [])
-    .map(item => item.trim())
-    .filter(Boolean)
-
-  return typingTexts[0] || blogSettings.value['blog.slogan'] || '分享小猫日常，认识有趣的人。'
+  return blogSettings.value['blog.kimidou_description']?.trim() || '前景可待 未来可期'
 })
 
 const momentAuthor = (item: KimidouMomentItem) => item.author?.nickname || '匿名用户'

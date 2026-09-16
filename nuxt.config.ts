@@ -1,5 +1,7 @@
 import Icons from 'unplugin-icons/vite'
 
+const apiProxyTarget = process.env.NUXT_API_PROXY_TARGET?.replace(/\/+$/, '')
+
 // 开发环境下代理图片请求（绕过 CORS）
 // 服务端渲染/生产构建使用 Nitro server route: server/routes/proxy-image.get.ts
 const devProxyPlugin = {
@@ -76,6 +78,16 @@ export default defineNuxtConfig({
         : process.env.NODE_ENV !== 'development'
     }
   },
+  routeRules: apiProxyTarget
+    ? {
+        '/api/v1/**': {
+          proxy: {
+            to: `${apiProxyTarget}/api/v1/**`,
+            headers: { Origin: apiProxyTarget }
+          }
+        }
+      }
+    : undefined,
 vite: {
     plugins: [
       Icons({ compiler: 'vue3', autoInstall: true }),

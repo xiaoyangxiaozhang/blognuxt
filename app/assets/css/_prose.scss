@@ -263,14 +263,12 @@
   a {
     color: var(--prose-link);
     text-decoration: none;
-    border-bottom: 1px solid transparent;
     transition: all 0.3s ease;
     font-weight: 500;
     position: relative;
 
     &:hover {
       color: var(--prose-link-hover);
-      border-bottom-color: var(--prose-link);
     }
 
     // 外部链接图标

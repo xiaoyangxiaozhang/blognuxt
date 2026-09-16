@@ -1,4 +1,4 @@
-import { apiGet } from '~/composables/useApi'
+import { apiDelete, apiGet, apiPost, apiPut } from '~/composables/useApi'
 import type { PaginationData } from '~/types/api'
 
 export interface KimidouMomentContent {
@@ -22,5 +22,29 @@ export interface KimidouMomentItem {
   author?: KimidouMomentAuthor
 }
 
+export interface KimidouManagedMomentItem extends KimidouMomentItem {
+  channel: 'site' | 'kimidou'
+  user_id?: number
+  deleted_at?: string
+}
+
+export interface KimidouMomentPayload {
+  content: KimidouMomentContent
+  is_publish: boolean
+  publish_time?: string
+}
+
 export const getKimidouMomentList = (params?: Record<string, unknown>) =>
   apiGet<PaginationData<KimidouMomentItem>>('/kimidou/moments', { params })
+
+export const getMyKimidouMoments = (params?: Record<string, unknown>) =>
+  apiGet<PaginationData<KimidouManagedMomentItem>>('/admin/kimidou/moments', { params })
+
+export const createKimidouMoment = (body: KimidouMomentPayload) =>
+  apiPost<KimidouManagedMomentItem>('/admin/kimidou/moments', body)
+
+export const updateKimidouMoment = (id: number, body: KimidouMomentPayload) =>
+  apiPut<KimidouManagedMomentItem>(`/admin/kimidou/moments/${id}`, body)
+
+export const deleteKimidouMoment = (id: number) =>
+  apiDelete<null>(`/admin/kimidou/moments/${id}`)

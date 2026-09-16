@@ -57,17 +57,43 @@
 
           <template v-else>
             <div class="profile-summary">
-              <img v-if="currentUser?.avatar" :src="currentUser.avatar" :alt="currentUser.nickname || '用户头像'">
-              <div v-else class="avatar-fallback">{{ (currentUser?.nickname || '用').slice(0, 1) }}</div>
-              <div>
-                <strong>{{ currentUser?.nickname || '未设置昵称' }}</strong>
-                <span>{{ currentUser?.email }}</span>
+              <div class="profile-identity">
+                <img v-if="currentUser?.avatar" :src="currentUser.avatar" :alt="currentUser.nickname || '用户头像'">
+                <div v-else class="avatar-fallback">{{ (currentUser?.nickname || '用').slice(0, 1) }}</div>
+                <div>
+                  <strong>{{ currentUser?.nickname || '未设置昵称' }}</strong>
+                  <span>{{ currentUser?.email }}</span>
+                </div>
+              </div>
+              <button type="button" class="text-button profile-edit-button" @click="startProfileEdit">编辑资料</button>
+            </div>
+
+            <div class="profile-stats" aria-label="个人数据">
+              <div class="profile-stat">
+                <strong>{{ currentUser?.moment_count ?? 0 }}</strong>
+                <span>动态</span>
+              </div>
+              <div class="profile-stat">
+                <strong>{{ currentUser?.comment_count ?? 0 }}</strong>
+                <span>评论</span>
               </div>
             </div>
 
-            <form class="dialog-form" @submit.prevent="saveProfile">
+            <form v-if="profileEditing" class="dialog-form profile-editor" @submit.prevent="saveProfile">
+              <div class="avatar-editor">
+                <div class="avatar-preview">
+                  <img v-if="profileAvatarUrl" :src="profileAvatarUrl" alt="头像预览">
+                  <span v-else>{{ (profileForm.nickname || '用').slice(0, 1) }}</span>
+                </div>
+                <div class="avatar-editor-copy">
+                  <strong>头像</strong>
+                  <span>支持 JPG、PNG、GIF、WebP，最大 5MB</span>
+                  <label class="secondary-button avatar-upload-button" for="account-avatar">更换头像</label>
+                  <input id="account-avatar" ref="avatarInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/gif,image/webp" @change="handleAvatarChange">
+                </div>
+              </div>
               <label>
-                <span>昵称</span>
+                <span>名字</span>
                 <input v-model="profileForm.nickname" required minlength="2" maxlength="32">
               </label>
               <label>
@@ -75,42 +101,52 @@
                 <input v-model="profileForm.website" type="url" placeholder="选填">
               </label>
               <div class="form-actions">
-                <span v-if="profileSaved" class="status-text">已保存</span>
-                <button class="primary-button" type="submit" :disabled="profileSaving">{{ profileSaving ? '保存中…' : '保存' }}</button>
+                <button type="button" class="text-button" :disabled="profileSaving" @click="cancelProfileEdit">取消</button>
+                <button class="primary-button" type="submit" :disabled="profileSaving">{{ profileSaving ? '保存中…' : '保存资料' }}</button>
               </div>
             </form>
 
-            <form class="dialog-form section-divider" @submit.prevent="savePassword">
-              <h3>{{ hasPassword ? '修改密码' : '设置密码' }}</h3>
-              <label v-if="hasPassword">
-                <span>当前密码</span>
-                <input v-model="passwordForm.oldPassword" type="password" required autocomplete="current-password">
-              </label>
-              <label>
-                <span>{{ hasPassword ? '新密码' : '密码' }}</span>
-                <input v-model="passwordForm.newPassword" type="password" required minlength="6" maxlength="32" autocomplete="new-password">
-              </label>
-              <label v-if="!hasPassword">
-                <span>确认密码</span>
-                <input v-model="passwordForm.confirmPassword" type="password" required minlength="6" maxlength="32" autocomplete="new-password">
-              </label>
-              <div class="form-actions">
-                <button class="primary-button" type="submit" :disabled="passwordSaving">{{ passwordSaving ? '提交中…' : '提交' }}</button>
-              </div>
-            </form>
-
-            <div class="section-divider oauth-section">
-              <h3>登录方式</h3>
-              <div v-if="linkedProviders.length" class="oauth-list">
-                <div v-for="provider in linkedProviders" :key="provider" class="oauth-item">
-                  <span>{{ providerLabel(provider) }}</span>
-                  <button type="button" class="text-button" :disabled="!canUnbindOAuth" @click="removeOAuth(provider)">
-                    {{ canUnbindOAuth ? '解绑' : '不可解绑' }}
-                  </button>
-                </div>
-              </div>
-              <p v-else class="status-text">未绑定第三方登录</p>
+            <div class="account-links">
+              <NuxtLink class="text-button" to="/kimidou/mine" @click="close">管理我的动态</NuxtLink>
+              <button type="button" class="text-button" @click="securityOpen = true">修改密码</button>
             </div>
+
+            <template v-if="securityOpen">
+              <form class="dialog-form security-panel" @submit.prevent="savePassword">
+                <div class="security-heading">
+                  <h3>{{ hasPassword ? '修改密码' : '设置密码' }}</h3>
+                  <button type="button" class="text-button" @click="securityOpen = false">收起</button>
+                </div>
+                <label v-if="hasPassword">
+                  <span>当前密码</span>
+                  <input v-model="passwordForm.oldPassword" type="password" required autocomplete="current-password">
+                </label>
+                <label>
+                  <span>{{ hasPassword ? '新密码' : '密码' }}</span>
+                  <input v-model="passwordForm.newPassword" type="password" required minlength="6" maxlength="32" autocomplete="new-password">
+                </label>
+                <label v-if="!hasPassword">
+                  <span>确认密码</span>
+                  <input v-model="passwordForm.confirmPassword" type="password" required minlength="6" maxlength="32" autocomplete="new-password">
+                </label>
+                <div class="form-actions">
+                  <button class="primary-button" type="submit" :disabled="passwordSaving">{{ passwordSaving ? '提交中…' : '提交' }}</button>
+                </div>
+              </form>
+
+              <div class="oauth-section">
+                <h3>登录方式</h3>
+                <div v-if="linkedProviders.length" class="oauth-list">
+                  <div v-for="provider in linkedProviders" :key="provider" class="oauth-item">
+                    <span>{{ providerLabel(provider) }}</span>
+                    <button type="button" class="text-button" :disabled="!canUnbindOAuth" @click="removeOAuth(provider)">
+                      {{ canUnbindOAuth ? '解绑' : '不可解绑' }}
+                    </button>
+                  </div>
+                </div>
+                <p v-else class="status-text">未绑定第三方登录</p>
+              </div>
+            </template>
 
             <div class="dialog-footer">
               <button type="button" class="text-button" @click="logout">退出登录</button>
@@ -146,12 +182,18 @@ import {
   unbindOAuth,
   updateUserProfile
 } from '~/services/api/auth'
+import { uploadFile } from '~/services/api/upload'
+import { proxyImageUrl } from '~/utils/image'
 
 const { accountOpen, accountMode } = useSiteOverlays()
 const { currentUser, authReady, isLoggedIn, fetchProfile, logoutUser } = useCommentAuth()
 const loginDialogOpen = ref(false)
 const profileSaving = ref(false)
-const profileSaved = ref(false)
+const profileEditing = ref(false)
+const securityOpen = ref(false)
+const avatarFile = ref<File | null>(null)
+const avatarPreviewUrl = ref('')
+const avatarInput = ref<HTMLInputElement | null>(null)
 const passwordSaving = ref(false)
 const sendingCode = ref(false)
 const resetting = ref(false)
@@ -164,38 +206,92 @@ const hasPassword = computed(() => Boolean(currentUser.value?.has_password))
 const supportedOAuthProviders = ['github', 'google', 'qq']
 const linkedProviders = computed(() => (currentUser.value?.linked_oauths || []).filter(provider => supportedOAuthProviders.includes(provider)))
 const canUnbindOAuth = computed(() => Boolean(currentUser.value?.has_password) || linkedProviders.value.length > 1)
+const profileAvatarUrl = computed(() => avatarPreviewUrl.value || proxyImageUrl(currentUser.value?.avatar))
 
-watch(currentUser, (user) => {
+const syncProfileForm = (user = currentUser.value) => {
   if (!user) return
   profileForm.nickname = user.nickname || ''
   profileForm.website = user.website || ''
+}
+
+const clearAvatarSelection = () => {
+  if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+  avatarFile.value = null
+  avatarPreviewUrl.value = ''
+  if (avatarInput.value) avatarInput.value.value = ''
+}
+
+watch(currentUser, (user) => {
+  if (!user) return
+  if (!profileEditing.value) syncProfileForm(user)
   resetForm.email = user.email || resetForm.email
 }, { immediate: true })
 
 watch(accountOpen, (open) => {
-  if (open) fetchProfile()
+  if (open) {
+    profileEditing.value = false
+    securityOpen.value = false
+    clearAvatarSelection()
+    void fetchProfile()
+  }
 })
 
 const close = () => {
   if (profileSaving.value || passwordSaving.value || resetting.value || sendingCode.value) return
   accountOpen.value = false
   accountMode.value = 'profile'
+  securityOpen.value = false
 }
 
 const handleLoginSuccess = async () => {
   await fetchProfile()
 }
 
+const startProfileEdit = () => {
+  syncProfileForm()
+  profileEditing.value = true
+}
+
+const cancelProfileEdit = () => {
+  if (profileSaving.value) return
+  syncProfileForm()
+  clearAvatarSelection()
+  profileEditing.value = false
+}
+
+const handleAvatarChange = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('头像只支持图片格式。')
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.warning('头像大小不能超过 5MB。')
+    return
+  }
+  if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+  avatarFile.value = file
+  avatarPreviewUrl.value = URL.createObjectURL(file)
+}
+
 const saveProfile = async () => {
   profileSaving.value = true
-  profileSaved.value = false
   try {
+    let avatar = ''
+    if (avatarFile.value) {
+      const response = await uploadFile(avatarFile.value, 'avatar')
+      avatar = response.data?.file_url || ''
+      if (!avatar) throw new Error(response.message || '头像上传失败。')
+    }
     await updateUserProfile({
       nickname: profileForm.nickname.trim(),
-      website: profileForm.website.trim() || undefined
+      website: profileForm.website.trim() || undefined,
+      ...(avatar ? { avatar } : {})
     })
     await fetchProfile()
-    profileSaved.value = true
+    clearAvatarSelection()
+    profileEditing.value = false
     ElMessage.success('资料已保存。')
   } catch (error) {
     console.error(error)
@@ -223,6 +319,7 @@ const savePassword = async () => {
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
     await fetchProfile()
+    securityOpen.value = false
     ElMessage.success(hadPassword ? '密码已修改。' : '密码已设置。')
   } catch (error) {
     console.error(error)
@@ -319,21 +416,32 @@ const logout = async () => {
   place-items: center;
   padding: 16px;
   overflow-y: auto;
-  background: rgba(0, 0, 0, 0.48);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.88);
+}
+
+:global(:root) {
+  --account-dialog-bg: #000;
+  --account-dialog-text: #fff;
+  --account-dialog-shadow: 0 24px 70px #000;
+}
+
+:global([data-theme='blue-white']) {
+  --account-dialog-bg: #fff;
+  --account-dialog-text: #000;
+  --account-dialog-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
 }
 
 .dialog {
   position: relative;
-  width: min(100%, 480px);
+  width: min(100%, 520px);
   max-height: min(780px, calc(100vh - 32px));
   overflow-y: auto;
-  padding: 28px;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+  padding: 34px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--account-dialog-bg, #000);
+  color: var(--account-dialog-text, #fff);
+  box-shadow: var(--account-dialog-shadow, 0 24px 70px #000);
 }
 
 .close-button {
@@ -346,7 +454,7 @@ const logout = async () => {
   height: 32px;
   border: 0;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--account-dialog-text);
   font-size: 24px;
   cursor: pointer;
 
@@ -357,7 +465,7 @@ const logout = async () => {
 }
 
 .dialog-header {
-  margin-bottom: 22px;
+  margin-bottom: 30px;
 
   h2 {
     margin: 0;
@@ -383,17 +491,17 @@ const logout = async () => {
 .dialog-form input {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid var(--border-color);
+  border: 0;
   border-radius: 9px;
   padding: 10px 12px;
-  background: var(--bg-panel-solid);
-  color: var(--text-primary);
+  background: var(--account-dialog-bg);
+  color: var(--account-dialog-text);
   font: inherit;
   font-size: 14px;
+  outline: 1px solid var(--account-dialog-text);
 
   &:focus {
-    outline: none;
-    border-color: var(--brand-accent);
+    outline: 2px solid var(--brand-accent);
   }
 }
 
@@ -420,8 +528,15 @@ const logout = async () => {
 }
 
 .profile-summary {
-  justify-content: flex-start;
+  justify-content: space-between;
   margin-bottom: 20px;
+
+  .profile-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
 
   img,
   .avatar-fallback {
@@ -451,20 +566,113 @@ const logout = async () => {
 
   span {
     margin-top: 4px;
-    color: var(--text-muted);
+    color: var(--account-dialog-text);
     font-size: 12px;
   }
 }
 
+.profile-edit-button {
+  flex: 0 0 auto;
+  padding: 7px 0;
+  font-weight: 600;
+}
+
+.profile-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 28px;
+  margin-bottom: 20px;
+}
+
+.profile-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+
+  strong {
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  span {
+    color: var(--account-dialog-text);
+    font-size: 12px;
+  }
+}
+
+.profile-editor {
+  margin-bottom: 2px;
+}
+
+.avatar-editor {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar-preview {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--brand-accent-soft);
+  color: var(--brand-accent);
+  font-size: 24px;
+  font-weight: 700;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.avatar-editor-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+
+  strong { font-size: 13px; }
+  span { color: var(--account-dialog-text); font-size: 11px; }
+}
+
+.avatar-upload-button {
+  width: fit-content;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .section-divider {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-color);
+  margin-top: 28px;
+  padding-top: 0;
 
   h3 {
     margin: 0;
     font-size: 15px;
   }
+}
+
+.account-links {
+  display: flex;
+  gap: 24px;
+  margin-top: 28px;
+  padding-top: 0;
 }
 
 .form-actions {
@@ -496,9 +704,9 @@ const logout = async () => {
 
 .secondary-button {
   flex: 0 0 auto;
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: var(--text-primary);
+  border: 0;
+  background: var(--account-dialog-text);
+  color: var(--account-dialog-bg);
 }
 
 .text-button {
@@ -513,13 +721,16 @@ const logout = async () => {
 
 .status-text {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--account-dialog-text);
   font-size: 12px;
 }
 
 .oauth-section {
   display: grid;
   gap: 12px;
+  margin-top: 28px;
+
+  h3 { margin: 0; font-size: 15px; }
 }
 
 .oauth-list {
@@ -535,14 +746,25 @@ const logout = async () => {
 .dialog-footer {
   align-items: center;
   margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-color);
+  padding-top: 0;
 }
 
 .danger-button {
-  border: 1px solid var(--border-color);
-  background: transparent;
-  color: var(--text-primary);
+  border: 0;
+  background: var(--account-dialog-bg);
+  color: var(--account-dialog-text);
+}
+
+.security-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  h3 { margin: 0; font-size: 15px; }
+}
+
+.security-panel {
+  margin-top: 28px;
 }
 
 .code-row {

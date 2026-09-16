@@ -338,7 +338,7 @@ onMounted(async () => {
 .chatbot-sources { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--home-border); font-size: 11px; }
 .chatbot-sources span { color: var(--home-text-muted, #999); }
 .chatbot-sources a { color: var(--brand-accent); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chatbot-sources a:hover { text-decoration: underline; }
+.chatbot-sources a:hover { text-decoration: none; }
 .chatbot-typing { display: flex; gap: 4px; padding: 14px; }
 .chatbot-typing i { width: 5px; height: 5px; border-radius: 50%; background: var(--brand-accent); animation: chatbot-bounce 1s infinite ease-in-out; }
 .chatbot-typing i:nth-child(2) { animation-delay: .15s; }.chatbot-typing i:nth-child(3) { animation-delay: .3s; }

@@ -62,9 +62,6 @@ const fallbackAnnouncement = computed(() => {
     text-decoration: none;
   }
 
-  :deep(a:hover) {
-    text-decoration: underline;
-  }
 }
 
 @media (max-width: 768px) {

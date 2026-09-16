@@ -1084,8 +1084,7 @@ onBeforeUnmount(() => {
 
   :deep(a) {
     color: inherit;
-    text-decoration: underline;
-    text-underline-offset: 4px;
+    text-decoration: none;
   }
 
   :deep(img) {
