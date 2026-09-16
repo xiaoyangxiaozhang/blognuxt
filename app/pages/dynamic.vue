@@ -75,6 +75,7 @@
                 <div class="footer-main">
                   <div class="footer-meta" :class="{ 'no-badge': !item.location }">
                     <div class="footer-leading">
+                      <span class="row-time">{{ formatMomentDate(item.publishTime) }}</span>
                       <span v-if="item.location" class="footer-badge">
                         <IconMaterialSymbolsLocationOnRounded />
                         {{ item.location }}
@@ -82,17 +83,6 @@
                     </div>
 
                     <div class="footer-side">
-                      <span class="row-time">{{ formatMomentDate(item.publishTime) }}</span>
-
-                      <button
-                        type="button"
-                        class="action-button mini-action"
-                        aria-label="Open comments"
-                        @click="openCommentPanel(item.id)"
-                      >
-                        <IconMaterialSymbolsChatBubbleRounded />
-                      </button>
-
                       <button type="button" class="more-button" aria-label="More actions">
                         <span></span>
                         <span></span>
@@ -103,24 +93,33 @@
                 </div>
               </footer>
 
-              <div
-                v-if="activeCommentMomentId === item.id"
-                :id="`moment-comments-${item.id}`"
-                class="moment-comment-panel"
-              >
+              <div :id="`moment-comments-${item.id}`" class="moment-comment-panel">
+                <div class="moment-like-row">
+                  <button
+                    type="button"
+                    class="moment-like-button"
+                    :class="{ liked: isMomentLiked(item.id) }"
+                    :aria-pressed="isMomentLiked(item.id)"
+                    aria-label="点赞"
+                    @click="toggleMomentLike(item.id)"
+                  >
+                    <span aria-hidden="true">{{ isMomentLiked(item.id) ? '♥' : '♡' }}</span>
+                  </button>
+                </div>
+
                 <UnifiedCommentPanel
                   variant="moment"
                   :defer-identity="true"
                   :show-header="false"
                   :comments="commentStates[item.id]?.comments || []"
                   :loading="commentStates[item.id]?.loading || false"
-                  :submitting="commentSubmitting"
-                  :form="commentForm"
+                  :submitting="commentStates[item.id]?.submitting || false"
+                  :form="commentStates[item.id]?.form || emptyCommentForm"
                   :error-text="commentStates[item.id]?.error || ''"
                   empty-text="还没有评论，来说点什么吧。"
-                  @update:form="handleFormUpdate"
-                  @reply="replyToMomentComment"
-                  @submit="handleCommentSubmit"
+                  @update:form="handleFormUpdate(item.id, $event)"
+                  @reply="replyToMomentComment(item.id, $event)"
+                  @submit="handleCommentSubmit(item.id, $event)"
                 />
               </div>
             </div>
@@ -133,7 +132,6 @@
 
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import IconMaterialSymbolsChatBubbleRounded from '~icons/material-symbols/chat-bubble-rounded'
 import IconMaterialSymbolsLocationOnRounded from '~icons/material-symbols/location-on-rounded'
 import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import type { UnifiedCommentForm, UnifiedCommentItem, UnifiedCommentSubmitMode } from '~/components/comments/UnifiedCommentPanel.vue'
@@ -159,9 +157,11 @@ type DynamicCommentForm = UnifiedCommentForm
 
 interface MomentCommentState {
   comments: UnifiedCommentItem[]
+  form: DynamicCommentForm
   loading: boolean
   loaded: boolean
   error: string
+  submitting: boolean
 }
 
 const DEFAULT_AVATAR = 'https://picsum.photos/200/200?random=7'
@@ -218,15 +218,14 @@ const typingSignatureText = computed(() => {
   return typingTexts[0] || blogSettings.value['blog.slogan'] || blogSettings.value['blog.subtitle'] || authorDesc.value
 })
 
-const commentSubmitting = ref(false)
-const activeCommentMomentId = ref<number | null>(null)
-const commentStates = reactive<Record<number, MomentCommentState>>({})
-const commentForm = reactive<DynamicCommentForm>({
+const emptyCommentForm: DynamicCommentForm = {
   nickname: '',
   email: '',
   website: '',
   content: ''
-})
+}
+const commentStates = reactive<Record<number, MomentCommentState>>({})
+const likedMomentIds = reactive(new Set<number>())
 
 const isRevealed = ref(false)
 const curtainReady = ref(false)
@@ -252,9 +251,11 @@ const ensureCommentState = (momentId: number) => {
   if (!commentStates[momentId]) {
     commentStates[momentId] = {
       comments: [],
+      form: { ...emptyCommentForm },
       loading: false,
       loaded: false,
-      error: ''
+      error: '',
+      submitting: false
     }
   }
 
@@ -286,42 +287,41 @@ const loadMomentComments = async (momentId: number) => {
   }
 }
 
-const handleFormUpdate = (nextForm: DynamicCommentForm) => {
-  commentForm.nickname = nextForm.nickname
-  commentForm.email = nextForm.email
-  commentForm.website = nextForm.website
-  commentForm.content = nextForm.content
-  commentForm.parentId = nextForm.parentId
+watch(moments, (items) => {
+  items.forEach((item) => ensureCommentState(item.id))
+  if (!import.meta.client) return
+  void Promise.all(items.map((item) => loadMomentComments(item.id)))
+}, { immediate: true })
+
+const handleFormUpdate = (momentId: number, nextForm: DynamicCommentForm) => {
+  ensureCommentState(momentId).form = nextForm
 }
 
-const replyToMomentComment = (item: UnifiedCommentItem) => {
+const replyToMomentComment = (momentId: number, item: UnifiedCommentItem) => {
   const parentId = Number(item.id)
-  commentForm.content = `@${item.author} `
-  commentForm.parentId = Number.isFinite(parentId) ? parentId : undefined
-}
-
-const openCommentPanel = async (momentId: number) => {
-  if (activeCommentMomentId.value === momentId) {
-    activeCommentMomentId.value = null
-    return
+  const state = ensureCommentState(momentId)
+  state.form = {
+    ...state.form,
+    content: `@${item.author} `,
+    parentId: Number.isFinite(parentId) ? parentId : undefined
   }
-
-  activeCommentMomentId.value = momentId
-  commentForm.content = ''
-  commentForm.parentId = undefined
-  await loadMomentComments(momentId)
-  await nextTick()
-  document.getElementById(`moment-comments-${momentId}`)?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start'
-  })
 }
 
-const handleCommentSubmit = async (mode?: UnifiedCommentSubmitMode) => {
-  const momentId = activeCommentMomentId.value
-  if (momentId === null) return
+const isMomentLiked = (momentId: number) => likedMomentIds.has(momentId)
 
-  if (!commentForm.content.trim()) {
+const toggleMomentLike = (momentId: number) => {
+  if (likedMomentIds.has(momentId)) {
+    likedMomentIds.delete(momentId)
+  } else {
+    likedMomentIds.add(momentId)
+  }
+}
+
+const handleCommentSubmit = async (momentId: number, mode?: UnifiedCommentSubmitMode) => {
+  const state = ensureCommentState(momentId)
+  const form = state.form
+
+  if (!form.content.trim()) {
     ElMessage.warning('请先填写评论内容。')
     return
   }
@@ -330,23 +330,21 @@ const handleCommentSubmit = async (mode?: UnifiedCommentSubmitMode) => {
     return
   }
 
-  commentSubmitting.value = true
+  state.submitting = true
 
   try {
     await createComment({
       target_type: 'moment',
       target_key: String(momentId),
-      content: commentForm.content.trim(),
-      nickname: mode === 'anonymous' ? undefined : commentForm.nickname.trim() || undefined,
-      email: mode === 'anonymous' ? undefined : commentForm.email.trim() || undefined,
-      website: mode === 'anonymous' ? undefined : commentForm.website.trim() || undefined,
-      parent_id: commentForm.parentId,
+      content: form.content.trim(),
+      nickname: mode === 'anonymous' ? undefined : form.nickname.trim() || undefined,
+      email: mode === 'anonymous' ? undefined : form.email.trim() || undefined,
+      website: mode === 'anonymous' ? undefined : form.website.trim() || undefined,
+      parent_id: form.parentId,
       anonymous: mode === 'anonymous'
     })
 
-    commentForm.content = ''
-    commentForm.parentId = undefined
-    const state = ensureCommentState(momentId)
+    state.form = { ...state.form, content: '', parentId: undefined }
     state.loaded = false
     await loadMomentComments(momentId)
     ElMessage.success('评论发表成功。')
@@ -354,7 +352,7 @@ const handleCommentSubmit = async (mode?: UnifiedCommentSubmitMode) => {
     console.error(error)
     ElMessage.error('评论发表失败，请稍后重试。')
   } finally {
-    commentSubmitting.value = false
+    state.submitting = false
   }
 }
 
@@ -362,7 +360,7 @@ onMounted(() => {
   if (!pending.value) {
     triggerReveal()
   }
-  fetchProfile()
+  void fetchProfile()
 })
 
 const formatMomentDate = formatDate
@@ -590,6 +588,9 @@ const formatMomentDate = formatDate
 .footer-leading {
   flex: 1 1 auto;
   min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .footer-meta.no-badge .footer-leading {
@@ -624,39 +625,6 @@ const formatMomentDate = formatDate
   color: var(--text-muted);
 }
 
-.action-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: var(--home-accent-soft);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
-
-  &:hover {
-    background: color-mix(in srgb, var(--home-accent-soft) 72%, var(--home-text) 10%);
-    color: var(--home-text);
-  }
-
-  &:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--home-text) 22%, transparent);
-    outline-offset: 2px;
-  }
-
-  :deep(svg) {
-    width: 12px;
-    height: 12px;
-  }
-}
-
-.mini-action {
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
-  border-radius: 7px;
-}
-
 .more-button {
   min-width: 26px;
   height: 22px;
@@ -683,7 +651,40 @@ const formatMomentDate = formatDate
 }
 
 .moment-comment-panel {
-  margin-top: 28px;
+  margin-top: 12px;
+}
+
+.moment-like-row {
+  padding: 6px 14px 0;
+  border-radius: 4px 4px 0 0;
+  background: color-mix(in srgb, var(--home-text) 7%, var(--home-card-bg));
+}
+
+.moment-like-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--brand-accent);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible,
+  &.liked {
+    color: var(--brand-accent-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 .loading-state,
