@@ -99,6 +99,7 @@
                           <HeartFilledIcon v-if="isMomentLiked(item.id)" aria-hidden="true" />
                           <HeartIcon v-else aria-hidden="true" />
                         </button>
+                        <span class="moment-like-count">{{ momentLikeCount(item.id) }}</span>
                         <button
                           type="button"
                           class="moment-comment-button"
@@ -161,7 +162,7 @@ import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import type { UnifiedCommentForm, UnifiedCommentItem, UnifiedCommentSubmitMode } from '~/components/comments/UnifiedCommentPanel.vue'
 import { normalizeCommentList } from '~/utils/comments'
 import { createComment, getCommentList } from '~/services/api/comments'
-import { getMomentList } from '~/services/api/moments'
+import { getMomentList, setMomentLike } from '~/services/api/moments'
 import { getBasicSettings, getSettings } from '~/services/api/user'
 import { proxyImageUrl } from '~/utils/image'
 import { formatDate } from '~/utils/date'
@@ -175,6 +176,8 @@ interface DynamicMomentItem {
   text: string
   images: string[]
   location: string
+  likeCount: number
+  liked: boolean
 }
 
 type DynamicCommentForm = UnifiedCommentForm
@@ -211,7 +214,9 @@ const { data, pending } = await useAsyncData(
             publishTime: item.publish_time,
             text: item.content?.text || '',
             images: (item.content?.images?.filter(Boolean) || []).map(i => proxyImageUrl(i)),
-            location: item.content?.location || ''
+            location: item.content?.location || '',
+            likeCount: Number(item.like_count || 0),
+            liked: Boolean(item.liked)
           })),
         settings: settingsResponse.data || {},
         blogSettings: blogSettingsResponse.data || {},
@@ -250,8 +255,13 @@ const emptyCommentForm: DynamicCommentForm = {
   website: '',
   content: ''
 }
+interface MomentLikeState {
+  liked: boolean
+  count: number
+}
+
 const commentStates = reactive<Record<number, MomentCommentState>>({})
-const likedMomentIds = reactive(new Set<number>())
+const momentLikeStates = reactive<Record<number, MomentLikeState>>({})
 
 const isRevealed = ref(false)
 const curtainReady = ref(false)
@@ -316,9 +326,34 @@ const loadMomentComments = async (momentId: number) => {
 }
 
 watch(moments, (items) => {
-  items.forEach((item) => ensureCommentState(item.id))
+  items.forEach((item) => {
+    ensureCommentState(item.id)
+    if (!momentLikeStates[item.id]) {
+      momentLikeStates[item.id] = { liked: item.liked, count: item.likeCount }
+    }
+  })
   if (!import.meta.client) return
   void Promise.all(items.map((item) => loadMomentComments(item.id)))
+}, { immediate: true })
+
+const syncMomentLikes = async () => {
+  if (!isLoggedIn.value) return
+  try {
+    const response = await getMomentList({ page_size: 20 })
+    for (const item of response.data?.list || []) {
+      momentLikeStates[item.id] = {
+        liked: Boolean(item.liked),
+        count: Number(item.like_count || 0)
+      }
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+watch(isLoggedIn, loggedIn => {
+  if (loggedIn) void syncMomentLikes()
+  else Object.values(momentLikeStates).forEach(state => { state.liked = false })
 }, { immediate: true })
 
 const handleFormUpdate = (momentId: number, nextForm: DynamicCommentForm) => {
@@ -347,13 +382,23 @@ const toggleMomentComposer = (momentId: number) => {
   state.composerExpanded = !state.composerExpanded
 }
 
-const isMomentLiked = (momentId: number) => likedMomentIds.has(momentId)
+const isMomentLiked = (momentId: number) => momentLikeStates[momentId]?.liked || false
+const momentLikeCount = (momentId: number) => momentLikeStates[momentId]?.count || 0
 
-const toggleMomentLike = (momentId: number) => {
-  if (likedMomentIds.has(momentId)) {
-    likedMomentIds.delete(momentId)
-  } else {
-    likedMomentIds.add(momentId)
+const toggleMomentLike = async (momentId: number) => {
+  if (!isLoggedIn.value) {
+    ElMessage.info('请先登录后点赞。')
+    return
+  }
+
+  const state = momentLikeStates[momentId] || (momentLikeStates[momentId] = { liked: false, count: 0 })
+  try {
+    const response = await setMomentLike(momentId, !state.liked)
+    state.liked = Boolean(response.data?.liked)
+    state.count = Number(response.data?.like_count || 0)
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('点赞操作失败，请稍后重试。')
   }
 }
 
@@ -760,6 +805,13 @@ const formatMomentDate = formatDate
     outline-offset: 2px;
     border-radius: 4px;
   }
+}
+
+.moment-like-count {
+  min-width: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 .loading-state,

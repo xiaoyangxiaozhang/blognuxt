@@ -20,6 +20,8 @@ export interface KimidouMomentItem {
   is_publish: boolean
   publish_time?: string
   author?: KimidouMomentAuthor
+  like_count: number
+  liked: boolean
 }
 
 export interface KimidouManagedMomentItem extends KimidouMomentItem {

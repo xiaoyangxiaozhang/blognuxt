@@ -97,6 +97,7 @@
                     <HeartFilledIcon v-if="isMomentLiked(item.id)" aria-hidden="true" />
                     <HeartIcon v-else aria-hidden="true" />
                   </button>
+                  <span class="moment-like-count">{{ momentLikeCount(item.id) }}</span>
                   <button
                     type="button"
                     class="moment-comment-button"
@@ -143,6 +144,7 @@ import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import type { UnifiedCommentForm, UnifiedCommentItem, UnifiedCommentSubmitMode } from '~/components/comments/UnifiedCommentPanel.vue'
 import { getCommentList, createComment } from '~/services/api/comments'
 import { getKimidouMomentList, type KimidouMomentItem } from '~/services/api/kimidou'
+import { setMomentLike } from '~/services/api/moments'
 import { getBasicSettings, getSettings } from '~/services/api/user'
 import { normalizeCommentList } from '~/utils/comments'
 import { proxyImageUrl } from '~/utils/image'
@@ -219,8 +221,13 @@ const communitySignature = computed(() => {
 
 const momentAuthor = (item: KimidouMomentItem) => item.author?.nickname || '匿名用户'
 const emptyCommentForm: UnifiedCommentForm = { nickname: '', email: '', website: '', content: '' }
+interface MomentLikeState {
+  liked: boolean
+  count: number
+}
+
 const commentStates = reactive<Record<number, CommentState>>({})
-const likedMomentIds = reactive(new Set<number>())
+const momentLikeStates = reactive<Record<number, MomentLikeState>>({})
 const curtainReady = ref(false)
 
 const ensureCommentState = (momentId: number) => {
@@ -258,8 +265,33 @@ const loadMomentComments = async (momentId: number) => {
 }
 
 watch(moments, items => {
-  items.forEach(item => ensureCommentState(item.id))
+  items.forEach(item => {
+    ensureCommentState(item.id)
+    if (!momentLikeStates[item.id]) {
+      momentLikeStates[item.id] = { liked: Boolean(item.liked), count: Number(item.like_count || 0) }
+    }
+  })
   if (import.meta.client) void Promise.all(items.map(item => loadMomentComments(item.id)))
+}, { immediate: true })
+
+const syncMomentLikes = async () => {
+  if (!isLoggedIn.value) return
+  try {
+    const response = await getKimidouMomentList({ page: 1, page_size: 20 })
+    for (const item of response.data?.list || []) {
+      momentLikeStates[item.id] = {
+        liked: Boolean(item.liked),
+        count: Number(item.like_count || 0)
+      }
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+watch(isLoggedIn, loggedIn => {
+  if (loggedIn) void syncMomentLikes()
+  else Object.values(momentLikeStates).forEach(state => { state.liked = false })
 }, { immediate: true })
 
 const handleFormUpdate = (momentId: number, nextForm: UnifiedCommentForm) => {
@@ -277,11 +309,24 @@ const toggleMomentComposer = (momentId: number) => {
   state.composerExpanded = !state.composerExpanded
 }
 
-const isMomentLiked = (momentId: number) => likedMomentIds.has(momentId)
+const isMomentLiked = (momentId: number) => momentLikeStates[momentId]?.liked || false
+const momentLikeCount = (momentId: number) => momentLikeStates[momentId]?.count || 0
 
-const toggleMomentLike = (momentId: number) => {
-  if (likedMomentIds.has(momentId)) likedMomentIds.delete(momentId)
-  else likedMomentIds.add(momentId)
+const toggleMomentLike = async (momentId: number) => {
+  if (!isLoggedIn.value) {
+    ElMessage.info('请先登录后点赞。')
+    return
+  }
+
+  const state = momentLikeStates[momentId] || (momentLikeStates[momentId] = { liked: false, count: 0 })
+  try {
+    const response = await setMomentLike(momentId, !state.liked)
+    state.liked = Boolean(response.data?.liked)
+    state.count = Number(response.data?.like_count || 0)
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('点赞操作失败，请稍后重试。')
+  }
 }
 
 const handleCommentSubmit = async (momentId: number, mode?: UnifiedCommentSubmitMode) => {
@@ -569,6 +614,13 @@ const formatMomentDate = formatDate
 .moment-like-button:hover,
 .moment-like-button:focus-visible,
 .moment-like-button.liked { color: var(--brand-accent-hover); }
+
+.moment-like-count {
+  min-width: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
 
 .loading-state,
 .error-state,
