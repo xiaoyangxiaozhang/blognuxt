@@ -76,39 +76,71 @@
               </div>
 
               <footer class="row-footer">
-                <div class="footer-meta">
-                  <span class="row-time">{{ formatMomentDate(item.publish_time) }}</span>
-                  <button type="button" class="more-button" aria-label="更多操作">
-                    <DotsHorizontalIcon aria-hidden="true" />
-                  </button>
+                <div class="footer-main">
+                  <div class="footer-meta">
+                    <div class="footer-leading">
+                      <span class="row-time">{{ formatMomentDate(item.publish_time) }}</span>
+                    </div>
+
+                    <div class="footer-side">
+                      <div
+                        v-if="commentStates[item.id]?.actionsExpanded"
+                        :id="`kimidou-actions-${item.id}`"
+                        class="moment-like-row"
+                      >
+                        <button
+                          type="button"
+                          class="moment-like-button"
+                          :class="{ liked: isMomentLiked(item.id) }"
+                          :aria-pressed="isMomentLiked(item.id)"
+                          aria-label="点赞"
+                          @click="toggleMomentLike(item.id)"
+                        >
+                          <HeartFilledIcon v-if="isMomentLiked(item.id)" aria-hidden="true" />
+                          <HeartIcon v-else aria-hidden="true" />
+                        </button>
+                        <span class="moment-like-count">{{ momentLikeCount(item.id) }}</span>
+                        <button
+                          type="button"
+                          class="moment-comment-button"
+                          :aria-expanded="commentStates[item.id]?.composerExpanded || false"
+                          aria-label="评论"
+                          @click="toggleMomentComposer(item.id)"
+                        >
+                          评论
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        class="more-button"
+                        aria-label="更多操作"
+                        :aria-expanded="commentStates[item.id]?.actionsExpanded || false"
+                        :aria-controls="`kimidou-actions-${item.id}`"
+                        @click="toggleMomentActions(item.id)"
+                      >
+                        <DotsHorizontalIcon aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </footer>
 
-              <div :id="`kimidou-comments-${item.id}`" class="moment-comment-panel">
-                <div class="moment-like-row">
-                  <button
-                    type="button"
-                    class="moment-like-button"
-                    :class="{ liked: isMomentLiked(item.id) }"
-                    :aria-pressed="isMomentLiked(item.id)"
-                    aria-label="点赞"
-                    @click="toggleMomentLike(item.id)"
-                  >
-                    <HeartFilledIcon v-if="isMomentLiked(item.id)" aria-hidden="true" />
-                    <HeartIcon v-else aria-hidden="true" />
-                  </button>
-                  <span class="moment-like-count">{{ momentLikeCount(item.id) }}</span>
-                  <button
-                    type="button"
-                    class="moment-comment-button"
-                    :aria-expanded="commentStates[item.id]?.composerExpanded || false"
-                    aria-label="评论"
-                    @click="toggleMomentComposer(item.id)"
-                  >
-                    评论
-                  </button>
-                </div>
+              <div v-if="momentLikeUsers(item.id).length" class="moment-like-users" aria-label="点赞用户">
+                <HeartIcon class="moment-like-users-icon" aria-hidden="true" />
+                <span
+                  v-for="user in momentLikeUsers(item.id)"
+                  :key="`${item.id}-like-user-${user.id}`"
+                  class="moment-like-user"
+                >
+                  {{ user.nickname || '匿名用户' }}
+                </span>
+              </div>
 
+              <div
+                v-if="commentStates[item.id]?.composerExpanded || commentStates[item.id]?.comments.length"
+                :id="`kimidou-comments-${item.id}`"
+                class="moment-comment-panel"
+              >
                 <UnifiedCommentPanel
                   variant="moment"
                   :defer-identity="true"
@@ -119,6 +151,7 @@
                   :submitting="commentStates[item.id]?.submitting || false"
                   :form="commentStates[item.id]?.form || emptyCommentForm"
                   :error-text="commentStates[item.id]?.error || ''"
+                  :show-empty="false"
                   empty-text="还没有评论，来说点什么吧。"
                   @update:form="handleFormUpdate(item.id, $event)"
                   @reply="replyToMomentComment(item.id, $event)"
@@ -144,7 +177,7 @@ import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import type { UnifiedCommentForm, UnifiedCommentItem, UnifiedCommentSubmitMode } from '~/components/comments/UnifiedCommentPanel.vue'
 import { getCommentList, createComment } from '~/services/api/comments'
 import { getKimidouMomentList, type KimidouMomentItem } from '~/services/api/kimidou'
-import { setMomentLike } from '~/services/api/moments'
+import { setMomentLike, type MomentLikeUser } from '~/services/api/moments'
 import { getBasicSettings, getSettings } from '~/services/api/user'
 import { normalizeCommentList } from '~/utils/comments'
 import { proxyImageUrl } from '~/utils/image'
@@ -160,6 +193,7 @@ interface CommentState {
   loaded: boolean
   error: string
   submitting: boolean
+  actionsExpanded: boolean
   composerExpanded: boolean
 }
 
@@ -224,6 +258,7 @@ const emptyCommentForm: UnifiedCommentForm = { nickname: '', email: '', website:
 interface MomentLikeState {
   liked: boolean
   count: number
+  users: MomentLikeUser[]
 }
 
 const commentStates = reactive<Record<number, CommentState>>({})
@@ -239,6 +274,7 @@ const ensureCommentState = (momentId: number) => {
       loaded: false,
       error: '',
       submitting: false,
+      actionsExpanded: false,
       composerExpanded: false
     }
   }
@@ -268,7 +304,11 @@ watch(moments, items => {
   items.forEach(item => {
     ensureCommentState(item.id)
     if (!momentLikeStates[item.id]) {
-      momentLikeStates[item.id] = { liked: Boolean(item.liked), count: Number(item.like_count || 0) }
+      momentLikeStates[item.id] = {
+        liked: Boolean(item.liked),
+        count: Number(item.like_count || 0),
+        users: item.like_users || []
+      }
     }
   })
   if (import.meta.client) void Promise.all(items.map(item => loadMomentComments(item.id)))
@@ -281,7 +321,8 @@ const syncMomentLikes = async () => {
     for (const item of response.data?.list || []) {
       momentLikeStates[item.id] = {
         liked: Boolean(item.liked),
-        count: Number(item.like_count || 0)
+        count: Number(item.like_count || 0),
+        users: item.like_users || []
       }
     }
   } catch (error) {
@@ -298,19 +339,31 @@ const handleFormUpdate = (momentId: number, nextForm: UnifiedCommentForm) => {
   ensureCommentState(momentId).form = nextForm
 }
 
-const replyToMomentComment = (momentId: number, item: UnifiedCommentItem) => {
+const toggleMomentActions = (momentId: number) => {
   const state = ensureCommentState(momentId)
-  state.form = { ...state.form, content: `@${item.author} `, parentId: Number(item.id) }
+  state.actionsExpanded = !state.actionsExpanded
+}
+
+const replyToMomentComment = (momentId: number, item: UnifiedCommentItem) => {
+  const parentId = Number(item.id)
+  const state = ensureCommentState(momentId)
+  state.form = {
+    ...state.form,
+    content: `@${item.author} `,
+    parentId: Number.isFinite(parentId) ? parentId : undefined
+  }
   state.composerExpanded = true
 }
 
 const toggleMomentComposer = (momentId: number) => {
   const state = ensureCommentState(momentId)
+  state.actionsExpanded = true
   state.composerExpanded = !state.composerExpanded
 }
 
 const isMomentLiked = (momentId: number) => momentLikeStates[momentId]?.liked || false
 const momentLikeCount = (momentId: number) => momentLikeStates[momentId]?.count || 0
+const momentLikeUsers = (momentId: number) => momentLikeStates[momentId]?.users || []
 
 const toggleMomentLike = async (momentId: number) => {
   if (!isLoggedIn.value) {
@@ -318,11 +371,12 @@ const toggleMomentLike = async (momentId: number) => {
     return
   }
 
-  const state = momentLikeStates[momentId] || (momentLikeStates[momentId] = { liked: false, count: 0 })
+  const state = momentLikeStates[momentId] || (momentLikeStates[momentId] = { liked: false, count: 0, users: [] })
   try {
     const response = await setMomentLike(momentId, !state.liked)
     state.liked = Boolean(response.data?.liked)
     state.count = Number(response.data?.like_count || 0)
+    state.users = response.data?.like_users || []
   } catch (error) {
     console.error(error)
     ElMessage.error('点赞操作失败，请稍后重试。')
@@ -548,6 +602,11 @@ const formatMomentDate = formatDate
 
 .row-footer { margin-top: 14px; }
 
+.footer-main {
+  display: grid;
+  gap: 6px;
+}
+
 .footer-meta {
   display: flex;
   align-items: center;
@@ -556,30 +615,83 @@ const formatMomentDate = formatDate
   gap: 8px;
 }
 
+.footer-leading {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-side {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
 .row-time { margin: 0; font-size: 12px; color: var(--text-muted); }
 
 .more-button {
-  min-width: 26px;
-  height: 22px;
+  min-width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   border: 0;
   border-radius: 7px;
   background: var(--home-accent-soft);
   cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--home-text) 22%, transparent);
+    outline-offset: 2px;
+  }
 
   :deep(svg) { width: 16px; height: 16px; color: var(--text-muted); }
 }
 
 .moment-comment-panel { margin-top: 12px; }
 
+.moment-like-users {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--home-text) 7%, var(--home-card-bg));
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.moment-like-users-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 3px 4px 0 0;
+  color: var(--brand-accent);
+}
+
+.moment-like-user {
+  color: var(--brand-accent);
+}
+
+.moment-like-user:not(:last-child)::after {
+  content: '、';
+  color: var(--text-muted);
+}
+
 .moment-like-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px 0;
-  border-radius: 4px 4px 0 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--home-text) 7%, var(--home-card-bg));
 }
 
@@ -591,6 +703,12 @@ const formatMomentDate = formatDate
   color: var(--text-muted);
   font-size: 12px;
   cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 .moment-comment-button:hover,
@@ -605,15 +723,25 @@ const formatMomentDate = formatDate
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--brand-accent);
+  color: var(--text-muted);
   cursor: pointer;
 
   :deep(svg) { width: 18px; height: 18px; }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
 .moment-like-button:hover,
-.moment-like-button:focus-visible,
-.moment-like-button.liked { color: var(--brand-accent-hover); }
+.moment-like-button:focus-visible { color: var(--text-muted); }
+
+.moment-like-button.liked { color: var(--brand-accent); }
+
+.moment-like-button.liked:hover,
+.moment-like-button.liked:focus-visible { color: var(--brand-accent-hover); }
 
 .moment-like-count {
   min-width: 12px;

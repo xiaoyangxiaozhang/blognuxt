@@ -1,5 +1,6 @@
 import { apiDelete, apiGet, apiPost, apiPut } from '~/composables/useApi'
 import type { PaginationData } from '~/types/api'
+import type { MomentLikeUser } from '~/services/api/moments'
 
 export interface KimidouMomentContent {
   text?: string
@@ -22,6 +23,7 @@ export interface KimidouMomentItem {
   author?: KimidouMomentAuthor
   like_count: number
   liked: boolean
+  like_users: MomentLikeUser[]
 }
 
 export interface KimidouManagedMomentItem extends KimidouMomentItem {

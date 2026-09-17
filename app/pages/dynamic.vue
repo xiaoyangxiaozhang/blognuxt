@@ -125,6 +125,17 @@
                 </div>
               </footer>
 
+              <div v-if="momentLikeUsers(item.id).length" class="moment-like-users" aria-label="点赞用户">
+                <HeartIcon class="moment-like-users-icon" aria-hidden="true" />
+                <span
+                  v-for="user in momentLikeUsers(item.id)"
+                  :key="`${item.id}-like-user-${user.id}`"
+                  class="moment-like-user"
+                >
+                  {{ user.nickname || '匿名用户' }}
+                </span>
+              </div>
+
               <div
                 v-if="commentStates[item.id]?.composerExpanded || commentStates[item.id]?.comments.length"
                 :id="`moment-comments-${item.id}`"
@@ -162,7 +173,7 @@ import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import type { UnifiedCommentForm, UnifiedCommentItem, UnifiedCommentSubmitMode } from '~/components/comments/UnifiedCommentPanel.vue'
 import { normalizeCommentList } from '~/utils/comments'
 import { createComment, getCommentList } from '~/services/api/comments'
-import { getMomentList, setMomentLike } from '~/services/api/moments'
+import { getMomentList, setMomentLike, type MomentLikeUser } from '~/services/api/moments'
 import { getBasicSettings, getSettings } from '~/services/api/user'
 import { proxyImageUrl } from '~/utils/image'
 import { formatDate } from '~/utils/date'
@@ -178,6 +189,7 @@ interface DynamicMomentItem {
   location: string
   likeCount: number
   liked: boolean
+  likeUsers: MomentLikeUser[]
 }
 
 type DynamicCommentForm = UnifiedCommentForm
@@ -216,7 +228,8 @@ const { data, pending } = await useAsyncData(
             images: (item.content?.images?.filter(Boolean) || []).map(i => proxyImageUrl(i)),
             location: item.content?.location || '',
             likeCount: Number(item.like_count || 0),
-            liked: Boolean(item.liked)
+            liked: Boolean(item.liked),
+            likeUsers: item.like_users || []
           })),
         settings: settingsResponse.data || {},
         blogSettings: blogSettingsResponse.data || {},
@@ -258,6 +271,7 @@ const emptyCommentForm: DynamicCommentForm = {
 interface MomentLikeState {
   liked: boolean
   count: number
+  users: MomentLikeUser[]
 }
 
 const commentStates = reactive<Record<number, MomentCommentState>>({})
@@ -329,7 +343,7 @@ watch(moments, (items) => {
   items.forEach((item) => {
     ensureCommentState(item.id)
     if (!momentLikeStates[item.id]) {
-      momentLikeStates[item.id] = { liked: item.liked, count: item.likeCount }
+      momentLikeStates[item.id] = { liked: item.liked, count: item.likeCount, users: item.likeUsers }
     }
   })
   if (!import.meta.client) return
@@ -343,7 +357,8 @@ const syncMomentLikes = async () => {
     for (const item of response.data?.list || []) {
       momentLikeStates[item.id] = {
         liked: Boolean(item.liked),
-        count: Number(item.like_count || 0)
+        count: Number(item.like_count || 0),
+        users: item.like_users || []
       }
     }
   } catch (error) {
@@ -384,6 +399,7 @@ const toggleMomentComposer = (momentId: number) => {
 
 const isMomentLiked = (momentId: number) => momentLikeStates[momentId]?.liked || false
 const momentLikeCount = (momentId: number) => momentLikeStates[momentId]?.count || 0
+const momentLikeUsers = (momentId: number) => momentLikeStates[momentId]?.users || []
 
 const toggleMomentLike = async (momentId: number) => {
   if (!isLoggedIn.value) {
@@ -391,11 +407,12 @@ const toggleMomentLike = async (momentId: number) => {
     return
   }
 
-  const state = momentLikeStates[momentId] || (momentLikeStates[momentId] = { liked: false, count: 0 })
+  const state = momentLikeStates[momentId] || (momentLikeStates[momentId] = { liked: false, count: 0, users: [] })
   try {
     const response = await setMomentLike(momentId, !state.liked)
     state.liked = Boolean(response.data?.liked)
     state.count = Number(response.data?.like_count || 0)
+    state.users = response.data?.like_users || []
   } catch (error) {
     console.error(error)
     ElMessage.error('点赞操作失败，请稍后重试。')
@@ -736,6 +753,36 @@ const formatMomentDate = formatDate
 
 .moment-comment-panel {
   margin-top: 12px;
+}
+
+.moment-like-users {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--home-text) 7%, var(--home-card-bg));
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.moment-like-users-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 3px 4px 0 0;
+  color: var(--brand-accent);
+}
+
+.moment-like-user {
+  color: var(--brand-accent);
+}
+
+.moment-like-user:not(:last-child)::after {
+  content: '、';
+  color: var(--text-muted);
 }
 
 .moment-like-row {

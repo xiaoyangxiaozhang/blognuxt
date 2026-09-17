@@ -8,6 +8,12 @@ export interface MomentContent {
   location?: string
   tags?: string
 }
+
+export interface MomentLikeUser {
+  id: number
+  nickname: string
+}
+
 // 动态列表项
 export interface MomentItem {
   id: number
@@ -16,6 +22,7 @@ export interface MomentItem {
   is_publish: boolean
   like_count: number
   liked: boolean
+  like_users: MomentLikeUser[]
 }
 
 export const getMomentList = (params?: Record<string, unknown>) => {
@@ -25,6 +32,7 @@ export const getMomentList = (params?: Record<string, unknown>) => {
 export interface MomentLikeResponse {
   like_count: number
   liked: boolean
+  like_users: MomentLikeUser[]
 }
 
 export const setMomentLike = (momentId: number, liked: boolean) =>
