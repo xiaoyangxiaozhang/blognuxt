@@ -5,9 +5,7 @@
     <main class="blog-main" :class="{ 'blog-main-article': route.path.startsWith('/article/') }">
       <div class="container">
         <div class="hero-wrapper">
-          <transition name="fade" mode="out-in">
-            <slot />
-          </transition>
+          <slot />
         </div>
       </div>
     </main>
@@ -49,16 +47,6 @@ const route = useRoute()
   .container {
     margin: 0;
   }
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }
 
 @media (max-width: 768px) {

@@ -181,23 +181,25 @@ onMounted(() => {
   cursor: pointer;
   text-decoration: none;
   transition:
-    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.35s ease,
-    box-shadow 0.35s ease,
-    border-radius 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    transform 200ms var(--ease-out-expo),
+    border-color 200ms var(--ease-out-expo),
+    box-shadow 200ms var(--ease-out-expo),
+    border-radius 200ms var(--ease-out-expo);
 
-  &:hover {
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 3px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tag-card:hover {
     transform: scale(1.04);
     border-color: var(--brand-accent);
     border-radius: 6px;
     box-shadow:
       0 0 0 2px color-mix(in srgb, var(--brand-accent) 30%, transparent),
       0 12px 28px -8px rgba(0, 0, 0, 0.24);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--brand-accent);
-    outline-offset: 3px;
   }
 }
 

@@ -25,7 +25,7 @@
     </ul>
 
     <div data-scroll-reveal class="feature-body-reveal">
-      <transition name="fade" mode="out-in">
+      <transition name="fade">
         <div :key="activeTab" class="feature-body">
           <component :is="activeComponent" v-bind="activeProps" />
         </div>
@@ -199,12 +199,11 @@ const activeProps = computed(() => {
 
 .scroll-reveal-enabled [data-scroll-reveal] {
   opacity: 0;
-  transform: translate3d(0, 30px, 0);
+  transform: translate3d(0, 18px, 0);
   transition:
-    opacity 0.95s cubic-bezier(0.25, 0.1, 0.25, 1),
-    transform 1.05s cubic-bezier(0.25, 0.1, 0.25, 1);
+    opacity 260ms var(--ease-out-expo),
+    transform 280ms var(--ease-out-expo);
   transition-delay: var(--reveal-delay, 0ms);
-  will-change: opacity, transform;
 }
 
 .scroll-reveal-enabled [data-scroll-reveal].is-revealed {
@@ -288,28 +287,34 @@ const activeProps = computed(() => {
 
 .feature-body-reveal {
   --reveal-delay: 240ms;
+  display: grid;
 }
 
 .feature-body {
+  grid-area: 1 / 1;
   display: flex;
   justify-content: flex-start;
   min-height: 150px;
   margin-top: 20px;
 }
 
-.fade-enter-active,
+.fade-enter-active {
+  transition: opacity 180ms var(--ease-out-expo), transform 180ms var(--ease-out-expo);
+}
+
 .fade-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  transition: opacity 140ms var(--ease-out-expo), transform 140ms var(--ease-out-expo);
 }
 
 .fade-enter-from {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(6px);
 }
 
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-6px);
 }
 
 @media (max-width: 1200px) {

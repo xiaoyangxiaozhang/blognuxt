@@ -56,7 +56,9 @@
               :blocks="articleDocument.blocks"
               :article-list="readerArticleList"
               :author-name="authorName"
+              :closing="readerClosing"
               @close="closeReader"
+              @closed="onReaderClosed"
               @next="handleReaderNext"
               @previous="handleReaderNext"
             />
@@ -264,9 +266,12 @@ const tocHeadings = computed<MarkdownHeading[]>(() =>
 )
 const commentList = computed(() => normalizeCommentList(commentsPayload.value?.response?.data?.list))
 const showReader = ref(false)
+const readerClosing = ref(false)
+let resolveReaderClosed: (() => void) | null = null
 let readerOwnsFullscreen = false
 
 const openReader = async () => {
+  readerClosing.value = false
   showReader.value = true
 
   if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
@@ -279,8 +284,17 @@ const openReader = async () => {
   }
 }
 
-const closeReader = async () => {
+const onReaderClosed = () => {
   showReader.value = false
+  readerClosing.value = false
+  resolveReaderClosed?.()
+  resolveReaderClosed = null
+}
+
+const closeReader = async () => {
+  if (!showReader.value || readerClosing.value) return
+  readerClosing.value = true
+  const closed = new Promise<void>((resolve) => { resolveReaderClosed = resolve })
 
   if (readerOwnsFullscreen && document.fullscreenElement) {
     try {
@@ -291,12 +305,13 @@ const closeReader = async () => {
   }
 
   readerOwnsFullscreen = false
+  await closed
 }
 
 const handleFullscreenChange = () => {
   if (!document.fullscreenElement && readerOwnsFullscreen) {
     readerOwnsFullscreen = false
-    showReader.value = false
+    void closeReader()
   }
 }
 
@@ -410,7 +425,7 @@ const scrollToHeading = (id: string) => {
 
   window.scrollTo({
     top: heading.getBoundingClientRect().top + window.scrollY - 96,
-    behavior: 'smooth'
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
   })
   window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${id}`)
   activeHeadingId.value = id
@@ -562,6 +577,8 @@ watch(articleContentHtml, () => {
 })
 
 onBeforeUnmount(() => {
+  resolveReaderClosed?.()
+  resolveReaderClosed = null
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
   window.removeEventListener('scroll', updateReadingProgress)
   window.removeEventListener('scroll', updateActiveHeading)

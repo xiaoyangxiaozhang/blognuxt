@@ -263,7 +263,7 @@
   a {
     color: var(--prose-link);
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: color 180ms var(--ease-out-expo);
     font-weight: 500;
     position: relative;
 
@@ -963,7 +963,7 @@
       font-size: 0.9rem;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: color 180ms var(--ease-out-expo), background-color 180ms var(--ease-out-expo);
       white-space: nowrap;
 
       &:hover {
@@ -1081,7 +1081,6 @@
       color: var(--prose-meta);
       background: rgba(73, 177, 245, 0.05);
       border-bottom: 1px solid var(--prose-custom-border);
-      transition: all 0.3s ease;
     }
 
     .custom-link-main {

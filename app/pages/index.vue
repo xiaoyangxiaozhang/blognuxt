@@ -391,6 +391,7 @@ const handleMotionPreferenceChange = () => {
     heroVideoReady.value = false
   }
 
+  resetTyping()
   void syncHeroVideoPlayback()
 }
 
@@ -401,12 +402,17 @@ const handleDocumentVisibilityChange = () => {
 const resetTyping = () => {
   clearTypingTimers()
 
+  const characters = Array.from(typingIntroText.value)
+  if (reducedMotionQuery?.matches) {
+    displayedIntroChars.value = characters
+    return
+  }
+
   displayedIntroChars.value = []
-  const text = typingIntroText.value
   let index = 0
 
   typingTimer = setInterval(() => {
-    if (index >= text.length) {
+    if (index >= characters.length) {
       clearTypingTimers()
       restartTimer = setTimeout(() => {
         resetTyping()
@@ -414,7 +420,7 @@ const resetTyping = () => {
       return
     }
 
-    displayedIntroChars.value.push(text[index] || '')
+    displayedIntroChars.value.push(characters[index] || '')
     index += 1
   }, 120)
 }
@@ -426,10 +432,9 @@ watch(typingIntroText, () => {
 })
 
 onMounted(() => {
-  resetTyping()
-
   reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
   reducedMotionQuery.addEventListener('change', handleMotionPreferenceChange)
+  resetTyping()
   document.addEventListener('visibilitychange', handleDocumentVisibilityChange)
 
   if (heroVisualRef.value) {

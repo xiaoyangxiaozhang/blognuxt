@@ -34,11 +34,10 @@
                   aria-label="站点导航"
                 >
                   <NuxtLink
-                    v-for="(item, index) in brandRoutes"
+                    v-for="item in brandRoutes"
                     :key="item.to"
                     :to="item.to"
                     class="brand-route-item"
-                    :style="{ '--menu-index': index }"
                     @click.stop
                   >
                     {{ item.label }}
@@ -54,6 +53,7 @@
                   文章 <ChevronDownIcon class="dropdown-arrow" aria-hidden="true" />
                 </button>
                 <div class="nav-dropdown-menu">
+                  <NuxtLink to="/articles" class="nav-dropdown-item">全部文章</NuxtLink>
                   <NuxtLink to="/archive" class="nav-dropdown-item">归档</NuxtLink>
                   <NuxtLink to="/categories" class="nav-dropdown-item">分类</NuxtLink>
                   <NuxtLink to="/tags" class="nav-dropdown-item">标签</NuxtLink>
@@ -75,7 +75,7 @@
                 type="button"
                 title="订阅更新"
                 aria-label="订阅更新"
-                @click="subscribeDialogOpen = true"
+                @click="openSubscribe"
               >
                 <BellIcon aria-hidden="true" />
               </button>
@@ -127,11 +127,14 @@
                 :style="{ width: `${islandIndicator.width}px`, transform: `translateX(${islandIndicator.left}px)` }"
               />
               <NuxtLink to="/" class="island-link" @mouseenter="moveIslandIndicator(0)" @focus="moveIslandIndicator(0)">首页</NuxtLink>
-              <NuxtLink to="/archive" class="island-link" @mouseenter="moveIslandIndicator(1)" @focus="moveIslandIndicator(1)">归档</NuxtLink>
-              <NuxtLink to="/categories" class="island-link" @mouseenter="moveIslandIndicator(2)" @focus="moveIslandIndicator(2)">分类</NuxtLink>
-              <NuxtLink to="/tags" class="island-link" @mouseenter="moveIslandIndicator(3)" @focus="moveIslandIndicator(3)">标签</NuxtLink>
-              <NuxtLink to="/message" class="island-link" @mouseenter="moveIslandIndicator(4)" @focus="moveIslandIndicator(4)">留言</NuxtLink>
-              <NuxtLink to="/kimidou" class="island-link" @mouseenter="moveIslandIndicator(5)" @focus="moveIslandIndicator(5)">基米斗</NuxtLink>
+              <NuxtLink to="/articles" class="island-link" @mouseenter="moveIslandIndicator(1)" @focus="moveIslandIndicator(1)">文章</NuxtLink>
+              <NuxtLink to="/archive" class="island-link" @mouseenter="moveIslandIndicator(2)" @focus="moveIslandIndicator(2)">归档</NuxtLink>
+              <NuxtLink to="/categories" class="island-link" @mouseenter="moveIslandIndicator(3)" @focus="moveIslandIndicator(3)">分类</NuxtLink>
+              <NuxtLink to="/tags" class="island-link" @mouseenter="moveIslandIndicator(4)" @focus="moveIslandIndicator(4)">标签</NuxtLink>
+              <NuxtLink to="/friends" class="island-link" @mouseenter="moveIslandIndicator(5)" @focus="moveIslandIndicator(5)">友链</NuxtLink>
+              <NuxtLink to="/dynamic" class="island-link" @mouseenter="moveIslandIndicator(6)" @focus="moveIslandIndicator(6)">动态</NuxtLink>
+              <NuxtLink to="/message" class="island-link" @mouseenter="moveIslandIndicator(7)" @focus="moveIslandIndicator(7)">留言</NuxtLink>
+              <NuxtLink to="/kimidou" class="island-link" @mouseenter="moveIslandIndicator(8)" @focus="moveIslandIndicator(8)">基米斗</NuxtLink>
             </nav>
 
             <div class="island-actions">
@@ -140,7 +143,7 @@
                 type="button"
                 title="订阅更新"
                 aria-label="订阅更新"
-                @click="subscribeDialogOpen = true"
+                @click="openSubscribe"
               >
                 <BellIcon aria-hidden="true" />
               </button>
@@ -170,7 +173,7 @@
     </div>
   </header>
 
-  <SubscribeDialog v-model="subscribeDialogOpen" />
+  <SubscribeDialog v-model="subscribeOpen" />
   <SearchDialog v-model="searchDialogOpen" />
   <FeedbackDialog />
   <AccountDialog />
@@ -199,11 +202,10 @@ type HeaderState = 'full' | 'logo' | 'island'
 
 const theme = ref<ThemeMode>('midnight-blue')
 const { settings: blogSettings } = useBlogSettings()
-const { openFeedback, openAccount } = useSiteOverlays()
+const { openFeedback, openAccount, openSubscribe, subscribeOpen } = useSiteOverlays()
 const siteTitle = computed(() => blogSettings.value['blog.title'] || '小羊嚣张')
 const headerState = ref<HeaderState>('full')
 const brandMenuOpen = ref(false)
-const subscribeDialogOpen = ref(false)
 const searchDialogOpen = ref(false)
 let brandMenuCloseTimer: ReturnType<typeof setTimeout> | null = null
 const lastScrollY = ref(0)
@@ -211,6 +213,7 @@ const lastDirection = ref<'up' | 'down' | null>(null)
 
 const brandRoutes = [
   { label: '首页', to: '/' },
+  { label: '全部文章', to: '/articles' },
   { label: '归档', to: '/archive' },
   { label: '分类', to: '/categories' },
   { label: '标签', to: '/tags' },
@@ -284,7 +287,7 @@ const route = useRoute()
 const islandNav = ref<HTMLElement | null>(null)
 const islandHoverIndex = ref<number | null>(null)
 const islandIndicator = reactive({ left: 0, width: 50 })
-const islandRoutePaths = ['/', '/archive', '/categories', '/tags', '/message', '/kimidou']
+const islandRoutePaths = ['/', '/articles', '/archive', '/categories', '/tags', '/friends', '/dynamic', '/message', '/kimidou']
 const activeIslandIndex = computed(() => {
   const index = islandRoutePaths.indexOf(route.path)
   return index >= 0 ? index : 0
@@ -327,7 +330,7 @@ const scrollToTop = () => {
 
   window.scrollTo({
     top: 0,
-    behavior: 'smooth'
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
   })
 }
 // 滚动处理函数，控制 headerState 的切换
@@ -610,22 +613,25 @@ onUnmounted(() => {
 
 .brand-menu-enter-active,
 .brand-menu-leave-active {
-  overflow: hidden;
   transform-origin: top center;
+}
+
+.brand-menu-enter-active {
   transition:
-    max-height 480ms cubic-bezier(0.22, 1, 0.36, 1),
-    padding 480ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 180ms ease,
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 160ms var(--ease-out-expo),
+    transform 180ms var(--ease-out-expo);
+}
+
+.brand-menu-leave-active {
+  transition:
+    opacity 120ms var(--ease-out-expo),
+    transform 140ms var(--ease-out-expo);
 }
 
 .brand-menu-enter-from,
 .brand-menu-leave-to {
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
   opacity: 0;
-  transform: translateY(-8px) scaleY(0.94);
+  transform: translateY(-6px);
   pointer-events: none;
 }
 
@@ -653,51 +659,10 @@ onUnmounted(() => {
   }
 }
 
-.brand-menu-enter-active .brand-route-item {
-  animation: brandRouteEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--menu-index) * 42ms);
-}
-
-.brand-menu-leave-active .brand-route-item {
-  animation: brandRouteExit 220ms cubic-bezier(0.55, 0, 0.78, 0.22) both;
-  animation-delay: calc((7 - var(--menu-index)) * 34ms);
-}
-
-@keyframes brandRouteEnter {
-  from {
-    opacity: 0;
-    transform: translateY(-12px) scaleY(0.72);
-    transform-origin: top center;
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-    transform-origin: top center;
-  }
-}
-
-@keyframes brandRouteExit {
-  from {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-    transform-origin: top center;
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-8px) scaleY(0.72);
-    transform-origin: top center;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .brand-menu-enter-active,
   .brand-menu-leave-active {
     transition-duration: 1ms;
-  }
-
-  .brand-menu-enter-active .brand-route-item,
-  .brand-menu-leave-active .brand-route-item {
-    animation: none;
   }
 }
 
@@ -816,8 +781,10 @@ onUnmounted(() => {
 }
 
 .action-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 999px;
   border: 0;
   background: transparent;
   color: var(--header-action-color);
@@ -829,34 +796,24 @@ onUnmounted(() => {
   transition: color 0.2s ease, filter 0.2s ease;
 
   &:hover,
-  &:focus-visible,
   &:active {
     background: transparent;
     border-color: transparent;
     color: var(--brand-accent);
-    outline: none;
     filter: brightness(1.08);
+  }
+
+  &:focus-visible {
+    color: var(--brand-accent);
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
 }
 
 .action-theme {
-  width: 36px;
-  height: 36px;
   padding: 0;
   background: transparent;
   border: 0;
-  outline: 0;
-  box-shadow: none;
-
-  &:hover,
-  &:focus,
-  &:focus-visible,
-  &:active {
-    background: transparent;
-    border: 0;
-    outline: 0;
-    box-shadow: none;
-  }
 }
 
 .action-btn :deep(svg) {
@@ -948,7 +905,7 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   z-index: 0;
-  height: 38px;
+  height: 44px;
   border-radius: 999px;
   background: var(--brand-accent-soft);
   pointer-events: none;
@@ -959,7 +916,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 14px;
   border-radius: 999px;
   white-space: nowrap;
@@ -1085,10 +1042,24 @@ onUnmounted(() => {
     font-size: 14px;
   }
 
+  .header-actions {
+    gap: 0;
+  }
+
   .mini-logo-mark {
     width: 30px;
     height: 30px;
   }
 
+}
+
+@media (max-width: 360px) {
+  .header-content {
+    gap: 7px;
+  }
+
+  .action-search {
+    display: none;
+  }
 }
 </style>

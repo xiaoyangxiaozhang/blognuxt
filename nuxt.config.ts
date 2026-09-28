@@ -64,6 +64,16 @@ const devProxyPlugin = {
   }
 }
 
+const animatedIconsStylePlugin = {
+  name: 'animated-icons-style-side-effects',
+  transform(code: string, id: string) {
+    // The package injects its animation CSS here but declares sideEffects: false.
+    if (id.replace(/\\/g, '/').includes('/@svg-animated-icons/vue/dist/index.mjs')) {
+      return { code, moduleSideEffects: true }
+    }
+  }
+}
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -92,7 +102,8 @@ export default defineNuxtConfig({
 vite: {
     plugins: [
       Icons({ compiler: 'vue3', autoInstall: true }),
-      devProxyPlugin
+      devProxyPlugin,
+      animatedIconsStylePlugin
     ]
   },
   app:{

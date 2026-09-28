@@ -56,13 +56,21 @@ const emit = defineEmits<{
 
 <style scoped lang="scss">
 .guestbook-section {
+  --guestbook-submit-bg: color-mix(in srgb, var(--brand-accent) 26%, var(--home-surface));
+  --guestbook-submit-hover: color-mix(in srgb, var(--brand-accent) 35%, var(--home-surface));
+  --guestbook-focus: color-mix(in srgb, var(--brand-accent) 55%, var(--home-text));
+
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr);
   gap: 64px;
-  margin-top: 92px;
-  padding: 78px 0 0;
+  margin-top: 76px;
+  padding: 58px 0 0;
   border-top: 1px solid var(--home-border);
   scroll-margin-top: 110px;
+}
+
+:global([data-theme='blue-white']) .guestbook-section {
+  --guestbook-focus: color-mix(in srgb, var(--brand-accent) 40%, #000000);
 }
 
 .guestbook-intro h2 {
@@ -75,8 +83,8 @@ const emit = defineEmits<{
 }
 
 .guestbook-description {
-  margin: 28px 0 0;
-  color: var(--home-text-muted);
+  margin: 20px 0 0;
+  color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.9;
   white-space: pre-line;
@@ -95,8 +103,8 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   border: 1px solid var(--home-border);
-  border-radius: 8px;
-  background: transparent;
+  border-radius: 12px;
+  background: var(--home-card-bg);
   box-shadow: none;
 }
 
@@ -126,39 +134,45 @@ const emit = defineEmits<{
 }
 
 .guestbook-content :deep(.variant-board .info-field input) {
-  height: 38px;
-  padding: 0 12px;
+  height: 44px;
+  padding: 0 10px;
   border: 1px solid var(--home-border);
-  border-radius: 6px;
+  border-radius: 7px;
   color: var(--comment-input-text);
-  background: transparent;
+  background: var(--home-surface);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.guestbook-content :deep(.variant-board .info-field input:focus) {
-  border-color: var(--brand-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 10%, transparent);
+.guestbook-content :deep(.variant-board .info-field input::placeholder),
+.guestbook-content :deep(.variant-board .composer-body textarea::placeholder) {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+.guestbook-content :deep(.variant-board .info-field input:focus-visible) {
+  border-color: var(--guestbook-focus);
+  outline: 2px solid var(--guestbook-focus);
+  outline-offset: 2px;
 }
 
 .guestbook-content :deep(.variant-board .composer-body textarea) {
   width: 100%;
-  min-height: 82px;
+  min-height: 108px;
   padding: 10px 12px;
   border: 1px solid var(--home-border);
-  border-radius: 6px;
+  border-radius: 7px;
   color: var(--comment-input-text);
-  background: transparent;
+  background: var(--home-surface);
   font-size: 15px;
   line-height: 1.7;
   resize: vertical;
-  transition: min-height var(--transition-base), border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.guestbook-content :deep(.variant-board .composer-body textarea:focus) {
-  min-height: 140px;
-  border-color: var(--brand-accent);
-  outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-accent) 10%, transparent);
+.guestbook-content :deep(.variant-board .composer-body textarea:focus-visible) {
+  border-color: var(--guestbook-focus);
+  outline: 2px solid var(--guestbook-focus);
+  outline-offset: 2px;
 }
 
 .guestbook-content :deep(.variant-board .submit-button) {
@@ -166,18 +180,32 @@ const emit = defineEmits<{
   height: 44px;
   padding: 0 24px;
   border-radius: 7px;
-  border: 0;
-  background: var(--brand-accent);
-  color: var(--brand-accent-text);
+  border: 1px solid var(--home-border);
+  background: var(--guestbook-submit-bg);
+  color: var(--home-text);
   transition: background var(--transition-fast), transform var(--transition-fast), opacity var(--transition-fast);
 }
 
 .guestbook-content :deep(.variant-board .submit-button:hover:not(:disabled)) {
-  background: var(--brand-accent-hover);
+  background: var(--guestbook-submit-hover);
   transform: translateY(-1px);
 }
 
+.guestbook-content :deep(.variant-board .submit-button:focus-visible),
+.guestbook-content :deep(.variant-board .login-button:focus-visible),
+.guestbook-content :deep(.variant-board .plain-icon:focus-visible),
+.guestbook-content :deep(.variant-board .reply-action:focus-visible) {
+  outline: 2px solid var(--guestbook-focus);
+  outline-offset: 3px;
+}
+
+.guestbook-content :deep(.variant-board .plain-icon) {
+  width: 44px;
+  height: 44px;
+}
+
 .guestbook-content :deep(.variant-board .login-button) {
+  height: 44px;
   border-radius: 7px;
 }
 
@@ -189,7 +217,7 @@ const emit = defineEmits<{
 
 .guestbook-content :deep(.board-card) {
   display: flex;
-  width: 72%;
+  width: min(100%, 760px);
   min-height: 0;
   flex-direction: column;
   padding: 24px 0;
@@ -200,18 +228,13 @@ const emit = defineEmits<{
   box-shadow: none;
 }
 
-.guestbook-content :deep(.board-card:nth-child(even)) {
-  width: 62%;
-  margin-left: auto;
-}
-
 .guestbook-content :deep(.comment-avatar) {
   display: none;
 }
 
 .guestbook-content :deep(.board-date) {
   order: 1;
-  color: var(--home-text-muted);
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -255,7 +278,7 @@ const emit = defineEmits<{
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--home-text-muted);
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
@@ -267,7 +290,7 @@ const emit = defineEmits<{
 .guestbook-content :deep(.reply-action) {
   border: 0;
   padding: 0;
-  color: var(--home-text-muted);
+  color: var(--text-secondary);
   background: transparent;
   font: inherit;
   font-size: 12px;
@@ -277,14 +300,14 @@ const emit = defineEmits<{
 
 .guestbook-content :deep(.reply-action:hover),
 .guestbook-content :deep(.reply-action:focus-visible) {
-  color: var(--brand-accent);
+  color: var(--guestbook-focus);
 }
 
 .guestbook-content :deep(.comment-empty) {
   padding: 24px 0;
   border: 0;
   border-radius: 0;
-  color: var(--home-text-muted);
+  color: var(--text-secondary);
   background: transparent;
   box-shadow: none;
 }
@@ -294,6 +317,16 @@ const emit = defineEmits<{
 .guestbook-content :deep(.login-profile p) {
   color: var(--home-text);
   opacity: 1;
+}
+
+.guestbook-content :deep(.comment-error .el-alert) {
+  border: 1px solid color-mix(in srgb, #d92d20 30%, var(--home-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, #d92d20 10%, var(--home-surface));
+}
+
+.guestbook-content :deep(.comment-error .el-alert__title) {
+  color: var(--home-text);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -312,9 +345,9 @@ const emit = defineEmits<{
 @media (max-width: 767px) {
   .guestbook-section {
     grid-template-columns: 1fr;
-    gap: 40px;
-    margin-top: 72px;
-    padding-top: 64px;
+    gap: 26px;
+    margin-top: 64px;
+    padding-top: 48px;
   }
 
   .guestbook-content :deep(.variant-board .composer-body) {
@@ -322,29 +355,54 @@ const emit = defineEmits<{
   }
 
   .guestbook-content :deep(.variant-board .composer-topline) {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
     padding: 12px 16px 0;
   }
 
+  .guestbook-content :deep(.variant-board .composer-topline .info-field:nth-child(3)) {
+    grid-column: 1 / -1;
+  }
+
   .guestbook-content :deep(.variant-board .composer-footer) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
     padding: 14px 16px 16px;
   }
 
+  .guestbook-content :deep(.variant-board .toolbar-group) {
+    display: grid;
+    grid-template-columns: repeat(3, 44px);
+    gap: 8px;
+  }
+
   .guestbook-content :deep(.variant-board .action-group) {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
   }
 
   .guestbook-content :deep(.variant-board .login-button),
   .guestbook-content :deep(.variant-board .submit-button) {
+    min-width: 0;
     width: 100%;
   }
 
-  .guestbook-content :deep(.board-card),
-  .guestbook-content :deep(.board-card:nth-child(even)) {
+  .guestbook-content :deep(.board-card) {
     width: 100%;
     margin-left: 0;
+  }
+}
+
+@media (max-width: 359px) {
+  .guestbook-content :deep(.variant-board .composer-topline) {
+    grid-template-columns: 1fr;
+  }
+
+  .guestbook-content :deep(.variant-board .composer-topline .info-field:nth-child(3)) {
+    grid-column: auto;
   }
 }
 

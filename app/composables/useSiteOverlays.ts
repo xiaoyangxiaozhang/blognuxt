@@ -4,6 +4,7 @@ export const useSiteOverlays = () => {
   const feedbackOpen = useState('feedback-dialog-open', () => false)
   const accountOpen = useState('account-dialog-open', () => false)
   const accountMode = useState<AccountDialogMode>('account-dialog-mode', () => 'profile')
+  const subscribeOpen = useState('subscribe-dialog-open', () => false)
 
   const openFeedback = () => {
     feedbackOpen.value = true
@@ -14,11 +15,17 @@ export const useSiteOverlays = () => {
     accountOpen.value = true
   }
 
+  const openSubscribe = () => {
+    subscribeOpen.value = true
+  }
+
   return {
     feedbackOpen,
     accountOpen,
     accountMode,
+    subscribeOpen,
     openFeedback,
-    openAccount
+    openAccount,
+    openSubscribe
   }
 }

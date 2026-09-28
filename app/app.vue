@@ -1,6 +1,6 @@
 <template>
   <div class="bg" :style="themeStyles"><NuxtLayout>
-    <NuxtPage />
+    <NuxtPage :transition="{ name: 'route-fade', mode: 'out-in' }" />
   </NuxtLayout>
   </div>
 </template>

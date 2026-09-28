@@ -73,12 +73,14 @@ h1 {
   background: var(--bg-panel);
   color: var(--text-primary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background-color 180ms var(--ease-out-expo), border-color 180ms var(--ease-out-expo);
 }
 
-.api-btn:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  .api-btn:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
 }
 
 .result-area {

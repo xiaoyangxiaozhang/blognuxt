@@ -100,7 +100,7 @@ const {
   refresh: refreshScrollReveal
 } = useScrollReveal(newestSectionRef)
 
-const revealDelay = (index: number) => `${Math.min(index, 5) * 110}ms`
+const revealDelay = (index: number) => `${Math.min(index, 5) * 50}ms`
 
 // 文章加载后提取封面主色调并应用到标签
 watch(() => props.articles, async (articles) => {
@@ -133,14 +133,13 @@ onUpdated(refreshScrollReveal)
 }
 
 [data-scroll-reveal] {
-  --reveal-distance: 34px;
+  --reveal-distance: 18px;
   opacity: 0;
   transform: translate3d(0, var(--reveal-distance), 0);
   transition:
-    opacity 0.9s cubic-bezier(0.25, 0.1, 0.25, 1),
-    transform 1.05s cubic-bezier(0.25, 0.1, 0.25, 1);
+    opacity 260ms var(--ease-out-expo),
+    transform 280ms var(--ease-out-expo);
   transition-delay: var(--reveal-delay, 0ms);
-  will-change: opacity, transform;
 }
 
 [data-scroll-reveal].is-revealed {
@@ -219,8 +218,8 @@ onUpdated(refreshScrollReveal)
   opacity: 0;
   transform: translate3d(0, 14px, 0);
   transition:
-    opacity 0.62s cubic-bezier(0.25, 0.1, 0.25, 1),
-    transform 0.72s cubic-bezier(0.25, 0.1, 0.25, 1);
+    opacity 200ms var(--ease-out-expo),
+    transform 220ms var(--ease-out-expo);
 }
 
 .article-card.is-revealed .article-meta,
@@ -231,15 +230,15 @@ onUpdated(refreshScrollReveal)
 }
 
 .article-card.is-revealed .article-meta {
-  transition-delay: calc(var(--reveal-delay, 0ms) + 150ms);
+  transition-delay: calc(var(--reveal-delay, 0ms) + 40ms);
 }
 
 .article-card.is-revealed .article-title {
-  transition-delay: calc(var(--reveal-delay, 0ms) + 270ms);
+  transition-delay: calc(var(--reveal-delay, 0ms) + 70ms);
 }
 
 .article-card.is-revealed .article-date {
-  transition-delay: calc(var(--reveal-delay, 0ms) + 390ms);
+  transition-delay: calc(var(--reveal-delay, 0ms) + 100ms);
 }
 
 .article-card[data-scroll-reveal].is-revealed:hover {

@@ -1,6 +1,6 @@
 <template>
-  <section ref="feedRef" class="article-feed">
-    <div data-scroll-reveal class="feed-head">
+  <section ref="feedRef" class="article-feed" :class="{ 'article-feed-overview': isControlled }">
+    <div v-if="!isControlled" data-scroll-reveal class="feed-head">
       <div class="feed-copy">
         <h2 v-if="title" class="feed-title">{{ title }}</h2>
         <p v-if="description" class="feed-description">{{ description }}</p>
@@ -19,28 +19,29 @@
       </label>
     </div>
 
-    <div v-if="initialLoading" class="state-block">
+    <div v-if="!isControlled && initialLoading" class="state-block">
       <el-skeleton :rows="8" animated />
     </div>
 
-    <div v-else-if="errorMessage" class="state-block">
+    <div v-else-if="!isControlled && errorMessage" class="state-block">
       <el-alert :title="errorMessage" type="error" show-icon />
     </div>
 
     <template v-else>
-      <div v-if="visibleArticles.length" class="articles-grid">
+      <div v-if="displayArticles.length" class="articles-grid">
         <article
-          v-for="(article, index) in visibleArticles"
+          v-for="(article, index) in displayArticles"
           :key="article.id"
           :data-article-id="article.id"
           data-scroll-reveal
           class="article-card"
-          :class="{ featured: index === 0 }"
+          :class="{ featured: !isControlled && index === 0 }"
           :style="{ '--reveal-delay': revealDelay(index) }"
         >
-          <NuxtLink :to="`/article/${article.slug}`" class="article-cover-link">
+          <NuxtLink :to="`/article/${encodeURIComponent(article.slug)}`" class="article-cover-link">
             <div class="article-cover">
-              <img :src="article.cover" :alt="article.title" loading="lazy" />
+              <img :src="article.cover" :alt="article.title" loading="lazy" decoding="async" />
+              <span v-if="isControlled && article.isTop" class="article-pin">置顶</span>
             </div>
           </NuxtLink>
 
@@ -60,7 +61,7 @@
             </div>
 
             <h3 data-reveal-child class="article-title">
-              <NuxtLink :to="`/article/${article.slug}`">{{ article.title }}</NuxtLink>
+              <NuxtLink :to="`/article/${encodeURIComponent(article.slug)}`">{{ article.title }}</NuxtLink>
             </h3>
 
             <span data-reveal-child class="article-date">{{ article.publishDate }}</span>
@@ -72,12 +73,12 @@
         <el-empty :description="searchKeyword ? '没有匹配到相关文章' : emptyText" />
       </div>
 
-      <div v-if="showBottomState && visibleArticles.length" class="load-state">
+      <div v-if="!isControlled && showBottomState && visibleArticles.length" class="load-state">
         <span v-if="loadingMore">正在加载更多文章...</span>
         <span v-else-if="!hasMore && articles.length > 0">已经到底啦</span>
       </div>
 
-      <div ref="sentinelRef" class="feed-sentinel" aria-hidden="true"></div>
+      <div v-if="!isControlled" ref="sentinelRef" class="feed-sentinel" aria-hidden="true"></div>
     </template>
   </section>
 </template>
@@ -91,6 +92,7 @@ import { getDominantColor } from '~/utils/dominantColor'
 import { useScrollReveal } from '~/composables/useScrollReveal'
 
 const props = withDefaults(defineProps<{
+  items?: DisplayArticleCard[]
   title?: string
   description?: string
   fetchParams?: Record<string, unknown>
@@ -115,6 +117,8 @@ const initialLoading = ref(true)
 const loadingMore = ref(false)
 const errorMessage = ref('')
 const sentinelRef = ref<HTMLElement | null>(null)
+const isControlled = computed(() => props.items !== undefined)
+const coverColors = new Map<string, Promise<string>>()
 
 let observer: IntersectionObserver | null = null
 
@@ -126,7 +130,7 @@ const normalizedKeyword = computed(() => searchKeyword.value.trim().toLowerCase(
 const hasMore = computed(() => articles.value.length < total.value)
 const showBottomState = computed(() => !initialLoading.value && !errorMessage.value && articles.value.length > 0)
 
-const revealDelay = (index: number) => `${Math.min(index, 5) * 110}ms`
+const revealDelay = (index: number) => `${Math.min(index, 5) * 40}ms`
 
 const visibleArticles = computed(() => {
   if (!normalizedKeyword.value) {
@@ -145,6 +149,9 @@ const visibleArticles = computed(() => {
     return haystack.includes(normalizedKeyword.value)
   })
 })
+
+// The overview page owns filtering and paging; category/tag pages keep fetching here.
+const displayArticles = computed(() => props.items ?? visibleArticles.value)
 
 const buildParams = (nextPage: number) => ({
   ...props.fetchParams,
@@ -201,7 +208,7 @@ const stopObserver = () => {
 }
 
 const startObserver = () => {
-  if (!import.meta.client || !sentinelRef.value) {
+  if (!import.meta.client || isControlled.value || !sentinelRef.value) {
     return
   }
 
@@ -221,11 +228,15 @@ const startObserver = () => {
 watch(
   () => JSON.stringify(props.fetchParams || {}),
   async () => {
-    await resetAndReload()
+    if (!isControlled.value) await resetAndReload()
   }
 )
 
-watch(articles, async (items) => {
+watch(displayArticles, async (items) => {
+  if (!import.meta.client) {
+    return
+  }
+
   if (!items.length) {
     return
   }
@@ -238,7 +249,10 @@ watch(articles, async (items) => {
     }
 
     try {
-      const color = await getDominantColor(article.cover)
+      if (!coverColors.has(article.cover)) {
+        coverColors.set(article.cover, getDominantColor(article.cover))
+      }
+      const color = await coverColors.get(article.cover)
       if (!color) {
         continue
       }
@@ -249,10 +263,10 @@ watch(articles, async (items) => {
       console.warn('Failed to extract color for article', article.id, error)
     }
   }
-})
+}, { immediate: true })
 
 onMounted(async () => {
-  await resetAndReload()
+  if (!isControlled.value) await resetAndReload()
   startObserver()
   refreshScrollReveal()
 })
@@ -274,14 +288,13 @@ onBeforeUnmount(() => {
 }
 
 [data-scroll-reveal] {
-  --reveal-distance: 34px;
+  --reveal-distance: 18px;
   opacity: 0;
   transform: translate3d(0, var(--reveal-distance), 0);
   transition:
-    opacity 0.9s cubic-bezier(0.25, 0.1, 0.25, 1),
-    transform 1.05s cubic-bezier(0.25, 0.1, 0.25, 1);
+    opacity 260ms var(--ease-out-expo),
+    transform 280ms var(--ease-out-expo);
   transition-delay: var(--reveal-delay, 0ms);
-  will-change: opacity, transform;
 }
 
 [data-scroll-reveal].is-revealed {
@@ -398,8 +411,8 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: translate3d(0, 14px, 0);
   transition:
-    opacity 0.62s cubic-bezier(0.25, 0.1, 0.25, 1),
-    transform 0.72s cubic-bezier(0.25, 0.1, 0.25, 1);
+    opacity 200ms var(--ease-out-expo),
+    transform 220ms var(--ease-out-expo);
 }
 
 .article-card.is-revealed .article-meta,
@@ -410,19 +423,15 @@ onBeforeUnmount(() => {
 }
 
 .article-card.is-revealed .article-meta {
-  transition-delay: calc(var(--reveal-delay, 0ms) + 150ms);
+  transition-delay: calc(var(--reveal-delay, 0ms) + 40ms);
 }
 
 .article-card.is-revealed .article-title {
-  transition-delay: calc(var(--reveal-delay, 0ms) + 270ms);
+  transition-delay: calc(var(--reveal-delay, 0ms) + 70ms);
 }
 
 .article-card.is-revealed .article-date {
-  transition-delay: calc(var(--reveal-delay, 0ms) + 390ms);
-}
-
-.article-card[data-scroll-reveal].is-revealed:hover {
-  transform: scale(0.97);
+  transition-delay: calc(var(--reveal-delay, 0ms) + 100ms);
 }
 
 .article-card.featured {
@@ -465,6 +474,21 @@ onBeforeUnmount(() => {
   }
 }
 
+.article-pin {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 42%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--home-card-bg) 82%, transparent);
+  color: var(--brand-accent);
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+}
+
 .article-card:not(.featured) .article-cover {
   display: flex;
   align-items: center;
@@ -483,7 +507,7 @@ onBeforeUnmount(() => {
   object-position: center center;
   transform: scale(1.015);
   transform-origin: center;
-  transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), filter var(--transition-base);
+  transition: transform 320ms var(--ease-out-expo), filter var(--transition-base);
   filter: saturate(0.94);
 }
 
@@ -497,7 +521,7 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
   flex-direction: column;
-  padding: 22px 24px 24px;
+  padding: 18px 20px 20px;
 }
 
 .article-card.featured .article-content {
@@ -509,8 +533,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .category {
@@ -544,7 +568,9 @@ onBeforeUnmount(() => {
   overflow: hidden;
   color: var(--home-text);
   font-size: 18px;
+  letter-spacing: -0.01em;
   line-height: 1.45;
+  text-wrap: pretty;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 
@@ -571,8 +597,8 @@ onBeforeUnmount(() => {
 
 .article-date {
   display: block;
-  margin-top: 10px;
-  color: var(--home-text-muted);
+  margin-top: 8px;
+  color: var(--articles-muted, var(--home-text-muted));
   font-size: 13px;
 }
 
@@ -595,6 +621,29 @@ onBeforeUnmount(() => {
   height: 2px;
 }
 
+.article-feed-overview .articles-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.article-feed-overview .article-card:not(.featured) {
+  min-height: 340px;
+}
+
+.article-feed-overview .article-card:not(.featured) .article-cover {
+  height: auto;
+  aspect-ratio: 16 / 10;
+}
+
+.article-feed-overview .article-title {
+  -webkit-line-clamp: 2;
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  .article-feed-overview .article-card:not(.featured) {
+    min-height: 0;
+  }
+}
+
 @media (max-width: 900px) {
   .feed-head {
     grid-template-columns: 1fr;
@@ -603,6 +652,10 @@ onBeforeUnmount(() => {
 
   .search-shell {
     width: min(100%, 360px);
+  }
+
+  .article-feed-overview .articles-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .article-card.featured {
@@ -640,6 +693,10 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .article-feed-overview .articles-grid {
+    grid-template-columns: 1fr;
+  }
+
   .article-card {
     border-radius: 14px;
   }
@@ -656,6 +713,15 @@ onBeforeUnmount(() => {
 
   .article-card:not(.featured) .article-cover {
     height: 220px;
+  }
+
+  .article-feed-overview .article-card:not(.featured) {
+    min-height: 0;
+  }
+
+  .article-feed-overview .article-card:not(.featured) .article-cover {
+    height: auto;
+    aspect-ratio: 16 / 10;
   }
 
   .article-content,

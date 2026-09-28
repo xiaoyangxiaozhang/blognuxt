@@ -59,6 +59,7 @@ let mixer: THREE.AnimationMixer | null = null
 let model: THREE.Object3D | null = null
 let resizeObserver: ResizeObserver | null = null
 let reducedMotionQuery: MediaQueryList | null = null
+let motionChangeHandler: ((event: MediaQueryListEvent) => void) | null = null
 let animationFrame = 0
 let disposed = false
 
@@ -88,6 +89,10 @@ const setError = (error: unknown) => {
 const cleanup = () => {
   disposed = true
   if (animationFrame) window.cancelAnimationFrame(animationFrame)
+  animationFrame = 0
+  if (motionChangeHandler) reducedMotionQuery?.removeEventListener('change', motionChangeHandler)
+  motionChangeHandler = null
+  reducedMotionQuery = null
   resizeObserver?.disconnect()
   resizeObserver = null
   controls?.dispose()
@@ -111,6 +116,9 @@ onMounted(() => {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000)
   const clock = new THREE.Timer()
+  const renderStaticFrame = () => {
+    if (reducedMotionQuery?.matches) renderer?.render(scene, camera)
+  }
 
   const resize = () => {
     if (!renderer) return
@@ -121,6 +129,7 @@ onMounted(() => {
     renderer.setSize(width, height, false)
     camera.aspect = width / height
     camera.updateProjectionMatrix()
+    renderStaticFrame()
   }
 
   const fitCameraToModel = (object: THREE.Object3D) => {
@@ -170,14 +179,15 @@ onMounted(() => {
 
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enabled = props.enableControls
-  controls.enableDamping = true
+  reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  controls.enableDamping = !reducedMotionQuery.matches
   controls.dampingFactor = 0.08
   controls.enablePan = false
   controls.enableZoom = props.enableZoom
   controls.screenSpacePanning = false
+  controls.addEventListener('change', renderStaticFrame)
   renderer.domElement.style.touchAction = 'pan-y'
 
-  reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
   resizeObserver = new ResizeObserver(resize)
   resizeObserver.observe(host)
   resize()
@@ -207,9 +217,14 @@ onMounted(() => {
       if (gltf.animations.length) {
         mixer = new THREE.AnimationMixer(model)
         gltf.animations.forEach((clip) => mixer?.clipAction(clip).play())
+        if (reducedMotionQuery?.matches) {
+          mixer.timeScale = 0
+          mixer.update(0)
+        }
       }
 
       status.value = 'ready'
+      renderStaticFrame()
     },
     undefined,
     setError
@@ -218,15 +233,29 @@ onMounted(() => {
   const animate = () => {
     if (disposed || !renderer) return
 
-    animationFrame = window.requestAnimationFrame(animate)
+    animationFrame = reducedMotionQuery?.matches ? 0 : window.requestAnimationFrame(animate)
     clock.update()
-    const delta = clock.getDelta()
+    const delta = Math.min(clock.getDelta(), 0.05)
     mixer?.update(delta)
     if (props.autoRotate && !reducedMotionQuery?.matches) scene.rotation.y += delta * 0.18
     controls?.update()
     renderer.render(scene, camera)
   }
 
+  motionChangeHandler = (event) => {
+    if (controls) controls.enableDamping = !event.matches
+    if (mixer) mixer.timeScale = event.matches ? 0 : 1
+
+    if (event.matches) {
+      if (animationFrame) window.cancelAnimationFrame(animationFrame)
+      animationFrame = 0
+      controls?.update()
+      renderStaticFrame()
+    } else if (!animationFrame) {
+      animate()
+    }
+  }
+  reducedMotionQuery.addEventListener('change', motionChangeHandler)
   animate()
 })
 </script>

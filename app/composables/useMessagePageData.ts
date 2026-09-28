@@ -123,7 +123,7 @@ const parseVersions = (value: string | undefined): MessageVersion[] => {
 
   return raw
     .map((item) => ({ name: toText(item.name), version: toText(item.version) }))
-    .filter((item) => item.name && item.version)
+    .filter((item) => item.name && item.version && item.version.toLowerCase() !== 'x.y.z')
 }
 
 const parseProfile = (value: string | undefined) => {

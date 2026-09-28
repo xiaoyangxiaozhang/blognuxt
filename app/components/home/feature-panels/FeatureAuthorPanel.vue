@@ -187,7 +187,12 @@ const socialLinks = computed(() => {
   border-radius: 50%;
   font-size: 20px;
   text-decoration: none;
-  transition: all 0.25s cubic-bezier(0.345, 0.045, 0.345, 1);
+  transition:
+    color 200ms var(--ease-out-expo),
+    background-color 200ms var(--ease-out-expo),
+    border-color 200ms var(--ease-out-expo),
+    border-radius 200ms var(--ease-out-expo),
+    transform 200ms var(--ease-out-expo);
 
   // 品牌色通过 CSS 变量注入
   color: var(--sl-color, var(--home-text-muted));

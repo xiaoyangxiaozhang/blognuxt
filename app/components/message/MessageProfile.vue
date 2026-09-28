@@ -122,7 +122,7 @@ const hasResources = computed(() => Boolean(
       <img :src="exhibition" alt="关于本站的展示图片" loading="lazy" />
     </figure>
 
-    <p v-if="authorName" class="signature" :aria-label="`${authorName}的签名`">—— {{ authorName }}</p>
+    <p v-if="authorName" class="signature" :aria-label="`${authorName}的签名`">{{ authorName }}</p>
 
     <p v-if="guestbookTransition" class="guestbook-transition">{{ guestbookTransition }}</p>
   </section>
@@ -177,7 +177,7 @@ const hasResources = computed(() => Boolean(
 
 .profile-item dt,
 .muted-copy {
-  color: var(--home-text-muted);
+  color: var(--text-secondary);
 }
 
 .profile-item dd {
@@ -200,7 +200,7 @@ const hasResources = computed(() => Boolean(
 
 .notes-block .muted-copy,
 .current-block .muted-copy {
-  color: var(--home-text-muted);
+  color: var(--text-secondary);
 }
 
 .motto-list {
@@ -219,7 +219,7 @@ const hasResources = computed(() => Boolean(
 
 .current-block .info-line {
   margin-bottom: 10px;
-  color: var(--home-text-muted);
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
@@ -239,7 +239,11 @@ const hasResources = computed(() => Boolean(
 
 .social-links a:hover,
 .social-links a:focus-visible {
-  color: var(--brand-accent);
+  color: var(--about-link-accent, var(--brand-accent));
+}
+
+:global([data-theme='blue-white']) .about-details {
+  --about-link-accent: color-mix(in srgb, var(--brand-accent) 40%, #000000);
 }
 
 .resource-grid {
@@ -265,7 +269,7 @@ const hasResources = computed(() => Boolean(
   justify-content: space-between;
   gap: 12px;
   margin: 0 0 12px;
-  color: var(--home-text-muted);
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.6;
   text-decoration: none;
@@ -273,7 +277,7 @@ const hasResources = computed(() => Boolean(
 
 .resource-block a:hover,
 .resource-block a:focus-visible {
-  color: var(--brand-accent);
+  color: var(--about-link-accent, var(--brand-accent));
 }
 
 .resource-block strong {
@@ -302,17 +306,15 @@ const hasResources = computed(() => Boolean(
 .signature {
   width: fit-content;
   margin: 54px 0 0 62%;
-  color: var(--home-text-muted);
+  color: var(--text-secondary);
   font-family: 'Songti SC', STSong, 'Noto Serif CJK SC', serif;
   font-size: 18px;
 }
 
 .guestbook-transition {
   max-width: 420px;
-  margin: 52px 0 0 30%;
-  padding-left: 22px;
-  border-left: 1px solid var(--brand-accent);
-  color: var(--home-text-muted);
+  margin: 44px 0 0 30%;
+  color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.9;
 }

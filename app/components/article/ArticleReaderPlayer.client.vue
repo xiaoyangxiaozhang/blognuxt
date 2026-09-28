@@ -1,6 +1,8 @@
 <template>
   <Teleport to="body">
+    <Transition name="reader-overlay" appear @after-leave="emit('closed')">
     <div
+      v-if="!closing"
       class="article-reader-player"
       :style="playerStyle"
       role="dialog"
@@ -181,6 +183,7 @@
         </section>
       </main>
     </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -262,13 +265,16 @@ const props = withDefaults(defineProps<{
   blocks: MarkdownBlock[]
   articleList?: ArticleListItem[]
   authorName?: string
+  closing?: boolean
 }>(), {
   articleList: () => [],
-  authorName: ''
+  authorName: '',
+  closing: false
 })
 
 const emit = defineEmits<{
   close: []
+  closed: []
   next: [slug: string]
   previous: [slug: string]
 }>()
@@ -314,10 +320,12 @@ const settings = reactive<ReaderSettings>({ ...defaultSettings })
 let background: BackgroundController | null = null
 let meshRenderer: MeshRendererController | null = null
 let meshSnapshots: MeshControlPointSnapshot[] = []
+let reducedMotionQuery: MediaQueryList | null = null
 let intersectionObserver: IntersectionObserver | null = null
 let resizeObserver: ResizeObserver | null = null
 let readingFrame = 0
 let meshAnimationFrame = 0
+let meshLastTimestamp = 0
 let playbackFrame = 0
 let playbackLastTimestamp = 0
 let playbackWasActiveOnBlockClick = false
@@ -493,7 +501,10 @@ const scrollToBlock = (key: string) => {
 
   stopPlayback()
   activeBlockIndex.value = index
-  element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  element.scrollIntoView({
+    behavior: reducedMotionQuery?.matches ? 'auto' : 'smooth',
+    block: 'center'
+  })
 }
 
 const handleBlockClick = (key: string, event: MouseEvent) => {
@@ -642,35 +653,52 @@ const applyMeshShape = () => {
 }
 
 const animateMesh = (timestamp: number) => {
-  if (!meshSnapshots.length) return
+  meshAnimationFrame = 0
+  if (reducedMotionQuery?.matches || !meshSnapshots.length) return
 
-  const time = timestamp / 1000
-  const intensity = settings.shape
-  meshSnapshots.forEach((snapshot, index) => {
-    const phase = index * 0.53
-    const movement = 0.025 * intensity
-    snapshot.point.location[0] = snapshot.locationX + Math.sin(time * 0.42 + phase) * movement
-    snapshot.point.location[1] = snapshot.locationY + Math.cos(time * 0.35 + phase * 1.3) * movement
-    snapshot.point.uScale = snapshot.uScale * (0.75 + intensity * 0.35) * (1 + Math.sin(time * 0.28 + phase) * 0.08 * intensity)
-    snapshot.point.vScale = snapshot.vScale * (0.75 + intensity * 0.35) * (1 + Math.cos(time * 0.31 + phase) * 0.08 * intensity)
-    snapshot.point.uRot = snapshot.uRot * (0.78 + intensity * 0.28) + Math.sin(time * 0.24 + phase) * 0.11 * intensity
-    snapshot.point.vRot = snapshot.vRot * (0.78 + intensity * 0.28) + Math.cos(time * 0.22 + phase) * 0.11 * intensity
-  })
+  if (!meshLastTimestamp || timestamp - meshLastTimestamp >= 1000 / 30) {
+    meshLastTimestamp = timestamp
+    const time = timestamp / 1000
+    const intensity = settings.shape
+    meshSnapshots.forEach((snapshot, index) => {
+      const phase = index * 0.53
+      const movement = 0.025 * intensity
+      snapshot.point.location[0] = snapshot.locationX + Math.sin(time * 0.42 + phase) * movement
+      snapshot.point.location[1] = snapshot.locationY + Math.cos(time * 0.35 + phase * 1.3) * movement
+      snapshot.point.uScale = snapshot.uScale * (0.75 + intensity * 0.35) * (1 + Math.sin(time * 0.28 + phase) * 0.08 * intensity)
+      snapshot.point.vScale = snapshot.vScale * (0.75 + intensity * 0.35) * (1 + Math.cos(time * 0.31 + phase) * 0.08 * intensity)
+      snapshot.point.uRot = snapshot.uRot * (0.78 + intensity * 0.28) + Math.sin(time * 0.24 + phase) * 0.11 * intensity
+      snapshot.point.vRot = snapshot.vRot * (0.78 + intensity * 0.28) + Math.cos(time * 0.22 + phase) * 0.11 * intensity
+    })
+  }
 
   meshAnimationFrame = window.requestAnimationFrame(animateMesh)
 }
 
 const startMeshAnimation = () => {
-  if (!meshAnimationFrame && meshSnapshots.length) meshAnimationFrame = window.requestAnimationFrame(animateMesh)
+  if (!reducedMotionQuery?.matches && !meshAnimationFrame && meshSnapshots.length) {
+    meshLastTimestamp = 0
+    meshAnimationFrame = window.requestAnimationFrame(animateMesh)
+  }
 }
 
 const applyBackgroundSettings = () => {
   if (!background) return
 
   // AMLL 的 flowSpeed 驱动 Mesh Gradient 的连续时间；形变强度同时作用于控制点切线。
-  background.setFlowSpeed(settings.flowSpeed * (0.72 + settings.shape * 0.44) * 8)
+  background.setFlowSpeed(reducedMotionQuery?.matches ? 0 : settings.flowSpeed * (0.72 + settings.shape * 0.44) * 8)
   background.setRenderScale(0.45 + settings.scale * 0.2)
   applyMeshShape()
+}
+
+const handleMotionPreferenceChange = (event: MediaQueryListEvent) => {
+  if (event.matches && meshAnimationFrame) {
+    window.cancelAnimationFrame(meshAnimationFrame)
+    meshAnimationFrame = 0
+  }
+  background?.setStaticMode(event.matches)
+  applyBackgroundSettings()
+  if (!event.matches) startMeshAnimation()
 }
 
 const loadAlbumImage = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => {
@@ -702,7 +730,7 @@ const initBackground = async () => {
     renderedCanvas.dataset.renderer = 'amll-mesh-gradient-webgl'
     backgroundHostRef.value?.appendChild(renderedCanvas)
     await background.setAlbum(await loadAlbumImage(cover))
-    background.setStaticMode(false)
+    background.setStaticMode(Boolean(reducedMotionQuery?.matches))
     background.setFPS(30)
     background.setHasLyric(true)
     captureMeshControlPoints()
@@ -742,6 +770,8 @@ watch(() => props.blocks, () => {
 
 onMounted(async () => {
   readSettings()
+  reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  reducedMotionQuery.addEventListener('change', handleMotionPreferenceChange)
   previousBodyOverflow = document.body.style.overflow
   document.body.style.overflow = 'hidden'
   document.addEventListener('pointerdown', handleDocumentPointerDown)
@@ -750,6 +780,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  reducedMotionQuery?.removeEventListener('change', handleMotionPreferenceChange)
+  reducedMotionQuery = null
   document.removeEventListener('pointerdown', handleDocumentPointerDown)
   document.removeEventListener('keydown', handleKeydown)
   contentScrollRef.value?.removeEventListener('scroll', scheduleReadingUpdate)
@@ -774,6 +806,20 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
+.reader-overlay-enter-active {
+  transition: opacity 180ms var(--ease-out-expo);
+}
+
+.reader-overlay-leave-active {
+  pointer-events: none;
+  transition: opacity 140ms var(--ease-out-expo);
+}
+
+.reader-overlay-enter-from,
+.reader-overlay-leave-to {
+  opacity: 0;
+}
+
 .article-reader-player {
   position: fixed;
   inset: 0;

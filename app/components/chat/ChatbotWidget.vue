@@ -46,7 +46,7 @@
               :disabled="sending"
               placeholder="和我聊聊……"
               aria-label="聊天内容"
-              @keydown.enter.exact.prevent="send()"
+              @keydown.enter.exact="handleInputKeydown"
             />
             <button type="submit" :disabled="sending || !draft.trim()" aria-label="发送">
               <PaperPlaneIcon aria-hidden="true" />
@@ -176,6 +176,12 @@ const errorText = (error: unknown) => {
     if (data?.message) return data.message
   }
   return error instanceof Error ? error.message : '暂时没有连上我，请稍后再试。'
+}
+
+const handleInputKeydown = (event: KeyboardEvent) => {
+  if (event.isComposing || event.keyCode === 229) return
+  event.preventDefault()
+  send()
 }
 
 const send = async (preset?: string) => {

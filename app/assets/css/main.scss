@@ -89,7 +89,7 @@ a:focus-visible {
   --bg-header-scrolled: rgba(255, 255, 255, 0.92);
   --text-primary: #000000;
   --text-secondary: #555555;
-  --text-muted: #999999;
+  --text-muted: #666666;
   --text-on-accent: #ffffff;
   --accent: #000000;
   --accent-strong: #333333;
@@ -111,7 +111,7 @@ a:focus-visible {
   --home-accent: #333333;
   --home-accent-soft: rgba(0, 0, 0, 0.04);
   --home-text: #000000;
-  --home-text-muted: #999999;
+  --home-text-muted: #666666;
   --home-shadow: 0 0 10px rgba(0, 0, 0, 0.04);
   /* Hero 顶部渐变色 */
   --hero-gradient-start: #ffffff;
@@ -125,11 +125,28 @@ a:focus-visible {
   --brand-accent-text: #ffffff;
   /* 评论区 token */
   --comment-input-text: #000000;
-  --comment-input-placeholder: #999999;
+  --comment-input-placeholder: #666666;
   --comment-login-bg: color-mix(in srgb, var(--brand-accent) 6%, transparent);
-  --comment-toolbar-btn: #999999;
+  --comment-toolbar-btn: #666666;
   --comment-toolbar-btn-hover: #555555;
   --comment-separator: rgba(0, 0, 0, 0.06);
+}
+
+.route-fade-enter-active,
+.route-fade-leave-active {
+  transition: opacity 240ms ease;
+}
+
+.route-fade-enter-from,
+.route-fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-fade-enter-active,
+  .route-fade-leave-active {
+    transition: none;
+  }
 }
 
 html, body {

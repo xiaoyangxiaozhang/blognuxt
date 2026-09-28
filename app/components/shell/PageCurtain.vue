@@ -18,24 +18,46 @@ const emit = defineEmits<{
 }>()
 
 const isOpen = ref(false)
+let openedTimer: ReturnType<typeof setTimeout> | null = null
+let reducedMotionQuery: MediaQueryList | null = null
+
+const handleMotionPreferenceChange = (event: MediaQueryListEvent) => {
+  if (!event.matches || !openedTimer) return
+  clearTimeout(openedTimer)
+  openedTimer = null
+  emit('opened')
+}
+
+const openCurtain = () => {
+  if (isOpen.value) return
+  isOpen.value = true
+
+  if (reducedMotionQuery?.matches ?? window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    emit('opened')
+    return
+  }
+
+  openedTimer = setTimeout(() => {
+    openedTimer = null
+    emit('opened')
+  }, 360)
+}
 
 watch(() => props.modelValue, (val) => {
-  if (val && !isOpen.value) {
-    isOpen.value = true
-    setTimeout(() => {
-      emit('opened')
-    }, 400)
-  }
+  if (import.meta.client && val) openCurtain()
 })
 
 // 如果初始化时就为 true，直接打开
 onMounted(() => {
-  if (props.modelValue) {
-    isOpen.value = true
-    setTimeout(() => {
-      emit('opened')
-    }, 400)
-  }
+  reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  reducedMotionQuery.addEventListener('change', handleMotionPreferenceChange)
+  if (props.modelValue) openCurtain()
+})
+
+onBeforeUnmount(() => {
+  if (openedTimer) clearTimeout(openedTimer)
+  reducedMotionQuery?.removeEventListener('change', handleMotionPreferenceChange)
+  reducedMotionQuery = null
 })
 </script>
 

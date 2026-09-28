@@ -4,7 +4,6 @@
       <MessageHero
         :author-name="authorName"
         :description="aboutDescribe"
-        :tips="aboutDescribeTips"
         :model-enabled="model.enabled"
         :model-url="model.url"
         :model-rotate="model.rotate"
@@ -13,7 +12,7 @@
         :fallback-image-url="authorAvatar"
       />
 
-      <p v-if="settingsError" class="sr-only" role="status">
+      <p v-if="settingsError" class="page-status" role="status">
         {{ settingsError }}
       </p>
 
@@ -108,41 +107,34 @@ useSeoMeta({
 
 <style scoped lang="scss">
 .message-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--home-surface);
   color: var(--home-text);
 }
 
 .message-shell {
-  width: min(1120px, calc(100% - 80px));
+  width: min(1000px, calc(100% - 60px));
   margin: 0 auto;
   padding: 104px 0 96px;
   color: var(--home-text);
 }
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+.page-status {
+  margin: 0 0 32px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
   .message-shell {
-    width: min(calc(100% - 48px), 880px);
+    width: min(760px, calc(100% - 60px));
     padding-top: 96px;
   }
 }
 
 @media (max-width: 767px) {
   .message-shell {
-    width: calc(100% - 40px);
-    padding-top: 96px;
     padding-bottom: 64px;
   }
 }

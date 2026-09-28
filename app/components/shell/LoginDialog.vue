@@ -338,7 +338,7 @@ const loginWithOAuth = (provider: OAuthProvider) => {
   if (!import.meta.client) return
 
   const redirect = encodeURIComponent(resolveRedirectPath())
-  const baseURL = config.public.apiBase || ''
+  const baseURL = String(config.public.apiBase || '').replace(/\/+$/, '')
 
   window.location.href = `${baseURL}/auth/${provider}?redirect=${redirect}`
 }

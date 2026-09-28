@@ -200,9 +200,9 @@ components:
 
 ## Overview
 
-BlogNuxt 的视觉核心不是复制外部 Apple 页面，而是把当前首页已经形成的几个识别点稳定下来：深色优先的画布、紫蓝品牌交互色、沉浸式视频或图片 Hero、柔和的波浪分隔、内容逐层出现，以及随滚动在完整导航、居中 Logo 和紧凑岛状导航之间切换的 Header。
+BlogNuxt 的视觉核心不是复制外部 Apple 页面，而是把当前首页已经形成的几个识别点稳定下来：深色优先的画布、主题品牌交互色、沉浸式视频或图片 Hero、柔和的波浪分隔、内容逐层出现，以及随滚动在完整导航、居中 Logo 和紧凑岛状导航之间切换的 Header。
 
-附件 `DESIGN.md` 提供的是设计文档格式和一套 Apple 风格分析结果。它可以作为排版方式、token 组织方式和 Do/Don't 结构的参考，但不是本项目的直接视觉 token。当前项目仍以 `main.scss` 的主题变量和首页/Header 的实际 CSS 为准：品牌色是 `#8183ff`，默认主题是 `midnight-blue`，而不是附件中的 Action Blue `#0066cc`。
+
 
 ### Design Intent
 

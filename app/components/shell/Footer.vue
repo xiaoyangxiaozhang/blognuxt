@@ -52,7 +52,7 @@ const footerLinks = computed<FooterLinkItem[]>(() =>
   parseBlogJson<FooterLinkItem[]>(blogSettings.value['blog.footer_links'], [])
     .filter((item) => item.name?.trim() && item.url?.trim())
 )
-const { openFeedback, openAccount } = useSiteOverlays()
+const { openFeedback, openAccount, openSubscribe } = useSiteOverlays()
 const route = useRoute()
 const isMessagePage = computed(() => route.path === '/message')
 const footerIconMap: Record<string, any> = {
@@ -139,7 +139,7 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
             <component :is="footerIcon(item.icon)" />
           </a>
         </div>
-        <p v-else class="about-footer-note">Thanks for stopping by.</p>
+        <p v-else class="about-footer-note">谢谢你来过。</p>
       </div>
 
       <div v-if="!isMessagePage" class="footer-stats-grid">
@@ -166,6 +166,9 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
             <button v-else-if="item.url === '/account'" type="button" class="footer-link" @click="openAccount()">
               {{ item.name }}
             </button>
+            <button v-else-if="item.url === '/subscribe'" type="button" class="footer-link" @click="openSubscribe">
+              {{ item.name }}
+            </button>
             <NuxtLink v-else :to="item.url" class="footer-link">
               {{ item.name }}
             </NuxtLink>
@@ -178,7 +181,7 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
             <a :href="`https://beian.miit.gov.cn`" target="_blank" rel="noopener noreferrer">{{ icp }}</a>
           </template>
         </p>
-        <p class="powered">{{ isMessagePage ? 'Powered by Nuxt 4' : 'Powered by Nuxt 4 & Designed with care' }}</p>
+        <p v-if="!isMessagePage" class="powered">Powered by Nuxt 4 & Designed with care</p>
       </div>
     </div>
   </footer>
@@ -260,7 +263,7 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
   color: var(--sl-color, var(--home-text-muted));
   background: var(--sl-bg, var(--home-card-alt));
   border: 1px solid var(--sl-border, var(--home-border));
-  transition: all 0.25s cubic-bezier(0.345, 0.045, 0.345, 1);
+  transition: color 0.25s cubic-bezier(0.345, 0.045, 0.345, 1), background-color 0.25s cubic-bezier(0.345, 0.045, 0.345, 1), border-color 0.25s cubic-bezier(0.345, 0.045, 0.345, 1), transform 0.25s cubic-bezier(0.345, 0.045, 0.345, 1);
 
   :deep(svg) {
     width: 20px;
@@ -333,6 +336,12 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
 
   &:hover {
     color: var(--accent);
+  }
+
+  &:focus-visible {
+    border-radius: 2px;
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
   }
 }
 

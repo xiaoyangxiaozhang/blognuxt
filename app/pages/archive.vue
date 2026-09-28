@@ -333,7 +333,7 @@ onMounted(() => {
 .year-panel {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.82s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: grid-template-rows 260ms var(--ease-out-expo);
 }
 
 .year-section.expanded .year-panel {
@@ -346,8 +346,8 @@ onMounted(() => {
   padding: 0 24px;
   opacity: 0;
   transition:
-    padding 0.82s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.55s ease;
+    padding 260ms var(--ease-out-expo),
+    opacity 180ms var(--ease-out-expo);
 }
 
 .year-section.expanded .month-groups {

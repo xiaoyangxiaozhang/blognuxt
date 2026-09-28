@@ -12,34 +12,39 @@
       <div class="composer-card">
         <div v-if="!deferIdentity" class="composer-topline">
           <label class="info-field">
+            <span v-if="variant === 'board'" class="field-label">昵称 <span aria-hidden="true">*</span></span>
             <input
               :value="form.nickname"
               type="text"
-              :readonly="isLoggedIn"
-              :disabled="isLoggedIn"
-              placeholder="昵称*"
+              :aria-required="variant === 'board' && !showAuthenticatedState ? 'true' : undefined"
+              :readonly="showAuthenticatedState"
+              :disabled="showAuthenticatedState"
+              :placeholder="variant === 'board' ? '请输入昵称' : '昵称*'"
               @input="updateField('nickname', ($event.target as HTMLInputElement).value)"
             />
           </label>
 
           <label class="info-field">
+            <span v-if="variant === 'board'" class="field-label">邮箱 <span aria-hidden="true">*</span></span>
             <input
               :value="form.email"
               type="email"
-              :readonly="isLoggedIn"
-              :disabled="isLoggedIn"
-              placeholder="邮箱*"
+              :aria-required="variant === 'board' && !showAuthenticatedState ? 'true' : undefined"
+              :readonly="showAuthenticatedState"
+              :disabled="showAuthenticatedState"
+              :placeholder="variant === 'board' ? '请输入邮箱' : '邮箱*'"
               @input="updateField('email', ($event.target as HTMLInputElement).value)"
             />
           </label>
 
           <label class="info-field">
+            <span v-if="variant === 'board'" class="field-label">个人主页 <span class="field-optional">选填</span></span>
             <input
               :value="form.website"
               type="url"
-              :readonly="isLoggedIn"
-              :disabled="isLoggedIn"
-              placeholder="网站"
+              :readonly="showAuthenticatedState"
+              :disabled="showAuthenticatedState"
+              :placeholder="variant === 'board' ? 'https://' : '网站'"
               @input="updateField('website', ($event.target as HTMLInputElement).value)"
             />
           </label>
@@ -55,7 +60,7 @@
           </button>
         </div>
 
-        <div v-if="isLoggedIn && currentUser && !deferIdentity" class="login-banner">
+        <div v-if="showAuthenticatedState && currentUser && !deferIdentity" class="login-banner">
           <div class="login-profile">
             <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.nickname || 'user'" />
             <span v-else>{{ (currentUser.nickname || currentUser.email || 'U').slice(0, 1) }}</span>
@@ -136,7 +141,7 @@
           </div>
 
           <div class="action-group">
-            <button v-if="!isLoggedIn && !deferIdentity" type="button" class="login-button" @click="loginDialogVisible = true">
+            <button v-if="!showAuthenticatedState && !deferIdentity" type="button" class="login-button" @click="loginDialogVisible = true">
               <PersonIcon aria-hidden="true" />
               登录
             </button>
@@ -418,6 +423,8 @@ const localUploads = ref<AttachmentPreviewItem[]>([])
 
 const { currentUser, isLoggedIn, fetchProfile, logoutUser } = useCommentAuth()
 const { openAccount } = useSiteOverlays()
+const authViewReady = ref(false)
+const showAuthenticatedState = computed(() => authViewReady.value && isLoggedIn.value)
 
 const previewBlocks = computed(() => renderCommentContent(props.form.content))
 const uploadedImageUrls = computed(() => extractCommentImageUrls(props.form.content))
@@ -679,6 +686,7 @@ const formatPublishTime = (value: string) => {
 }
 
 onMounted(async () => {
+  authViewReady.value = true
   await fetchProfile()
   if (isLoggedIn.value) {
     syncUserIntoForm()
@@ -763,11 +771,33 @@ onMounted(async () => {
       outline: none;
     }
 
+    &:focus-visible {
+      outline: 2px solid var(--brand-accent);
+      outline-offset: 2px;
+    }
+
     &:disabled {
       color: var(--text-muted);
       cursor: default;
     }
   }
+}
+
+.field-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+
+  > span:not(.field-optional) {
+    color: var(--home-text);
+  }
+}
+
+.field-optional {
+  margin-left: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .plain-icon {
@@ -875,6 +905,11 @@ onMounted(async () => {
 
   &:focus {
     outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
   }
 }
 
@@ -1327,7 +1362,7 @@ onMounted(async () => {
 .identity-choice-overlay {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: 600;
   display: grid;
   place-items: center;
   padding: 16px;
