@@ -76,7 +76,7 @@ const emit = defineEmits<{
 .guestbook-intro h2 {
   margin: 0;
   color: var(--home-text);
-  font-family: 'Songti SC', STSong, 'Noto Serif CJK SC', serif;
+  font-family: var(--blog-font-family, 'Songti SC'), STSong, 'Noto Serif CJK SC', serif;
   font-size: 32px;
   font-weight: 500;
   line-height: 1.3;

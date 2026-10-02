@@ -147,7 +147,7 @@ const hasResources = computed(() => Boolean(
 .detail-block h2 {
   margin: 0 0 28px;
   color: var(--home-text);
-  font-family: 'Songti SC', STSong, 'Noto Serif CJK SC', serif;
+  font-family: var(--blog-font-family, 'Songti SC'), STSong, 'Noto Serif CJK SC', serif;
   font-size: 22px;
   font-weight: 500;
   line-height: 1.4;
@@ -307,7 +307,7 @@ const hasResources = computed(() => Boolean(
   width: fit-content;
   margin: 54px 0 0 62%;
   color: var(--text-secondary);
-  font-family: 'Songti SC', STSong, 'Noto Serif CJK SC', serif;
+  font-family: var(--blog-font-family, 'Songti SC'), STSong, 'Noto Serif CJK SC', serif;
   font-size: 18px;
 }
 

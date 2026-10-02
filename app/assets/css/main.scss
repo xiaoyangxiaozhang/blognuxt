@@ -159,6 +159,14 @@ html, body {
   overflow-x: clip;
 }
 
+button,
+input,
+textarea,
+select,
+option {
+  font-family: inherit;
+}
+
 /* 主题切换全局过渡（对齐 oyiso cubic-bezier） */
 html {
   transition: background-color 0.4s cubic-bezier(0.345, 0.045, 0.345, 1),

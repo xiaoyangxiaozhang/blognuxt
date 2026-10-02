@@ -159,7 +159,7 @@ function onTitlePointerLeave(event: PointerEvent) {
   z-index: 0;
   margin: 0;
   color: var(--home-text);
-  font-family: 'Songti SC', STSong, 'Noto Serif CJK SC', serif;
+  font-family: var(--blog-font-family, 'Songti SC'), STSong, 'Noto Serif CJK SC', serif;
   font-size: clamp(48px, 5vw, 64px);
   font-weight: 500;
   line-height: 1.24;
