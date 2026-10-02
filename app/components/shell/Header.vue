@@ -65,35 +65,49 @@
               <NuxtLink to="/message" class="nav-item">留言</NuxtLink>
             </nav>
 
-            <div class="header-actions">
-              <button class="action-btn action-theme island-theme-btn" :title="themeButtonTitle" type="button" @click="toggleTheme">
-                <MoonIcon v-if="theme === 'midnight-blue'" aria-hidden="true" />
-                <SunIcon v-else aria-hidden="true" />
-              </button>
+            <div class="header-actions action-menu" @keydown.esc="handleActionsEscape" @focusout="handleActionsFocusOut">
               <button
-                class="action-btn action-subscribe"
+                class="action-btn action-menu-toggle"
                 type="button"
-                title="订阅更新"
-                aria-label="订阅更新"
-                @click="openSubscribe"
+                :aria-label="actionsOpen ? '收起快捷操作' : '展开快捷操作'"
+                :aria-expanded="actionsOpen"
+                aria-controls="header-quick-actions"
+                @click="actionsOpen = !actionsOpen"
               >
-                <BellIcon aria-hidden="true" />
+                <HamburgerMenuIcon :disable-hover="true" aria-hidden="true" />
               </button>
-              <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
-                <ExclamationTriangleIcon aria-hidden="true" />
-              </button>
-              <button class="action-btn" type="button" title="账号" aria-label="账号" @click="openAccount()">
-                <PersonIcon aria-hidden="true" />
-              </button>
-              <button
-                class="action-btn action-search"
-                type="button"
-                title="搜索"
-                aria-label="搜索"
-                @click="searchDialogOpen = true"
-              >
-                <MagnifyingGlassIcon aria-hidden="true" />
-              </button>
+              <Transition name="action-menu">
+                <div v-show="actionsOpen" id="header-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作" @click="actionsOpen = false">
+                  <button class="action-btn action-theme island-theme-btn" :title="themeButtonTitle" type="button" @click="toggleTheme">
+                    <MoonIcon v-if="theme === 'midnight-blue'" aria-hidden="true" />
+                    <SunIcon v-else aria-hidden="true" />
+                  </button>
+                  <button
+                    class="action-btn action-subscribe"
+                    type="button"
+                    title="订阅更新"
+                    aria-label="订阅更新"
+                    @click="openSubscribe"
+                  >
+                    <BellIcon aria-hidden="true" />
+                  </button>
+                  <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
+                    <ExclamationTriangleIcon aria-hidden="true" />
+                  </button>
+                  <button class="action-btn" type="button" title="账号" aria-label="账号" @click="openAccount()">
+                    <PersonIcon aria-hidden="true" />
+                  </button>
+                  <button
+                    class="action-btn action-search"
+                    type="button"
+                    title="搜索"
+                    aria-label="搜索"
+                    @click="searchDialogOpen = true"
+                  >
+                    <MagnifyingGlassIcon aria-hidden="true" />
+                  </button>
+                </div>
+              </Transition>
             </div>
           </div>
         </div>
@@ -137,35 +151,49 @@
               <NuxtLink v-if="isKimidouOpen" to="/kimidou" class="island-link" @mouseenter="moveIslandIndicator(8)" @focus="moveIslandIndicator(8)">基米斗</NuxtLink>
             </nav>
 
-            <div class="island-actions">
+            <div class="island-actions action-menu" @keydown.esc="handleActionsEscape" @focusout="handleActionsFocusOut">
               <button
-                class="action-btn action-subscribe"
+                class="action-btn action-menu-toggle"
                 type="button"
-                title="订阅更新"
-                aria-label="订阅更新"
-                @click="openSubscribe"
+                :aria-label="actionsOpen ? '收起快捷操作' : '展开快捷操作'"
+                :aria-expanded="actionsOpen"
+                aria-controls="island-quick-actions"
+                @click="actionsOpen = !actionsOpen"
               >
-                <BellIcon aria-hidden="true" />
+                <HamburgerMenuIcon :disable-hover="true" aria-hidden="true" />
               </button>
-              <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
-                <ExclamationTriangleIcon aria-hidden="true" />
-              </button>
-              <button class="action-btn" type="button" title="账号" aria-label="账号" @click="openAccount()">
-                <PersonIcon aria-hidden="true" />
-              </button>
-              <button
-                class="action-btn action-search"
-                type="button"
-                title="搜索"
-                aria-label="搜索"
-                @click="searchDialogOpen = true"
-              >
-                <MagnifyingGlassIcon aria-hidden="true" />
-              </button>
-              <button class="action-btn action-theme" :title="themeButtonTitle" type="button" @click="toggleTheme">
-                <MoonIcon v-if="theme === 'midnight-blue'" aria-hidden="true" />
-                <SunIcon v-else aria-hidden="true" />
-              </button>
+              <Transition name="action-menu">
+                <div v-show="actionsOpen" id="island-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作" @click="actionsOpen = false">
+                  <button
+                    class="action-btn action-subscribe"
+                    type="button"
+                    title="订阅更新"
+                    aria-label="订阅更新"
+                    @click="openSubscribe"
+                  >
+                    <BellIcon aria-hidden="true" />
+                  </button>
+                  <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
+                    <ExclamationTriangleIcon aria-hidden="true" />
+                  </button>
+                  <button class="action-btn" type="button" title="账号" aria-label="账号" @click="openAccount()">
+                    <PersonIcon aria-hidden="true" />
+                  </button>
+                  <button
+                    class="action-btn action-search"
+                    type="button"
+                    title="搜索"
+                    aria-label="搜索"
+                    @click="searchDialogOpen = true"
+                  >
+                    <MagnifyingGlassIcon aria-hidden="true" />
+                  </button>
+                  <button class="action-btn action-theme" :title="themeButtonTitle" type="button" @click="toggleTheme">
+                    <MoonIcon v-if="theme === 'midnight-blue'" aria-hidden="true" />
+                    <SunIcon v-else aria-hidden="true" />
+                  </button>
+                </div>
+              </Transition>
             </div>
           </div>
         </div>
@@ -184,6 +212,7 @@ import {
   BellIcon,
   ChevronDownIcon,
   ExclamationTriangleIcon,
+  HamburgerMenuIcon,
   MagnifyingGlassIcon,
   MoonIcon,
   PersonIcon,
@@ -207,6 +236,7 @@ const { openFeedback, openAccount, openSubscribe, subscribeOpen } = useSiteOverl
 const siteTitle = computed(() => blogSettings.value['blog.title'] || '小羊嚣张')
 const headerState = ref<HeaderState>('full')
 const brandMenuOpen = ref(false)
+const actionsOpen = ref(false)
 const searchDialogOpen = ref(false)
 let brandMenuCloseTimer: ReturnType<typeof setTimeout> | null = null
 const lastScrollY = ref(0)
@@ -323,11 +353,32 @@ const handleIslandResize = () => updateIslandIndicator()
 
 watch(() => route.fullPath, () => {
   closeBrandMenu()
+  actionsOpen.value = false
   searchDialogOpen.value = false
   clearIslandHover()
 })
 
+watch(headerState, () => {
+  actionsOpen.value = false
+})
+
 watch(isKimidouOpen, () => updateIslandIndicator())
+
+const handleActionsEscape = (event: KeyboardEvent) => {
+  if (!actionsOpen.value) return
+  actionsOpen.value = false
+  const menu = event.currentTarget as HTMLElement
+  menu.querySelector<HTMLButtonElement>('.action-menu-toggle')?.focus()
+}
+
+const handleActionsFocusOut = (event: FocusEvent) => {
+  const nextTarget = event.relatedTarget as Node | null
+  if (nextTarget && !(event.currentTarget as HTMLElement).contains(nextTarget)) actionsOpen.value = false
+}
+
+const handleActionsOutside = (event: PointerEvent) => {
+  if (event.target instanceof Element && !event.target.closest('.action-menu')) actionsOpen.value = false
+}
 
 const scrollToTop = () => {
   if (!import.meta.client) {
@@ -380,6 +431,7 @@ onMounted(() => {
   lastScrollY.value = window.scrollY
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('resize', handleIslandResize)
+  document.addEventListener('pointerdown', handleActionsOutside)
   handleScroll()
   updateIslandIndicator()
 })
@@ -388,6 +440,7 @@ onUnmounted(() => {
   cancelBrandMenuClose()
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('resize', handleIslandResize)
+  document.removeEventListener('pointerdown', handleActionsOutside)
 })
 </script>
 
@@ -786,6 +839,57 @@ onUnmounted(() => {
   margin-left: auto;
 }
 
+.action-menu {
+  position: relative;
+}
+
+.action-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -7px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  box-shadow: 0 12px 28px rgba(6, 16, 28, 0.14);
+  white-space: nowrap;
+  transform-origin: top center;
+}
+
+.action-menu-enter-active,
+.action-menu-leave-active {
+  transition: opacity 160ms var(--ease-out-expo), transform 200ms var(--ease-out-expo);
+}
+
+.action-menu-enter-from,
+.action-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.96);
+}
+
+.action-menu-toggle :deep(.ai-hamburger-menu-icon.no-hover .line) {
+  transform-origin: center;
+  transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1), opacity 140ms ease-out;
+}
+
+.action-menu-toggle[aria-expanded='true'] :deep(.ai-hamburger-menu-icon.no-hover .line-1) {
+  transform: translateY(4px) rotate(45deg);
+}
+
+.action-menu-toggle[aria-expanded='true'] :deep(.ai-hamburger-menu-icon.no-hover .line-2) {
+  opacity: 0;
+  transform: scaleX(0.5);
+}
+
+.action-menu-toggle[aria-expanded='true'] :deep(.ai-hamburger-menu-icon.no-hover .line-3) {
+  transform: translateY(-4px) rotate(-45deg);
+}
+
 .action-btn {
   width: 44px;
   height: 44px;
@@ -1063,9 +1167,13 @@ onUnmounted(() => {
   .header-content {
     gap: 7px;
   }
+}
 
-  .action-search {
-    display: none;
+@media (prefers-reduced-motion: reduce) {
+  .action-menu-enter-active,
+  .action-menu-leave-active,
+  .action-menu-toggle :deep(.ai-hamburger-menu-icon.no-hover .line) {
+    transition-duration: 1ms;
   }
 }
 </style>

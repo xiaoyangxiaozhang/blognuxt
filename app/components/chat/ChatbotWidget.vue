@@ -66,17 +66,7 @@
         @keydown.enter.prevent="open = true"
         @keydown.space.prevent="open = true"
       >
-        <ClientOnly>
-          <AboutModel
-            :key="chatbotModelUrl"
-            :model-url="chatbotModelUrl"
-            :auto-rotate="chatbotModelRotate"
-            :enable-controls="false"
-            :enable-zoom="false"
-            model-alt="打开和博主聊天"
-          />
-          <template #fallback><span aria-hidden="true"></span></template>
-        </ClientOnly>
+        <span class="chatbot-launcher-mark" aria-hidden="true" />
       </div>
     </div>
   </Teleport>
@@ -84,18 +74,14 @@
 
 <script setup lang="ts">
 import { Cross1Icon, PaperPlaneIcon } from '@svg-animated-icons/vue'
-import AboutModel from '~/components/about/AboutModel.vue'
-import { useBlogSettings } from '~/composables/useBlogSettings'
 import { getChatbotConfig, streamChatbotMessage } from '~/services/api/chatbot'
 import type { ChatbotMessage, PublicChatbotConfig } from '~/services/api/chatbot'
 import { proxyImageUrl } from '~/utils/image'
 import logoUrl from '~/assets/img/logo-sheep.png'
 
 const STORAGE_KEY = 'blog-chatbot-session-v2'
-const DEFAULT_CHATBOT_MODEL_URL = '/models/cat/scene.gltf'
 
 const route = useRoute()
-const { settings: blogSettings } = useBlogSettings()
 const open = ref(false)
 const sending = ref(false)
 const draft = ref('')
@@ -114,8 +100,6 @@ const sessionId = ref('')
 
 const displayName = computed(() => config.display_name || '博主')
 const avatar = computed(() => proxyImageUrl(config.avatar))
-const chatbotModelUrl = computed(() => blogSettings.value['blog.about_model_url']?.trim() || DEFAULT_CHATBOT_MODEL_URL)
-const chatbotModelRotate = computed(() => blogSettings.value['blog.about_model_rotate'] !== 'false')
 const suggestions = computed(() => (config.suggestions || []).filter(Boolean).slice(0, 4))
 const articleSlug = computed(() => {
   const slug = route.params.slug
@@ -272,12 +256,8 @@ onMounted(async () => {
   height: 100px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
-  color: inherit;
   background: transparent;
-  box-shadow: none;
   cursor: pointer;
-  font: inherit;
   transition: transform .25s var(--ease-out-expo, ease);
 
   &:hover {
@@ -285,28 +265,18 @@ onMounted(async () => {
   }
 
   &:focus-visible {
-    outline: 2px solid var(--home-text-muted, #999);
+    outline: 2px solid var(--home-text);
     outline-offset: 3px;
   }
+}
 
-  :deep(.about-model) {
-    min-height: 0;
-    overflow: visible;
-  }
-
-  :deep(canvas) { min-height: 0; }
-
-  :deep(.model-state) {
-    color: transparent;
-  }
-
-  :deep(.model-error) {
-    background: transparent;
-  }
-
-  :deep(.model-error span) {
-    display: none;
-  }
+.chatbot-launcher-mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--home-text);
+  -webkit-mask: url('../../assets/img/logo-sheep.png') center / contain no-repeat;
+  mask: url('../../assets/img/logo-sheep.png') center / contain no-repeat;
 }
 
 .chatbot-panel {
@@ -367,5 +337,10 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .chatbot-launcher { right: 16px; bottom: 16px; }
   .chatbot-panel { right: 0; bottom: 0; width: 100vw; height: min(78vh, 680px); border-radius: 15px 15px 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chatbot-launcher { transition: none; }
+  .chatbot-launcher:hover { transform: none; }
 }
 </style>

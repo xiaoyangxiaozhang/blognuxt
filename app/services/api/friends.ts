@@ -24,6 +24,14 @@ export interface GroupedFriendsData {
   total_friends: number
 }
 
+export interface FriendPreview {
+  url: string
+  title: string
+  description: string
+  favicon: string
+  image: string
+}
+
 export interface ApplyFriendPayload {
   name: string
   url: string
@@ -33,5 +41,7 @@ export interface ApplyFriendPayload {
 }
 
 export const getFriendList = () => apiGet<GroupedFriendsData>('/friends')
+
+export const getFriendPreview = (id: number) => apiGet<FriendPreview | null>(`/friends/${id}/preview`)
 
 export const applyFriend = (body: ApplyFriendPayload) => apiPost<null>('/friends/apply', body)
