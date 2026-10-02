@@ -107,7 +107,7 @@
             </form>
 
             <div class="account-links">
-              <NuxtLink class="text-button" to="/kimidou/mine" @click="close">管理我的动态</NuxtLink>
+              <NuxtLink v-if="isKimidouOpen" class="text-button" to="/kimidou/mine" @click="close">管理我的动态</NuxtLink>
               <button type="button" class="text-button" @click="securityOpen = true">修改密码</button>
             </div>
 
@@ -171,6 +171,7 @@
 import { Cross1Icon } from '@svg-animated-icons/vue'
 import { ElMessage } from 'element-plus'
 import LoginDialog from '~/components/shell/LoginDialog.vue'
+import { useBlogSettings } from '~/composables/useBlogSettings'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import {
@@ -186,6 +187,8 @@ import { uploadFile } from '~/services/api/upload'
 import { proxyImageUrl } from '~/utils/image'
 
 const { accountOpen, accountMode } = useSiteOverlays()
+const { settings: blogSettings } = useBlogSettings()
+const isKimidouOpen = computed(() => blogSettings.value['blog.kimidou_enabled'] === 'true')
 const { currentUser, authReady, isLoggedIn, fetchProfile, logoutUser } = useCommentAuth()
 const loginDialogOpen = ref(false)
 const profileSaving = ref(false)

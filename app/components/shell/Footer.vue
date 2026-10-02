@@ -9,6 +9,7 @@ import { EnvelopeClosedIcon, GithubLogoIcon, GlobeIcon, TwitterLogoIcon } from '
 
 const { data: settingsData } = await useAsyncData('footer-settings', () => getBasicSettings())
 const { settings: blogSettings } = useBlogSettings()
+const isKimidouOpen = computed(() => blogSettings.value['blog.kimidou_enabled'] === 'true')
 
 const authorName = computed(() => settingsData.value?.data?.['basic.author'] || '小羊嚣张')
 const authorAvatar = computed(() => proxyImageUrl(settingsData.value?.data?.['basic.author_avatar']) || '~/assets/img/dashboard.png')
@@ -50,7 +51,7 @@ const footerSocials = computed<FooterSocialItem[]>(() => {
 })
 const footerLinks = computed<FooterLinkItem[]>(() =>
   parseBlogJson<FooterLinkItem[]>(blogSettings.value['blog.footer_links'], [])
-    .filter((item) => item.name?.trim() && item.url?.trim())
+    .filter((item) => item.name?.trim() && item.url?.trim() && (isKimidouOpen.value || !item.url.startsWith('/kimidou')))
 )
 const { openFeedback, openAccount, openSubscribe } = useSiteOverlays()
 const route = useRoute()

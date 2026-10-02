@@ -61,7 +61,7 @@
               </div>
               <NuxtLink to="/friends" class="nav-item">友链</NuxtLink>
               <NuxtLink to="/dynamic" class="nav-item">动态</NuxtLink>
-              <NuxtLink to="/kimidou" class="nav-item">基米斗</NuxtLink>
+              <NuxtLink v-if="isKimidouOpen" to="/kimidou" class="nav-item">基米斗</NuxtLink>
               <NuxtLink to="/message" class="nav-item">留言</NuxtLink>
             </nav>
 
@@ -134,7 +134,7 @@
               <NuxtLink to="/friends" class="island-link" @mouseenter="moveIslandIndicator(5)" @focus="moveIslandIndicator(5)">友链</NuxtLink>
               <NuxtLink to="/dynamic" class="island-link" @mouseenter="moveIslandIndicator(6)" @focus="moveIslandIndicator(6)">动态</NuxtLink>
               <NuxtLink to="/message" class="island-link" @mouseenter="moveIslandIndicator(7)" @focus="moveIslandIndicator(7)">留言</NuxtLink>
-              <NuxtLink to="/kimidou" class="island-link" @mouseenter="moveIslandIndicator(8)" @focus="moveIslandIndicator(8)">基米斗</NuxtLink>
+              <NuxtLink v-if="isKimidouOpen" to="/kimidou" class="island-link" @mouseenter="moveIslandIndicator(8)" @focus="moveIslandIndicator(8)">基米斗</NuxtLink>
             </nav>
 
             <div class="island-actions">
@@ -202,6 +202,7 @@ type HeaderState = 'full' | 'logo' | 'island'
 
 const theme = ref<ThemeMode>('midnight-blue')
 const { settings: blogSettings } = useBlogSettings()
+const isKimidouOpen = computed(() => blogSettings.value['blog.kimidou_enabled'] === 'true')
 const { openFeedback, openAccount, openSubscribe, subscribeOpen } = useSiteOverlays()
 const siteTitle = computed(() => blogSettings.value['blog.title'] || '小羊嚣张')
 const headerState = ref<HeaderState>('full')
@@ -211,7 +212,7 @@ let brandMenuCloseTimer: ReturnType<typeof setTimeout> | null = null
 const lastScrollY = ref(0)
 const lastDirection = ref<'up' | 'down' | null>(null)
 
-const brandRoutes = [
+const brandRoutes = computed(() => [
   { label: '首页', to: '/' },
   { label: '全部文章', to: '/articles' },
   { label: '归档', to: '/archive' },
@@ -219,9 +220,9 @@ const brandRoutes = [
   { label: '标签', to: '/tags' },
   { label: '友链', to: '/friends' },
   { label: '动态', to: '/dynamic' },
-  { label: '基米斗', to: '/kimidou' },
+  ...(isKimidouOpen.value ? [{ label: '基米斗', to: '/kimidou' }] : []),
   { label: '留言', to: '/message' }
-]
+])
 
 const NAV_SWITCH_OFFSET = 48
 const DIRECTION_THRESHOLD = 4
@@ -287,9 +288,12 @@ const route = useRoute()
 const islandNav = ref<HTMLElement | null>(null)
 const islandHoverIndex = ref<number | null>(null)
 const islandIndicator = reactive({ left: 0, width: 50 })
-const islandRoutePaths = ['/', '/articles', '/archive', '/categories', '/tags', '/friends', '/dynamic', '/message', '/kimidou']
+const islandRoutePaths = computed(() => [
+  '/', '/articles', '/archive', '/categories', '/tags', '/friends', '/dynamic', '/message',
+  ...(isKimidouOpen.value ? ['/kimidou'] : [])
+])
 const activeIslandIndex = computed(() => {
-  const index = islandRoutePaths.indexOf(route.path)
+  const index = islandRoutePaths.value.indexOf(route.path)
   return index >= 0 ? index : 0
 })
 
@@ -322,6 +326,8 @@ watch(() => route.fullPath, () => {
   searchDialogOpen.value = false
   clearIslandHover()
 })
+
+watch(isKimidouOpen, () => updateIslandIndicator())
 
 const scrollToTop = () => {
   if (!import.meta.client) {

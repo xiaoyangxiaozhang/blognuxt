@@ -212,17 +212,21 @@ const isMinePage = computed(() => route.path === '/kimidou/mine')
 
 const { data, pending } = await useAsyncData<KimidouPageData>('kimidou-page', async () => {
   try {
-    const [momentsResponse, settingsResponse, blogSettingsResponse] = await Promise.all([
+    const blogSettingsResponse = await getSettings('blog')
+    const communitySettings = blogSettingsResponse.data || {}
+    if (communitySettings['blog.kimidou_enabled'] === 'false' || isMinePage.value) {
+      return { moments: [], total: 0, settings: {}, blogSettings: communitySettings, error: '' }
+    }
+    const [momentsResponse, settingsResponse] = await Promise.all([
       getKimidouMomentList({ page: 1, page_size: 20 }),
-      getBasicSettings(),
-      getSettings('blog')
+      getBasicSettings()
     ])
 
     return {
       moments: momentsResponse.data?.list || [],
       total: momentsResponse.data?.total || 0,
       settings: settingsResponse.data || {},
-      blogSettings: blogSettingsResponse.data || {},
+      blogSettings: communitySettings,
       error: ''
     }
   } catch (error) {
@@ -235,11 +239,14 @@ const { data, pending } = await useAsyncData<KimidouPageData>('kimidou-page', as
       error: '基米斗社区加载失败。'
     }
   }
-})
+}, { watch: [() => route.path] })
 
 const moments = computed(() => data.value?.moments || [])
 const settings = computed(() => data.value?.settings || {})
 const blogSettings = computed(() => data.value?.blogSettings || {})
+if (blogSettings.value['blog.kimidou_enabled'] === 'false') {
+  throw createError({ statusCode: 404, statusMessage: '页面不存在' })
+}
 const pageError = computed(() => data.value?.error || '')
 const currentPage = ref(1)
 const loadingMore = ref(false)
