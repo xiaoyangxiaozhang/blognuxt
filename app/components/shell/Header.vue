@@ -333,10 +333,8 @@ const updateIslandIndicator = async (index = islandHoverIndex.value ?? activeIsl
   const link = nav?.querySelectorAll<HTMLElement>('.island-link')[index]
   if (!nav || !link) return
 
-  const navRect = nav.getBoundingClientRect()
-  const linkRect = link.getBoundingClientRect()
-  islandIndicator.left = linkRect.left - navRect.left
-  islandIndicator.width = linkRect.width
+  islandIndicator.left = link.offsetLeft
+  islandIndicator.width = link.offsetWidth
 }
 
 const moveIslandIndicator = (index: number) => {
