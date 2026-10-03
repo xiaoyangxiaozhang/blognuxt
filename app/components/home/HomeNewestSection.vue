@@ -68,7 +68,7 @@
 
 <script setup lang="ts">
 import { nextTick } from 'vue'
-import { ArchiveIcon } from '@svg-animated-icons/vue'
+import { ArchiveIcon } from '~/utils/siteIcons'
 import { getDominantColor } from '~/utils/dominantColor'
 import { useScrollReveal } from '~/composables/useScrollReveal'
 

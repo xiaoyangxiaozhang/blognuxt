@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { Cross1Icon, MagnifyingGlassIcon } from '@svg-animated-icons/vue'
+import { Cross1Icon, MagnifyingGlassIcon } from '~/utils/siteIcons'
 import { searchArticles } from '~/services/api/article'
 import type { ArticleListItem } from '~/types/api'
 import { formatDate } from '~/utils/date'
@@ -260,28 +260,28 @@ onBeforeUnmount(() => {
 }
 
 .search-dialog-close {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border-radius: 6px;
 }
 
 .search-dialog-close :deep(svg),
 .search-clear :deep(svg) {
-  width: 17px;
-  height: 17px;
+  width: 20px;
+  height: 20px;
 }
 
 .search-dialog-close:hover,
 .search-dialog-close:focus-visible,
 .search-clear:hover,
 .search-clear:focus-visible {
-  color: var(--brand-accent);
-  background: var(--brand-accent-soft);
+  color: var(--home-text);
+  background: transparent;
 }
 
 .search-dialog-close:focus-visible,
 .search-clear:focus-visible {
-  outline: 2px solid var(--brand-accent);
+  outline: 2px solid currentColor;
   outline-offset: 2px;
 }
 
@@ -325,8 +325,8 @@ onBeforeUnmount(() => {
 }
 
 .search-clear {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border-radius: 5px;
 }
 

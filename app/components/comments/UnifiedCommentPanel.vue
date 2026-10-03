@@ -117,7 +117,7 @@
               aria-label="Remove image"
               @click="removeAttachment(item)"
             >
-              ×
+              <Cross1Icon :size="14" aria-hidden="true" />
             </button>
             <span v-if="item.uploading" class="attachment-status">上传中</span>
             <span v-else-if="item.uploadError" class="attachment-status attachment-status-error">上传失败</span>
@@ -135,8 +135,8 @@
               <ImageIcon aria-hidden="true" />
             </button>
 
-            <button v-if="!deferIdentity" type="button" class="plain-icon" aria-label="Toggle preview" @click="showPreview = !showPreview">
-              <EyeOpenIcon aria-hidden="true" />
+            <button v-if="!deferIdentity" type="button" class="plain-icon" :aria-label="showPreview ? '返回编辑' : '预览评论'" :aria-pressed="showPreview" @click="togglePreview">
+              <EyeOpenIcon :active="showPreview" :instant="previewIconInstant" aria-hidden="true" />
             </button>
           </div>
 
@@ -324,15 +324,7 @@
 <script setup lang="ts">
 import { markRaw } from 'vue'
 import { ElMessage } from 'element-plus'
-import {
-  ChatBubbleIcon,
-  Cross1Icon,
-  EyeOpenIcon,
-  FaceIcon,
-  ImageIcon,
-  InfoCircledIcon,
-  PersonIcon
-} from '@svg-animated-icons/vue'
+import { ChatBubbleIcon, Cross1Icon, EyeOpenIcon, FaceIcon, ImageIcon, InfoCircledIcon, PersonIcon } from '~/utils/siteIcons'
 import LoginDialog from '~/components/shell/LoginDialog.vue'
 import { renderCommentContent, extractCommentImageUrls } from '~/utils/commentRenderer'
 import { proxyImageUrl } from '~/utils/image'
@@ -419,6 +411,11 @@ const pendingLoginSubmit = ref(false)
 const submitMode = ref<UnifiedCommentSubmitMode>()
 const showEmojiPanel = ref(false)
 const showPreview = ref(false)
+const previewIconInstant = ref(false)
+const togglePreview = (event: MouseEvent) => {
+  previewIconInstant.value = event.detail === 0
+  showPreview.value = !showPreview.value
+}
 const localUploads = ref<AttachmentPreviewItem[]>([])
 
 const { currentUser, isLoggedIn, fetchProfile, logoutUser } = useCommentAuth()
@@ -815,7 +812,11 @@ onMounted(async () => {
 
   &:hover {
     color: var(--comment-toolbar-btn-hover);
-    background: var(--home-accent-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
 
   :deep(svg) {
@@ -999,6 +1000,9 @@ onMounted(async () => {
 }
 
 .remove-attachment {
+  display: grid;
+  place-items: center;
+  padding: 0;
   width: 18px;
   height: 18px;
   border: 0;
@@ -1399,18 +1403,23 @@ onMounted(async () => {
   position: absolute;
   top: 8px;
   right: 10px;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-primary);
   font-size: 22px;
   cursor: pointer;
 
   :deep(svg) {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
 }
 

@@ -3,7 +3,7 @@
     <Transition name="modal">
       <div v-if="modelValue" class="modal-overlay" @click.self="closeModal">
         <div class="modal-container">
-          <button class="close-btn" type="button" aria-label="Close login dialog" @click="closeModal">
+          <button class="close-btn" type="button" aria-label="关闭登录" @click="closeModal">
             <Cross1Icon aria-hidden="true" />
           </button>
 
@@ -70,10 +70,9 @@
                   type="button"
                   :aria-label="showPassword ? '隐藏密码' : '显示密码'"
                   :aria-pressed="showPassword"
-                  @click="showPassword = !showPassword"
+                  @click="togglePassword($event)"
                 >
-                  <EyeOpenIcon v-if="showPassword" aria-hidden="true" />
-                  <EyeClosedIcon v-else aria-hidden="true" />
+                  <EyeOpenIcon :active="showPassword" :instant="iconInputInstant" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -92,10 +91,9 @@
                   type="button"
                   :aria-label="showConfirmPassword ? '隐藏确认密码' : '显示确认密码'"
                   :aria-pressed="showConfirmPassword"
-                  @click="showConfirmPassword = !showConfirmPassword"
+                  @click="togglePassword($event, true)"
                 >
-                  <EyeOpenIcon v-if="showConfirmPassword" aria-hidden="true" />
-                  <EyeClosedIcon v-else aria-hidden="true" />
+                  <EyeOpenIcon :active="showConfirmPassword" :instant="iconInputInstant" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -142,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import { Cross1Icon, EyeClosedIcon, EyeOpenIcon, PersonIcon } from '@svg-animated-icons/vue'
+import { Cross1Icon, EyeOpenIcon, PersonIcon } from '~/utils/siteIcons'
 import { ElMessage } from 'element-plus'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { useSysConfig, type OAuthProvider } from '~/composables/useSysConfig'
@@ -168,6 +166,12 @@ const { loginWithPassword, registerWithEmail } = useCommentAuth()
 const mode = ref<AuthMode>('login')
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
+const iconInputInstant = ref(false)
+const togglePassword = (event: MouseEvent, confirm = false) => {
+  iconInputInstant.value = event.detail === 0
+  const target = confirm ? showConfirmPassword : showPassword
+  target.value = !target.value
+}
 const loading = ref(false)
 const avatarFile = ref<File | null>(null)
 const avatarPreviewUrl = ref('')
@@ -402,29 +406,29 @@ const handleSubmit = async () => {
   position: absolute;
   top: 14px;
   right: 14px;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 999px;
   display: grid;
   place-items: center;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-primary);
   font-size: 24px;
   cursor: pointer;
 
   :deep(svg) {
-    width: 21px;
-    height: 21px;
+    width: 20px;
+    height: 20px;
   }
 
   &:hover {
     color: var(--text-primary);
-    background: var(--accent-soft);
+    background: transparent;
   }
 
   &:focus-visible {
-    outline: 2px solid var(--brand-accent);
+    outline: 2px solid currentColor;
     outline-offset: 2px;
   }
 }
@@ -581,32 +585,37 @@ const handleSubmit = async () => {
   position: relative;
 
   input {
-    padding-right: 52px;
+    padding-right: 58px;
   }
 }
 
 .eye-btn {
   position: absolute;
   top: 50%;
-  right: 12px;
+  right: 6px;
   transform: translateY(-50%);
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--brand-accent);
+  color: var(--text-secondary);
   display: grid;
   place-items: center;
   cursor: pointer;
 
   :deep(svg) {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
 
   &:hover {
-    background: var(--brand-accent-soft);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
 }
 

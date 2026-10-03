@@ -85,7 +85,7 @@
 
 <script setup lang="ts">
 import { nextTick } from 'vue'
-import { ArchiveIcon, MagnifyingGlassIcon } from '@svg-animated-icons/vue'
+import { ArchiveIcon, MagnifyingGlassIcon } from '~/utils/siteIcons'
 import { getArticleList } from '~/services/api/article'
 import { mapArticleCard, type DisplayArticleCard } from '~/utils/article'
 import { getDominantColor } from '~/utils/dominantColor'

@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { Cross1Icon, PaperPlaneIcon } from '@svg-animated-icons/vue'
+import { Cross1Icon, PaperPlaneIcon } from '~/utils/siteIcons'
 import { getChatbotConfig, streamChatbotMessage } from '~/services/api/chatbot'
 import type { ChatbotMessage, PublicChatbotConfig } from '~/services/api/chatbot'
 import { proxyImageUrl } from '~/utils/image'
@@ -301,10 +301,10 @@ onMounted(async () => {
 .chatbot-kicker { color: var(--brand-accent); font-size: 10px; letter-spacing: .14em; line-height: 1.2; }
 .chatbot-heading strong { font-size: 16px; font-weight: 600; }
 .chatbot-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
-.chatbot-close { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 50%; color: var(--home-text-muted, #999); background: transparent; cursor: pointer; transition: color .2s ease, background .2s ease; }
-.chatbot-close :deep(svg) { width: 17px; height: 17px; }
-.chatbot-close:hover, .chatbot-close:focus-visible { color: var(--brand-accent); background: var(--brand-accent-soft); }
-.chatbot-close:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+.chatbot-close { display: grid; place-items: center; width: 44px; height: 44px; border: 0; color: var(--home-text); background: transparent; cursor: pointer; }
+.chatbot-close :deep(svg) { width: 20px; height: 20px; }
+.chatbot-close:active { transform: scale(.97); }
+.chatbot-close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .chatbot-messages { flex: 1; overflow-y: auto; padding: 18px 13px; background: var(--home-surface, var(--bg-primary, #f8f8fb)); }
 .chatbot-message-row { display: flex; margin-bottom: 11px; }
 .chatbot-message-row.user { justify-content: flex-end; }

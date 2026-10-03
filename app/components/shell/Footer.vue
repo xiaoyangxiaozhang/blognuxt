@@ -4,7 +4,8 @@ import { getArticleList } from '~/services/api/article'
 import { parseBlogJson, useBlogSettings } from '~/composables/useBlogSettings'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'
-import { EnvelopeClosedIcon, GithubLogoIcon, GlobeIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
+import { GithubLogoIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
+import { EnvelopeClosedIcon, GlobeIcon } from '~/utils/siteIcons'
 
 const { data: settingsData } = await useAsyncData('footer-settings', () => getBasicSettings())
 const { settings: blogSettings } = useBlogSettings()

@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { BellIcon, CheckCircledIcon, Cross1Icon } from '@svg-animated-icons/vue'
+import { BellIcon, CheckCircledIcon, Cross1Icon } from '~/utils/siteIcons'
 import { subscribeToUpdates } from '~/services/api/subscription'
 
 const props = defineProps<{
@@ -247,28 +247,28 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-primary);
   cursor: pointer;
   transition: color var(--transition-fast), background var(--transition-fast);
 
   :deep(svg) {
-    width: 21px;
-    height: 21px;
+    width: 20px;
+    height: 20px;
   }
 
   &:hover {
     color: var(--text-primary);
-    background: var(--accent-soft);
+    background: transparent;
   }
 
   &:focus-visible {
-    outline: 2px solid var(--brand-accent);
+    outline: 2px solid currentColor;
     outline-offset: 2px;
   }
 }

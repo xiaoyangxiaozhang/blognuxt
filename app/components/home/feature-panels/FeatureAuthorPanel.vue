@@ -35,7 +35,8 @@
 </template>
 
 <script setup lang="ts">
-import { EnvelopeClosedIcon, GithubLogoIcon, GlobeIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
+import { GithubLogoIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
+import { EnvelopeClosedIcon, GlobeIcon } from '~/utils/siteIcons'
 
 // 图标映射：ri 图标名 → Vue 组件
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'

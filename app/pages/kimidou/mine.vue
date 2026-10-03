@@ -3,7 +3,7 @@
     <main class="my-moments-shell">
       <header class="page-header">
         <div>
-          <NuxtLink to="/kimidou" class="back-link">← 返回基米斗</NuxtLink>
+          <NuxtLink to="/kimidou" class="back-link"><ArrowLeftIcon :size="16" aria-hidden="true" />返回基米斗</NuxtLink>
           <h1>我的动态</h1>
           <p v-if="isLoggedIn">管理你在基米斗发布的动态。</p>
         </div>
@@ -75,7 +75,7 @@
   <Transition name="site-dialog">
     <div v-if="editorOpen" class="editor-overlay" role="presentation" @click.self="closeEditor">
       <section class="editor-dialog" role="dialog" aria-modal="true" aria-labelledby="my-moment-editor-title">
-        <button type="button" class="close-button" aria-label="关闭" @click="closeEditor">×</button>
+        <button type="button" class="close-button" aria-label="关闭" @click="closeEditor"><Cross1Icon :size="20" aria-hidden="true" /></button>
         <h2 id="my-moment-editor-title">{{ editingId ? '编辑动态' : '发布动态' }}</h2>
 
         <form class="editor-form" @submit.prevent="submitMoment">
@@ -92,7 +92,7 @@
           <div v-if="previewImages.length" class="editor-images">
             <div v-for="(image, index) in previewImages" :key="`${image}-${index}`" class="editor-image">
               <img :src="image.startsWith('blob:') ? image : proxyImageUrl(image)" :alt="`待发布图片 ${index + 1}`" />
-              <button type="button" aria-label="移除图片" @click="removeImage(index)">×</button>
+              <button type="button" aria-label="移除图片" @click="removeImage(index)"><Cross1Icon :size="16" aria-hidden="true" /></button>
             </div>
           </div>
 
@@ -121,6 +121,7 @@
 
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
+import { ArrowLeftIcon, Cross1Icon } from '~/utils/siteIcons'
 import LoginDialog from '~/components/shell/LoginDialog.vue'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
@@ -433,7 +434,9 @@ onBeforeUnmount(clearPending)
   h2 { margin: 0 0 22px; font-size: 22px; }
 }
 
-.close-button { position: absolute; top: 10px; right: 12px; border: 0; background: transparent; color: var(--text-muted); font-size: 24px; cursor: pointer; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; }
+.close-button { position: absolute; display: grid; place-items: center; width: 44px; height: 44px; top: 10px; right: 12px; border: 0; background: transparent; color: var(--text-primary); cursor: pointer; }
+.close-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .editor-form { display: grid; gap: 18px; }
 .editor-form label { display: grid; gap: 8px; font-size: 13px; font-weight: 600; }
 .editor-form textarea { width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid var(--border-color); border-radius: 10px; padding: 11px 12px; background: var(--bg-panel-solid); color: var(--text-primary); font: inherit; line-height: 1.6; }
@@ -441,7 +444,7 @@ onBeforeUnmount(clearPending)
 .editor-images { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .editor-image { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 9px; background: var(--bg-panel-solid); }
 .editor-image img { width: 100%; height: 100%; object-fit: cover; }
-.editor-image button { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .6); color: #fff; cursor: pointer; }
+.editor-image button { position: absolute; display: grid; place-items: center; padding: 0; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .6); color: #fff; cursor: pointer; }
 .publish-toggle { display: flex !important; grid-template-columns: none !important; align-items: center; gap: 8px !important; font-weight: 400 !important; }
 .editor-actions { justify-content: flex-end; }
 

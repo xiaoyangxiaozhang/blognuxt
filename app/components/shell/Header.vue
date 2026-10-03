@@ -1,5 +1,5 @@
 <template>
-  <header class="blog-header" :class="[`state-${headerState}`]">
+  <header class="blog-header" :class="[`state-${headerState}`, { 'actions-open': actionsOpen }]">
     <div class="header-stage">
       <div
         class="header-layer header-layer-full"
@@ -24,7 +24,7 @@
               >
                 <img class="brand-logo" :src="logoUrl" alt="" aria-hidden="true" />
                 <span>{{ siteTitle }}</span>
-                <ChevronDownIcon class="brand-menu-arrow" :class="{ open: brandMenuOpen }" aria-hidden="true" />
+                <ChevronDownIcon class="brand-menu-arrow" :active="brandMenuOpen" :instant="iconInputInstant" aria-hidden="true" />
               </button>
               <Transition name="brand-menu">
                 <nav
@@ -65,22 +65,21 @@
               <NuxtLink to="/message" class="nav-item">留言</NuxtLink>
             </nav>
 
-            <div class="header-actions action-menu" @keydown.esc="handleActionsEscape" @focusout="handleActionsFocusOut">
+            <div class="header-actions action-menu" @keydown.esc="handleActionsEscape">
               <button
                 class="action-btn action-menu-toggle"
                 type="button"
                 :aria-label="actionsOpen ? '收起快捷操作' : '展开快捷操作'"
                 :aria-expanded="actionsOpen"
                 aria-controls="header-quick-actions"
-                @click="actionsOpen = !actionsOpen"
+                @click="toggleActions"
               >
-                <HamburgerMenuIcon :disable-hover="true" aria-hidden="true" />
+                <HamburgerMenuIcon :active="actionsOpen" :instant="iconInputInstant" aria-hidden="true" />
               </button>
-              <Transition name="action-menu">
-                <div v-show="actionsOpen" id="header-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作" @click="actionsOpen = false">
-                  <button class="action-btn action-theme island-theme-btn" :title="themeButtonTitle" type="button" @click="toggleTheme">
-                    <MoonIcon v-if="theme === 'midnight-blue'" aria-hidden="true" />
-                    <SunIcon v-else aria-hidden="true" />
+              <Transition name="action-menu" :css="!iconInputInstant" @after-leave="updateIslandIndicator()">
+                <div v-show="actionsOpen" id="header-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作">
+                  <button class="action-btn action-theme island-theme-btn" :title="themeButtonTitle" :aria-label="themeButtonTitle" type="button" @click="toggleTheme">
+                    <ThemeIcon :active="theme === 'blue-white'" :instant="iconInputInstant" aria-hidden="true" />
                   </button>
                   <button
                     class="action-btn action-subscribe"
@@ -151,19 +150,22 @@
               <NuxtLink v-if="isKimidouOpen" to="/kimidou" class="island-link" @mouseenter="moveIslandIndicator(8)" @focus="moveIslandIndicator(8)">基米斗</NuxtLink>
             </nav>
 
-            <div class="island-actions action-menu" @keydown.esc="handleActionsEscape" @focusout="handleActionsFocusOut">
+            <div class="island-actions action-menu" @keydown.esc="handleActionsEscape">
               <button
                 class="action-btn action-menu-toggle"
                 type="button"
                 :aria-label="actionsOpen ? '收起快捷操作' : '展开快捷操作'"
                 :aria-expanded="actionsOpen"
                 aria-controls="island-quick-actions"
-                @click="actionsOpen = !actionsOpen"
+                @click="toggleActions"
               >
-                <HamburgerMenuIcon :disable-hover="true" aria-hidden="true" />
+                <HamburgerMenuIcon :active="actionsOpen" :instant="iconInputInstant" aria-hidden="true" />
               </button>
-              <Transition name="action-menu">
-                <div v-show="actionsOpen" id="island-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作" @click="actionsOpen = false">
+              <Transition name="action-menu" :css="!iconInputInstant" @after-leave="updateIslandIndicator()">
+                <div v-show="actionsOpen" id="island-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作">
+                  <button class="action-btn action-theme" :title="themeButtonTitle" :aria-label="themeButtonTitle" type="button" @click="toggleTheme">
+                    <ThemeIcon :active="theme === 'blue-white'" :instant="iconInputInstant" aria-hidden="true" />
+                  </button>
                   <button
                     class="action-btn action-subscribe"
                     type="button"
@@ -188,10 +190,6 @@
                   >
                     <MagnifyingGlassIcon aria-hidden="true" />
                   </button>
-                  <button class="action-btn action-theme" :title="themeButtonTitle" type="button" @click="toggleTheme">
-                    <MoonIcon v-if="theme === 'midnight-blue'" aria-hidden="true" />
-                    <SunIcon v-else aria-hidden="true" />
-                  </button>
                 </div>
               </Transition>
             </div>
@@ -208,16 +206,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  BellIcon,
-  ChevronDownIcon,
-  ExclamationTriangleIcon,
-  HamburgerMenuIcon,
-  MagnifyingGlassIcon,
-  MoonIcon,
-  PersonIcon,
-  SunIcon
-} from '@svg-animated-icons/vue'
+import { BellIcon, ChevronDownIcon, ExclamationTriangleIcon, HamburgerMenuIcon, MagnifyingGlassIcon, PersonIcon, ThemeIcon } from '~/utils/siteIcons'
 import AccountDialog from '~/components/shell/AccountDialog.vue'
 import FeedbackDialog from '~/components/shell/FeedbackDialog.vue'
 import SearchDialog from '~/components/shell/SearchDialog.vue'
@@ -237,6 +226,12 @@ const siteTitle = computed(() => blogSettings.value['blog.title'] || '小羊嚣�
 const headerState = ref<HeaderState>('full')
 const brandMenuOpen = ref(false)
 const actionsOpen = ref(false)
+const iconInputInstant = ref(false)
+const toggleActions = (event: MouseEvent) => {
+  iconInputInstant.value = event.detail === 0
+  closeBrandMenu()
+  actionsOpen.value = !actionsOpen.value
+}
 const searchDialogOpen = ref(false)
 let brandMenuCloseTimer: ReturnType<typeof setTimeout> | null = null
 const lastScrollY = ref(0)
@@ -282,11 +277,13 @@ const themeButtonTitle = computed(() =>
   theme.value === 'midnight-blue' ? '切换到蓝白主题' : '切换到纯黑主题'
 )
 
-const toggleTheme = () => {
+const toggleTheme = (event: MouseEvent) => {
+  iconInputInstant.value = event.detail === 0
   applyTheme(theme.value === 'midnight-blue' ? 'blue-white' : 'midnight-blue')
 }
 
-const openBrandMenu = () => {
+const openBrandMenu = (event?: Event) => {
+  iconInputInstant.value = event?.type === 'focusin' || (event?.type === 'click' && (event as MouseEvent).detail === 0)
   cancelBrandMenuClose()
   brandMenuOpen.value = true
 }
@@ -356,26 +353,14 @@ watch(() => route.fullPath, () => {
   clearIslandHover()
 })
 
-watch(headerState, () => {
-  actionsOpen.value = false
-})
-
 watch(isKimidouOpen, () => updateIslandIndicator())
 
 const handleActionsEscape = (event: KeyboardEvent) => {
   if (!actionsOpen.value) return
+  iconInputInstant.value = true
   actionsOpen.value = false
   const menu = event.currentTarget as HTMLElement
   menu.querySelector<HTMLButtonElement>('.action-menu-toggle')?.focus()
-}
-
-const handleActionsFocusOut = (event: FocusEvent) => {
-  const nextTarget = event.relatedTarget as Node | null
-  if (nextTarget && !(event.currentTarget as HTMLElement).contains(nextTarget)) actionsOpen.value = false
-}
-
-const handleActionsOutside = (event: PointerEvent) => {
-  if (event.target instanceof Element && !event.target.closest('.action-menu')) actionsOpen.value = false
 }
 
 const scrollToTop = () => {
@@ -429,7 +414,6 @@ onMounted(() => {
   lastScrollY.value = window.scrollY
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('resize', handleIslandResize)
-  document.addEventListener('pointerdown', handleActionsOutside)
   handleScroll()
   updateIslandIndicator()
 })
@@ -438,7 +422,6 @@ onUnmounted(() => {
   cancelBrandMenuClose()
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('resize', handleIslandResize)
-  document.removeEventListener('pointerdown', handleActionsOutside)
 })
 </script>
 
@@ -639,11 +622,6 @@ onUnmounted(() => {
 .brand-menu-arrow {
   width: 12px;
   height: 12px;
-  transition: transform 0.2s ease;
-
-  &.open {
-    transform: rotate(180deg);
-  }
 }
 
 .brand-route-menu {
@@ -839,53 +817,27 @@ onUnmounted(() => {
 
 .action-menu {
   position: relative;
+  flex-direction: row-reverse;
+  gap: 4px;
 }
 
 .action-menu-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: -7px;
-  z-index: 20;
   display: flex;
-  flex-direction: column;
+  flex: 0 0 auto;
   align-items: center;
   gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  background: var(--bg-elevated);
-  box-shadow: 0 12px 28px rgba(6, 16, 28, 0.14);
   white-space: nowrap;
-  transform-origin: top center;
 }
 
 .action-menu-enter-active,
 .action-menu-leave-active {
-  transition: opacity 160ms var(--ease-out-expo), transform 200ms var(--ease-out-expo);
+  transition: opacity 140ms var(--ease-out-expo), transform 180ms var(--ease-out-expo);
 }
 
 .action-menu-enter-from,
 .action-menu-leave-to {
   opacity: 0;
-  transform: translateY(-6px) scale(0.96);
-}
-
-.action-menu-toggle :deep(.ai-hamburger-menu-icon.no-hover .line) {
-  transform-origin: center;
-  transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1), opacity 140ms ease-out;
-}
-
-.action-menu-toggle[aria-expanded='true'] :deep(.ai-hamburger-menu-icon.no-hover .line-1) {
-  transform: translateY(4px) rotate(45deg);
-}
-
-.action-menu-toggle[aria-expanded='true'] :deep(.ai-hamburger-menu-icon.no-hover .line-2) {
-  opacity: 0;
-  transform: scaleX(0.5);
-}
-
-.action-menu-toggle[aria-expanded='true'] :deep(.ai-hamburger-menu-icon.no-hover .line-3) {
-  transform: translateY(-4px) rotate(-45deg);
+  transform: translateX(10px);
 }
 
 .action-btn {
@@ -901,18 +853,18 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s ease, filter 0.2s ease;
+  transition: opacity 160ms ease-out;
 
   &:hover,
   &:active {
     background: transparent;
     border-color: transparent;
-    color: var(--brand-accent);
-    filter: brightness(1.08);
+    color: var(--header-action-color);
+    opacity: .8;
   }
 
   &:focus-visible {
-    color: var(--brand-accent);
+    color: var(--header-action-color);
     outline: 2px solid currentColor;
     outline-offset: 2px;
   }
@@ -925,8 +877,8 @@ onUnmounted(() => {
 }
 
 .action-btn :deep(svg) {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .floating-center {
@@ -981,6 +933,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   box-sizing: border-box;
+  max-width: calc(100% - 16px);
   height: 52px;
   min-height: 52px;
   padding: 7px 8px 7px 10px;
@@ -1058,6 +1011,15 @@ onUnmounted(() => {
   min-height: 58px;
   padding: 8px 10px 8px 12px;
   border-radius: 999px;
+}
+
+@media (max-width: 1100px) {
+  .blog-header:is(.actions-open, :has(.action-menu-leave-active)) {
+    .nav-menu,
+    .island-nav {
+      display: none;
+    }
+  }
 }
 
 @media (max-width: 960px) {
@@ -1161,6 +1123,23 @@ onUnmounted(() => {
 
 }
 
+@media (max-width: 600px) {
+  .blog-header:is(.actions-open, :has(.action-menu-leave-active)) {
+    .brand-menu-wrap,
+    .mini-logo-inline {
+      display: none;
+    }
+
+    .action-menu {
+      gap: 0;
+    }
+
+    .action-menu-panel {
+      gap: 2px;
+    }
+  }
+}
+
 @media (max-width: 360px) {
   .header-content {
     gap: 7px;
@@ -1169,8 +1148,7 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .action-menu-enter-active,
-  .action-menu-leave-active,
-  .action-menu-toggle :deep(.ai-hamburger-menu-icon.no-hover .line) {
+  .action-menu-leave-active {
     transition-duration: 1ms;
   }
 }

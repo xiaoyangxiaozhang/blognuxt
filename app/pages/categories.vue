@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ArchiveIcon } from '@svg-animated-icons/vue'
+import { ArchiveIcon } from '~/utils/siteIcons'
 import { getCategoryList } from '~/services/api/category'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 import type { CategoryItem } from '~/types/api'

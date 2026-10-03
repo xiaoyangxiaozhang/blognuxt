@@ -168,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { Cross1Icon } from '@svg-animated-icons/vue'
+import { Cross1Icon } from '~/utils/siteIcons'
 import { ElMessage } from 'element-plus'
 import LoginDialog from '~/components/shell/LoginDialog.vue'
 import { useBlogSettings } from '~/composables/useBlogSettings'
@@ -449,28 +449,28 @@ const logout = async () => {
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-primary);
   font-size: 24px;
   cursor: pointer;
   transition: color var(--transition-fast), background var(--transition-fast);
 
   :deep(svg) {
-    width: 21px;
-    height: 21px;
+    width: 20px;
+    height: 20px;
   }
 
   &:hover {
     color: var(--text-primary);
-    background: var(--accent-soft);
+    background: transparent;
   }
 
   &:focus-visible {
-    outline: 2px solid var(--brand-accent);
+    outline: 2px solid currentColor;
     outline-offset: 2px;
   }
 }

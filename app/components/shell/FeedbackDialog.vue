@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { Cross1Icon } from '@svg-animated-icons/vue'
+import { Cross1Icon } from '~/utils/siteIcons'
 import { ElMessage } from 'element-plus'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import { getFeedbackByTicket, submitFeedback, type FeedbackResponse, type FeedbackStatus, type ReportType } from '~/services/api/feedback'
@@ -247,18 +247,20 @@ const statusLabel = (status: FeedbackStatus) => ({ pending: '处理中', resolve
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: 0;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-primary);
   font-size: 24px;
   cursor: pointer;
 
   :deep(svg) {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
+
+  &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 }
 
 .dialog-header {

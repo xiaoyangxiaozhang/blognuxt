@@ -134,8 +134,7 @@
                 :title="isPlaying ? '暂停阅读' : '播放文章'"
                 @click="togglePlayback"
               >
-                <PauseIcon v-if="isPlaying" aria-hidden="true" />
-                <PlayIcon v-else aria-hidden="true" />
+                <PlayIcon :active="isPlaying" :instant="iconInputInstant" aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -189,7 +188,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, type ComponentPublicInstance } from 'vue'
-import { GearIcon, PauseIcon, PlayIcon, TrackNextIcon, TrackPreviousIcon } from '@svg-animated-icons/vue'
+import { GearIcon, PlayIcon, TrackNextIcon, TrackPreviousIcon } from '~/utils/siteIcons'
 import type { ArticleListItem } from '~/types/api'
 import type { MarkdownBlock } from '~/utils/markdown'
 import { formatDate } from '~/utils/date'
@@ -486,7 +485,9 @@ const startPlayback = () => {
   playbackFrame = window.requestAnimationFrame(advancePlayback)
 }
 
-const togglePlayback = () => {
+const iconInputInstant = ref(false)
+const togglePlayback = (event?: MouseEvent) => {
+  iconInputInstant.value = !event || event.detail === 0
   if (isPlaying.value) {
     stopPlayback()
   } else {

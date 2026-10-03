@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { EnvelopeClosedIcon, GithubLogoIcon, GlobeIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
+import { GithubLogoIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
+import { EnvelopeClosedIcon, GlobeIcon } from '~/utils/siteIcons'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'
 import IconRiNeteaseCloudMusicLine from '~icons/ri/netease-cloud-music-line'
 import IconRiTelegram2Line from '~icons/ri/telegram-2-line'

@@ -18,7 +18,7 @@
 
 <script setup lang="ts">
 import ArticleMasonryFeed from '~/components/articles/ArticleMasonryFeed.vue'
-import { ArrowLeftIcon } from '@svg-animated-icons/vue'
+import { ArrowLeftIcon } from '~/utils/siteIcons'
 
 const route = useRoute()
 

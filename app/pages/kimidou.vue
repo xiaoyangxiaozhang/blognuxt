@@ -172,7 +172,7 @@
 
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { HeartIcon, HeartFilledIcon, DotsHorizontalIcon } from '@svg-animated-icons/vue'
+import { HeartIcon, HeartFilledIcon, DotsHorizontalIcon } from '~/utils/siteIcons'
 import UnifiedCommentPanel from '~/components/comments/UnifiedCommentPanel.vue'
 import type { UnifiedCommentForm, UnifiedCommentItem, UnifiedCommentSubmitMode } from '~/components/comments/UnifiedCommentPanel.vue'
 import { getCommentList, createComment } from '~/services/api/comments'
