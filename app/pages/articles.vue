@@ -6,12 +6,16 @@
   >
     <div v-if="browseMode === 'immersive'" class="immersive-background" aria-hidden="true">
       <div v-if="previewState.settled" class="immersive-scene-layer" :data-preview-id="previewState.settled.item.id">
-        <img v-if="previewState.settled.imageUrl" class="immersive-scene-backdrop" :src="previewState.settled.imageUrl" alt="" />
-        <img v-if="previewState.settled.imageUrl" class="immersive-scene" :src="previewState.settled.imageUrl" alt="" loading="eager" fetchpriority="high" @error="handleSceneError('settled', previewState.settled.item.id)" />
+        <div class="immersive-scene-content">
+          <img v-if="previewState.settled.imageUrl && coverBackdrops.get(previewState.settled.imageUrl)" class="immersive-scene-backdrop" :src="coverBackdrops.get(previewState.settled.imageUrl)" alt="" />
+          <img v-if="previewState.settled.imageUrl" class="immersive-scene" :src="previewState.settled.imageUrl" alt="" loading="eager" fetchpriority="high" @load="prepareSceneBackdrop($event.target as HTMLImageElement)" @error="handleSceneError('settled', previewState.settled.item.id)" />
+        </div>
       </div>
-      <div v-if="previewState.entering" ref="incomingSceneRef" class="immersive-scene-layer immersive-scene-incoming" :style="{ clipPath: sceneRevealClip }" :data-preview-id="previewState.entering.item.id">
-        <img v-if="previewState.entering.imageUrl" class="immersive-scene-backdrop" :src="previewState.entering.imageUrl" alt="" />
-        <img v-if="previewState.entering.imageUrl" class="immersive-scene" :src="previewState.entering.imageUrl" alt="" @error="handleSceneError('entering', previewState.entering.item.id)" />
+      <div v-if="previewState.entering" ref="incomingSceneRef" class="immersive-scene-layer immersive-scene-incoming" :style="{ transform: sceneRevealTransform }" :data-preview-id="previewState.entering.item.id">
+        <div ref="incomingSceneContentRef" class="immersive-scene-content" :style="{ transform: sceneContentTransform }">
+          <img v-if="previewState.entering.imageUrl && coverBackdrops.get(previewState.entering.imageUrl)" class="immersive-scene-backdrop" :src="coverBackdrops.get(previewState.entering.imageUrl)" alt="" />
+          <img v-if="previewState.entering.imageUrl" class="immersive-scene" :src="previewState.entering.imageUrl" alt="" @load="prepareSceneBackdrop($event.target as HTMLImageElement)" @error="handleSceneError('entering', previewState.entering.item.id)" />
+        </div>
       </div>
       <div class="immersive-shade"></div>
     </div>
@@ -109,8 +113,8 @@
                 </NuxtLink>
               </article>
             </TransitionGroup>
-            <div ref="titleInkRef" class="immersive-title-ink" :style="{ clipPath: titleInkClip }" aria-hidden="true">
-              <TransitionGroup name="immersive-rows" tag="div" class="immersive-list">
+            <div ref="titleInkRef" class="immersive-title-ink" :style="{ height: titleInkHeight + 'px', transform: `translateY(${titleInkOffset}px)` }" aria-hidden="true">
+              <TransitionGroup name="immersive-rows" tag="div" class="immersive-list" :style="{ transform: `translateY(${-titleInkOffset}px)` }">
                 <div v-for="article in immersiveArticles" :key="article.id" class="immersive-ink-entry">
                   <span class="immersive-ink-link"><span class="immersive-title">{{ article.displayTitle }}</span></span>
                 </div>
@@ -207,16 +211,19 @@ const activeCategory = ref(restoreState.value?.category || '全部')
 const currentPage = ref(restoreState.value?.currentPage || 1)
 const immersiveScrollRef = ref<HTMLElement | null>(null)
 const incomingSceneRef = ref<HTMLElement | null>(null)
+const incomingSceneContentRef = ref<HTMLElement | null>(null)
+const coverBackdrops = shallowReactive(new Map<string, string>())
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const titleInkRef = ref<HTMLElement | null>(null)
-const titleInkClip = ref('inset(0 0 100% 0)')
+const titleInkOffset = ref(0)
+const titleInkHeight = ref(0)
 const titleInkInstant = ref(true)
 const titleInkReady = ref(false)
 const reducedMotion = ref(false)
 const previewState = shallowRef<PreviewSnapshot<ImmersiveArticle>>({ requestedId: null, settled: null, entering: null, phase: 'idle' })
 const resultsRef = ref<HTMLElement | null>(null)
 let scrollFrame = 0
-let sceneAnimation: Animation | null = null
+let sceneAnimations: Animation[] = []
 let hurryOnStart = false
 let motionQuery: MediaQueryList | null = null
 let motionChangeHandler: ((event: MediaQueryListEvent) => void) | null = null
@@ -295,22 +302,46 @@ const immersiveArticles = computed(() => [...filteredArticles.value].sort((a, b)
 ))
 const visualPreview = computed(() => previewState.value.entering || previewState.value.settled)
 const titleActiveId = computed(() => previewState.value.requestedId ?? visualPreview.value?.item.id)
-const sceneRevealClip = computed(() => {
+const sceneRevealDirection = computed(() => {
   const from = immersiveArticles.value.findIndex((article) => article.id === previewState.value.settled?.item.id)
   const to = immersiveArticles.value.findIndex((article) => article.id === previewState.value.entering?.item.id)
   // 与标题列表的纵向浏览方向一致：下一篇从下方接入，上一篇从上方接入。
-  return from >= 0 && to >= 0 && to < from ? 'inset(0 0 100% 0)' : 'inset(100% 0 0 0)'
+  return from >= 0 && to >= 0 && to < from ? -1 : 1
 })
+
+const sceneRevealTransform = computed(() => `translateY(${sceneRevealDirection.value * 100}%)`)
+const sceneContentTransform = computed(() => `translateY(${-sceneRevealDirection.value * 100}%)`)
+
+// 模糊只在小图生成时计算一次，切换过程中直接合成已有像素。
+const prepareSceneBackdrop = (image: HTMLImageElement) => {
+  const url = image.getAttribute('src')
+  if (!url || coverBackdrops.has(url) || !image.naturalWidth) return
+  const canvas = document.createElement('canvas')
+  const scale = 160 / Math.max(image.naturalWidth, image.naturalHeight)
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+  const context = canvas.getContext('2d')
+  if (!context) return
+  try {
+    context.filter = 'blur(4px)'
+    context.drawImage(image, 0, 0, canvas.width, canvas.height)
+    coverBackdrops.set(url, canvas.toDataURL('image/jpeg', .7))
+    if (coverBackdrops.size > 4) coverBackdrops.delete(coverBackdrops.keys().next().value!)
+  } catch {
+    // 无法读取跨域像素时保留原封面，背景退回纯色。
+  }
+}
 
 const updateTitleInk = (instant = titleInkInstant.value) => {
   const layer = titleInkRef.value
   const entry = immersiveScrollRef.value?.querySelector<HTMLElement>(`[data-article-id="${titleActiveId.value}"]`)
-  if (!layer || !entry) return
-  const bounds = layer.getBoundingClientRect()
+  if (!layer?.parentElement || !entry) return
+  const bounds = layer.parentElement.getBoundingClientRect()
   const row = entry.getBoundingClientRect()
   titleInkInstant.value = instant
   // 整列共用一块纵向移动的颜色窗口，经过行间空隙时自然完成上下交接。
-  titleInkClip.value = `inset(${Math.max(row.top - bounds.top, 0)}px 0 ${Math.max(bounds.bottom - row.bottom, 0)}px 0)`
+  titleInkOffset.value = Math.max(row.top - bounds.top, 0)
+  titleInkHeight.value = row.height
   titleInkReady.value = true
 }
 
@@ -326,7 +357,7 @@ watch(titleInkRef, (layer) => {
     return
   }
   titleInkObserver = new ResizeObserver(() => updateTitleInk(true))
-  titleInkObserver.observe(layer)
+  titleInkObserver.observe(layer.parentElement || layer)
   updateTitleInk(true)
 }, { flush: 'post' })
 
@@ -407,18 +438,20 @@ const prepareCover = (article: ImmersiveArticle): Promise<string | null> => {
 }
 
 const cancelSceneAnimation = () => {
-  sceneAnimation?.cancel()
-  sceneAnimation = null
+  for (const animation of sceneAnimations) animation.cancel()
+  sceneAnimations = []
   hurryOnStart = false
 }
 
 const hurrySceneAnimation = () => {
-  if (!sceneAnimation) {
+  if (!sceneAnimations.length) {
     hurryOnStart = true
     return
   }
-  const remaining = COVER_REVEAL_MS - Number(sceneAnimation.currentTime || 0)
-  if (remaining > COVER_HURRY_MS) sceneAnimation.playbackRate = remaining / COVER_HURRY_MS
+  const remaining = COVER_REVEAL_MS - Number(sceneAnimations[0]?.currentTime || 0)
+  if (remaining > COVER_HURRY_MS) {
+    for (const animation of sceneAnimations) animation.playbackRate = remaining / COVER_HURRY_MS
+  }
 }
 
 const beginSceneAnimation = async (instant: boolean) => {
@@ -426,23 +459,26 @@ const beginSceneAnimation = async (instant: boolean) => {
   await nextTick()
   if (!enteringId || previewState.value.entering?.item.id !== enteringId) return
   const layer = incomingSceneRef.value
-  if (!layer || instant || reducedMotion.value) {
+  const content = incomingSceneContentRef.value
+  if (!layer || !content || instant || reducedMotion.value) {
     hurryOnStart = false
     previewController?.complete()
     return
   }
-  const animation = layer.animate([
-    { clipPath: sceneRevealClip.value },
-    { clipPath: 'inset(0 0 0 0)' }
-  ], { duration: COVER_REVEAL_MS, easing: COVER_REVEAL_EASING, fill: 'both' })
-  sceneAnimation = animation
+  // 外层移动裁切窗口，内层反向移动，保持封面位置和上下揭开的效果。
+  const options: KeyframeAnimationOptions = { duration: COVER_REVEAL_MS, easing: COVER_REVEAL_EASING, fill: 'both' }
+  const animations = [
+    layer.animate([{ transform: sceneRevealTransform.value }, { transform: 'translateY(0)' }], options),
+    content.animate([{ transform: sceneContentTransform.value }, { transform: 'translateY(0)' }], options)
+  ]
+  sceneAnimations = animations
   if (hurryOnStart) {
     hurryOnStart = false
     hurrySceneAnimation()
   }
-  animation.finished.then(() => {
-    if (sceneAnimation !== animation) return
-    sceneAnimation = null
+  Promise.all(animations.map((animation) => animation.finished)).then(() => {
+    if (sceneAnimations !== animations) return
+    sceneAnimations = []
     previewController?.complete()
   }).catch(() => {})
 }
@@ -625,7 +661,7 @@ onMounted(async () => {
     reducedMotion.value = event.matches
     if (event.matches) {
       stopPointerScroll()
-      sceneAnimation?.finish()
+      for (const animation of sceneAnimations) animation.finish()
     }
   }
   motionQuery.addEventListener('change', onMotionChange)
@@ -640,6 +676,9 @@ onMounted(async () => {
   })
   if (!previewState.value.settled && immersiveArticles.value[0]) requestImmersivePreview(immersiveArticles.value[0], true)
   await nextTick()
+  for (const image of document.querySelectorAll<HTMLImageElement>('.immersive-background .immersive-scene')) {
+    if (image.complete) prepareSceneBackdrop(image)
+  }
   if (restoreState.value && immersiveScrollRef.value) {
     restoringScroll = true
     immersiveScrollRef.value.scrollTop = restoreState.value.scrollTop
@@ -661,6 +700,7 @@ onBeforeUnmount(() => {
   previewController = null
   for (const load of [...coverLoads.values()]) load.cancel()
   coverLoads.clear()
+  coverBackdrops.clear()
   if (motionQuery && motionChangeHandler) motionQuery.removeEventListener('change', motionChangeHandler)
   motionQuery = null
 })
@@ -966,7 +1006,9 @@ useSeoMeta({
   background: #151316;
 }
 
-.immersive-scene-incoming { clip-path: inset(100% 0 0 0); }
+.immersive-scene-content { position: absolute; inset: 0; }
+.immersive-scene-incoming,
+.immersive-scene-incoming .immersive-scene-content { will-change: transform; }
 
 .immersive-scene-backdrop { display: none; }
 
@@ -1064,10 +1106,16 @@ useSeoMeta({
 .immersive-list { padding-block: calc(50dvh - 50px); }
 .immersive-title-ink {
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto;
+  overflow: hidden;
   color: var(--immersive-accent);
   pointer-events: none;
-  transition: clip-path var(--immersive-switch-duration) var(--immersive-switch-easing);
+  will-change: transform;
+  transition: transform var(--immersive-switch-duration) var(--immersive-switch-easing);
+}
+.immersive-title-ink .immersive-list {
+  will-change: transform;
+  transition: transform var(--immersive-switch-duration) var(--immersive-switch-easing);
 }
 .immersive-rows-move { transition: transform 400ms cubic-bezier(.23, 1, .32, 1); }
 .immersive-rows-enter-active { transition: opacity 260ms cubic-bezier(.23, 1, .32, 1), transform 400ms cubic-bezier(.23, 1, .32, 1); }
@@ -1134,6 +1182,7 @@ useSeoMeta({
 }
 
 .is-instant .immersive-title-ink,
+.is-instant .immersive-title-ink .immersive-list,
 .is-instant .immersive-rows-move,
 .is-instant .immersive-rows-enter-active { transition: none; }
 
@@ -1227,7 +1276,6 @@ useSeoMeta({
     width: calc(100% + 48px);
     height: calc(100% + 48px);
     object-fit: cover;
-    filter: blur(20px);
     opacity: .4;
   }
 
@@ -1242,7 +1290,8 @@ useSeoMeta({
 @media (prefers-reduced-motion: reduce) {
   .immersive-rows-move,
   .immersive-rows-enter-active { transition: none; }
-  .immersive-title-ink { transition: none; }
+  .immersive-title-ink,
+  .immersive-title-ink .immersive-list { transition: none; }
   .immersive-meta { animation: none; }
 }
 </style>
