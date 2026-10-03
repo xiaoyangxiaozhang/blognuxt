@@ -16,6 +16,7 @@
 
         <div v-else-if="errorMessage" class="error-container">
           <el-alert :title="errorMessage" type="error" show-icon />
+          <button type="button" class="retry-button" @click="$emit('retry')">重新加载</button>
         </div>
 
         <div v-else class="articles-grid">
@@ -24,37 +25,39 @@
             :key="article.id"
             :data-article-id="article.id"
             data-scroll-reveal
-            class="article-card"
-            :class="{ featured: index === 0 }"
+            class="article-entry"
+            :class="{ featured: index === 0, compact: index >= 3 }"
             :style="{ '--reveal-delay': revealDelay(index) }"
           >
-            <NuxtLink :to="`/article/${article.slug}`" class="article-cover-link">
-              <div class="article-cover">
-                <img :src="article.cover" :alt="article.title" loading="lazy" class="lazy-image" />
+            <NuxtLink :to="`/article/${article.slug}`" :aria-label="article.title" class="article-card" :class="{ featured: index === 0, compact: index >= 3 }">
+              <div class="article-cover-link">
+                <div class="article-cover">
+                  <img v-if="article.cover" :src="article.cover" :alt="article.title" loading="lazy" class="lazy-image" />
+                </div>
+              </div>
+
+              <div class="article-content">
+                <div data-reveal-child class="article-meta">
+                  <span v-if="article.isTop" class="pinned-label">置顶</span>
+                  <span class="category">
+                    <ArchiveIcon aria-hidden="true" />
+                    {{ article.categoryName }}
+                  </span>
+                  <span
+                    v-for="tag in article.tags.slice(0, 2)"
+                    :key="tag.name"
+                    class="tag"
+                  >
+                    {{ tag.name }}
+                  </span>
+                </div>
+                <h3 data-reveal-child class="article-title">
+                  {{ article.title }}
+                </h3>
+                <p v-if="index < 3 && article.summary" class="article-summary">{{ article.summary }}</p>
+                <time data-reveal-child class="article-date" :datetime="article.dateTime">{{ article.publishDate }}</time>
               </div>
             </NuxtLink>
-
-            <div class="article-content">
-              <div data-reveal-child class="article-meta">
-                <span class="category">
-                  <ArchiveIcon aria-hidden="true" />
-                  {{ article.categoryName }}
-                </span>
-                <span
-                  v-for="tag in article.tags.slice(0, 2)"
-                  :key="tag.name"
-                  class="tag"
-                >
-                  {{ tag.name }}
-                </span>
-              </div>
-              <h3 data-reveal-child class="article-title">
-                <NuxtLink :to="`/article/${article.slug}`">
-                  {{ article.title }}
-                </NuxtLink>
-              </h3>
-              <span data-reveal-child class="article-date">{{ article.publishDate }}</span>
-            </div>
           </article>
 
           <div v-if="articles.length === 0" class="empty-container">
@@ -85,6 +88,9 @@ interface ArticleCard {
   publishDate: string
   categoryName: string
   categoryUrl: string
+  summary?: string
+  isTop?: boolean
+  dateTime?: string
   tags: ArticleTag[]
 }
 
@@ -93,6 +99,8 @@ const props = defineProps<{
   loading: boolean
   errorMessage: string
 }>()
+
+defineEmits<{ retry: [] }>()
 
 const newestSectionRef = ref<HTMLElement | null>(null)
 const {
@@ -132,7 +140,7 @@ onUpdated(refreshScrollReveal)
   margin-top: 28px;
 }
 
-[data-scroll-reveal] {
+.scroll-reveal-enabled [data-scroll-reveal] {
   --reveal-distance: 18px;
   opacity: 0;
   transform: translate3d(0, var(--reveal-distance), 0);
@@ -177,6 +185,21 @@ onUpdated(refreshScrollReveal)
   }
 }
 
+.retry-button {
+  margin-top: 12px;
+  padding: 8px 16px;
+  min-height: 44px;
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  background: var(--home-card-bg);
+  color: var(--home-text);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover { color: var(--brand-accent); }
+  &:focus-visible { outline: 2px solid var(--home-text); outline-offset: 4px; }
+}
+
 .articles-section {
   .loading-container,
   .error-container,
@@ -188,12 +211,23 @@ onUpdated(refreshScrollReveal)
 
 .articles-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 24px;
   align-items: stretch;
 }
 
+.article-entry {
+  min-width: 0;
+  grid-column: span 3;
+
+  &.featured { grid-column: 1 / -1; }
+  &.compact { grid-column: span 2; }
+}
+
 .article-card {
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -202,19 +236,15 @@ onUpdated(refreshScrollReveal)
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
-  transition:
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 400ms cubic-bezier(0.345, 0.045, 0.345, 1);
 
-  &:hover {
-    transform: scale(0.97);
-  }
-
-  &:focus-within {
-    transform: scale(0.97);
+  &:focus-visible {
+    outline: 2px solid var(--home-text);
+    outline-offset: 4px;
   }
 }
 
-.article-card [data-reveal-child] {
+.scroll-reveal-enabled .article-card [data-reveal-child] {
   opacity: 0;
   transform: translate3d(0, 14px, 0);
   transition:
@@ -222,31 +252,26 @@ onUpdated(refreshScrollReveal)
     transform 220ms var(--ease-out-expo);
 }
 
-.article-card.is-revealed .article-meta,
-.article-card.is-revealed .article-title,
-.article-card.is-revealed .article-date {
+.article-entry.is-revealed .article-meta,
+.article-entry.is-revealed .article-title,
+.article-entry.is-revealed .article-date {
   opacity: 1;
   transform: translate3d(0, 0, 0);
 }
 
-.article-card.is-revealed .article-meta {
+.article-entry.is-revealed .article-meta {
   transition-delay: calc(var(--reveal-delay, 0ms) + 40ms);
 }
 
-.article-card.is-revealed .article-title {
+.article-entry.is-revealed .article-title {
   transition-delay: calc(var(--reveal-delay, 0ms) + 70ms);
 }
 
-.article-card.is-revealed .article-date {
+.article-entry.is-revealed .article-date {
   transition-delay: calc(var(--reveal-delay, 0ms) + 100ms);
 }
 
-.article-card[data-scroll-reveal].is-revealed:hover {
-  transform: scale(0.97);
-}
-
 .article-card.featured {
-  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr);
   height: 360px;
@@ -260,6 +285,11 @@ onUpdated(refreshScrollReveal)
   display: block;
   min-width: 0;
   height: 100%;
+}
+
+.article-card:not(.featured) .article-cover-link {
+  height: auto;
+  flex-shrink: 0;
 }
 
 .article-cover {
@@ -300,13 +330,13 @@ onUpdated(refreshScrollReveal)
   object-position: center center;
   transform: scale(1.015);
   transform-origin: center;
-  transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), filter var(--transition-base);
+  transition: transform 400ms cubic-bezier(0.345, 0.045, 0.345, 1);
   filter: saturate(0.94);
 }
 
-.article-card:hover .article-cover img,
-.article-card:focus-within .article-cover img {
-  transform: scale(1.08);
+@media (hover: hover) and (pointer: fine) {
+  .article-card:hover { transform: scale(0.97); }
+  .article-card:hover .article-cover img { transform: scale(1.08); }
 }
 
 .article-content {
@@ -319,7 +349,7 @@ onUpdated(refreshScrollReveal)
 
 .article-card.featured .article-content {
   padding: 34px 36px 28px;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .article-meta {
@@ -333,7 +363,7 @@ onUpdated(refreshScrollReveal)
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: var(--card-accent, var(--home-accent));
+    color: var(--text-secondary);
     font-size: 13px;
     font-weight: 500;
 
@@ -350,7 +380,7 @@ onUpdated(refreshScrollReveal)
     padding: 2px 8px;
     border-radius: 4px;
     background: color-mix(in srgb, var(--card-accent, var(--accent-soft)) 25%, transparent);
-    color: var(--card-accent, var(--home-text-muted));
+    color: var(--text-secondary);
     font-size: 12px;
     font-weight: 400;
   }
@@ -363,6 +393,27 @@ onUpdated(refreshScrollReveal)
   margin-top: 10px;
 }
 
+.pinned-label {
+  color: var(--home-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.article-summary {
+  display: -webkit-box;
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.75;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.article-card.featured .article-summary {
+  -webkit-line-clamp: 3;
+}
+
 .article-title {
   margin: 0;
   font-size: 18px;
@@ -372,21 +423,25 @@ onUpdated(refreshScrollReveal)
   overflow: hidden;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-
-  a {
-    color: inherit;
-    text-decoration: none;
-
-    &:hover {
-      color: var(--home-accent);
-    }
-  }
 }
 
 .article-card.featured .article-title {
   font-size: 30px;
   line-height: 1.2;
   -webkit-line-clamp: 3;
+}
+
+.article-card.compact {
+  min-height: 340px;
+
+  .article-cover { height: 180px; }
+  .article-content { padding: 18px 20px 20px; }
+  .article-meta { gap: 6px; }
+  .article-title { -webkit-line-clamp: 2; }
+  .article-date {
+    margin-top: auto;
+    padding-top: 10px;
+  }
 }
 
 @media (max-width: 1200px) {
@@ -424,6 +479,10 @@ onUpdated(refreshScrollReveal)
   }
 }
 
+@media (max-width: 1024px) {
+  .article-entry.compact { grid-column: span 3; }
+}
+
 @media (max-width: 768px) {
   .newest-section {
     margin-top: 64px;
@@ -444,6 +503,9 @@ onUpdated(refreshScrollReveal)
   .articles-grid {
     grid-template-columns: 1fr;
   }
+
+  .article-entry,
+  .article-entry.compact { grid-column: 1 / -1; }
 
   .article-card {
     border-radius: 14px;
@@ -486,26 +548,21 @@ onUpdated(refreshScrollReveal)
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-scroll-reveal],
-  .article-card [data-reveal-child] {
+  .scroll-reveal-enabled [data-scroll-reveal],
+  .scroll-reveal-enabled .article-card [data-reveal-child] {
     opacity: 1;
     transform: none;
     transition: none;
   }
 
+  .article-card,
   .article-card:hover,
-  .article-card:focus-within,
-  .article-card[data-scroll-reveal].is-revealed:hover {
-    transform: none;
-  }
-
-  .article-card .article-cover img {
+  .article-card .article-cover img,
+  .article-card:hover .article-cover img {
     transform: none;
     transition: none;
   }
 
-  .article-card .article-cover::after {
-    transition: none;
-  }
+  .article-card .article-cover::after { transition: none; }
 }
 </style>

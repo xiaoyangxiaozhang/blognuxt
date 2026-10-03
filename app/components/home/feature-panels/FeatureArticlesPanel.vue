@@ -7,9 +7,9 @@
     <div v-else-if="articleCards.length === 0" class="empty-text">还没有文章数据</div>
 
     <div v-else class="article-grid">
-      <NuxtLink v-for="article in articleCards" :key="article.id" :to="`/article/${article.slug}`" class="article-card">
+      <NuxtLink v-for="article in articleCards" :key="article.id" :to="`/article/${article.slug}`" :aria-label="article.title" class="article-card">
         <div class="thumb">
-          <img :src="article.cover" :alt="article.title" loading="lazy" />
+          <img v-if="article.cover" :src="article.cover" :alt="article.title" loading="lazy" />
         </div>
         <div class="card-body">
           <span class="category-label">{{ article.categoryName }}</span>
@@ -63,15 +63,9 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
   text-decoration: none;
-  transition:
-    transform var(--transition-base);
-
-  &:hover {
-    transform: scale(0.97);
-  }
+  transition: transform 400ms cubic-bezier(0.345, 0.045, 0.345, 1);
 
   &:focus-visible {
-    transform: scale(0.97);
     outline: 2px solid var(--home-text);
     outline-offset: 4px;
   }
@@ -102,14 +96,14 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), filter var(--transition-base);
+    transition: transform 400ms cubic-bezier(0.345, 0.045, 0.345, 1);
     filter: saturate(0.94);
   }
 }
 
-.article-card:hover .thumb img,
-.article-card:focus-visible .thumb img {
-  transform: scale(1.1);
+@media (hover: hover) and (pointer: fine) {
+  .article-card:hover { transform: scale(0.97); }
+  .article-card:hover .thumb img { transform: scale(1.08); }
 }
 
 .card-body {
@@ -181,7 +175,8 @@ const articleCards = computed(() => props.recentArticles.slice(0, 6))
     transform: none;
   }
 
-  .thumb img {
+  .thumb img,
+  .article-card:hover .thumb img {
     transform: none;
   }
 }

@@ -585,6 +585,7 @@ const formatMomentDate = formatDate
 }
 
 .moment-row {
+  scroll-margin-top: 100px;
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 14px;

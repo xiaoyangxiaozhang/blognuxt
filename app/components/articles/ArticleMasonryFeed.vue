@@ -1,5 +1,5 @@
 <template>
-  <section ref="feedRef" class="article-feed" :class="{ 'article-feed-overview': isControlled }">
+  <section ref="feedRef" class="article-feed" :class="{ 'article-feed-overview': isControlled, 'scroll-reveal-enabled': scrollRevealReady }">
     <div v-if="!isControlled" data-scroll-reveal class="feed-head">
       <div class="feed-copy">
         <h2 v-if="title" class="feed-title">{{ title }}</h2>
@@ -34,38 +34,40 @@
           :key="article.id"
           :data-article-id="article.id"
           data-scroll-reveal
-          class="article-card"
+          class="article-entry"
           :class="{ featured: !isControlled && index === 0 }"
           :style="{ '--reveal-delay': revealDelay(index) }"
         >
-          <NuxtLink :to="`/article/${encodeURIComponent(article.slug)}`" class="article-cover-link">
-            <div class="article-cover">
-              <img :src="article.cover" :alt="article.title" loading="lazy" decoding="async" />
-              <span v-if="isControlled && article.isTop" class="article-pin">置顶</span>
+          <NuxtLink :to="`/article/${encodeURIComponent(article.slug)}`" :aria-label="article.title" class="article-card" :class="{ featured: !isControlled && index === 0 }">
+            <div class="article-cover-link">
+              <div class="article-cover">
+                <img :src="article.cover" :alt="article.title" loading="lazy" decoding="async" />
+                <span v-if="isControlled && article.isTop" class="article-pin">置顶</span>
+              </div>
+            </div>
+
+            <div class="article-content">
+              <div data-reveal-child class="article-meta">
+                <span class="category">
+                  <ArchiveIcon aria-hidden="true" />
+                  {{ article.categoryName }}
+                </span>
+                <span
+                  v-for="tag in article.tags.slice(0, 2)"
+                  :key="`${article.id}-${tag.slug || tag.name}`"
+                  class="tag"
+                >
+                  {{ tag.name }}
+                </span>
+              </div>
+
+              <h3 data-reveal-child class="article-title">
+                {{ article.title }}
+              </h3>
+
+              <span data-reveal-child class="article-date">{{ article.publishDate }}</span>
             </div>
           </NuxtLink>
-
-          <div class="article-content">
-            <div data-reveal-child class="article-meta">
-              <span class="category">
-                <ArchiveIcon aria-hidden="true" />
-                {{ article.categoryName }}
-              </span>
-              <span
-                v-for="tag in article.tags.slice(0, 2)"
-                :key="`${article.id}-${tag.slug || tag.name}`"
-                class="tag"
-              >
-                {{ tag.name }}
-              </span>
-            </div>
-
-            <h3 data-reveal-child class="article-title">
-              <NuxtLink :to="`/article/${encodeURIComponent(article.slug)}`">{{ article.title }}</NuxtLink>
-            </h3>
-
-            <span data-reveal-child class="article-date">{{ article.publishDate }}</span>
-          </div>
         </article>
       </div>
 
@@ -123,6 +125,7 @@ const coverColors = new Map<string, Promise<string>>()
 let observer: IntersectionObserver | null = null
 
 const {
+  isReady: scrollRevealReady,
   refresh: refreshScrollReveal
 } = useScrollReveal(feedRef)
 
@@ -287,7 +290,7 @@ onBeforeUnmount(() => {
   gap: 24px;
 }
 
-[data-scroll-reveal] {
+.scroll-reveal-enabled [data-scroll-reveal] {
   --reveal-distance: 18px;
   opacity: 0;
   transform: translate3d(0, var(--reveal-distance), 0);
@@ -386,7 +389,16 @@ onBeforeUnmount(() => {
   align-items: stretch;
 }
 
+.article-entry {
+  min-width: 0;
+
+  &.featured { grid-column: 1 / -1; }
+}
+
 .article-card {
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -395,19 +407,15 @@ onBeforeUnmount(() => {
   border: 1px solid var(--home-border);
   background: var(--home-card-bg);
   box-shadow: var(--home-shadow);
-  transition:
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 400ms cubic-bezier(0.345, 0.045, 0.345, 1);
 
-  &:hover {
-    transform: scale(0.97);
-  }
-
-  &:focus-within {
-    transform: scale(0.97);
+  &:focus-visible {
+    outline: 2px solid var(--home-text);
+    outline-offset: 4px;
   }
 }
 
-.article-card [data-reveal-child] {
+.scroll-reveal-enabled .article-card [data-reveal-child] {
   opacity: 0;
   transform: translate3d(0, 14px, 0);
   transition:
@@ -415,27 +423,26 @@ onBeforeUnmount(() => {
     transform 220ms var(--ease-out-expo);
 }
 
-.article-card.is-revealed .article-meta,
-.article-card.is-revealed .article-title,
-.article-card.is-revealed .article-date {
+.article-entry.is-revealed .article-meta,
+.article-entry.is-revealed .article-title,
+.article-entry.is-revealed .article-date {
   opacity: 1;
   transform: translate3d(0, 0, 0);
 }
 
-.article-card.is-revealed .article-meta {
+.article-entry.is-revealed .article-meta {
   transition-delay: calc(var(--reveal-delay, 0ms) + 40ms);
 }
 
-.article-card.is-revealed .article-title {
+.article-entry.is-revealed .article-title {
   transition-delay: calc(var(--reveal-delay, 0ms) + 70ms);
 }
 
-.article-card.is-revealed .article-date {
+.article-entry.is-revealed .article-date {
   transition-delay: calc(var(--reveal-delay, 0ms) + 100ms);
 }
 
 .article-card.featured {
-  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr);
   height: 360px;
@@ -449,11 +456,6 @@ onBeforeUnmount(() => {
   display: block;
   min-width: 0;
   height: 100%;
-
-  &:focus-visible {
-    outline: 2px solid var(--brand-accent);
-    outline-offset: -4px;
-  }
 }
 
 .article-cover {
@@ -507,13 +509,13 @@ onBeforeUnmount(() => {
   object-position: center center;
   transform: scale(1.015);
   transform-origin: center;
-  transition: transform 320ms var(--ease-out-expo), filter var(--transition-base);
+  transition: transform 400ms cubic-bezier(0.345, 0.045, 0.345, 1);
   filter: saturate(0.94);
 }
 
-.article-card:hover .article-cover img,
-.article-card:focus-within .article-cover img {
-  transform: scale(1.08);
+@media (hover: hover) and (pointer: fine) {
+  .article-card:hover { transform: scale(0.97); }
+  .article-card:hover .article-cover img { transform: scale(1.08); }
 }
 
 .article-content {
@@ -573,21 +575,6 @@ onBeforeUnmount(() => {
   text-wrap: pretty;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
-
-  a {
-    color: inherit;
-    text-decoration: none;
-
-    &:hover {
-      color: var(--home-accent);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--brand-accent);
-      outline-offset: 3px;
-      border-radius: 3px;
-    }
-  }
 }
 
 .article-card.featured .article-title {
@@ -741,29 +728,21 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-scroll-reveal],
-  .article-card [data-reveal-child] {
+  .scroll-reveal-enabled [data-scroll-reveal],
+  .scroll-reveal-enabled .article-card [data-reveal-child] {
     opacity: 1;
     transform: none;
     transition: none;
   }
 
+  .article-card,
   .article-card:hover,
-  .article-card[data-scroll-reveal].is-revealed:hover {
-    transform: none;
-  }
-
-  .article-card:focus-within {
-    transform: none;
-  }
-
-  .article-card .article-cover img {
+  .article-card .article-cover img,
+  .article-card:hover .article-cover img {
     transform: none;
     transition: none;
   }
 
-  .article-card .article-cover::after {
-    transition: none;
-  }
+  .article-card .article-cover::after { transition: none; }
 }
 </style>

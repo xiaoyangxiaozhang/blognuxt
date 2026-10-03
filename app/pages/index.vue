@@ -91,14 +91,32 @@
           :tags="homeData.tags"
           :recent-articles="homeData.recentArticles"
           :comments="homeData.comments"
+          :moments="homeData.moments"
+          :moments-error="homeData.momentsError"
           :loading="pending"
+          @retry="refresh"
         />
 
         <HomeNewestSection
           :articles="homeData.articles"
           :loading="pending"
           :error-message="homeData.error"
+          @retry="refresh"
         />
+
+        <section class="home-moments" aria-labelledby="home-moments-heading">
+          <div class="moments-heading">
+            <h2 id="home-moments-heading">最近动态</h2>
+            <NuxtLink to="/dynamic" class="more-moments">全部动态</NuxtLink>
+          </div>
+          <FeatureMomentsPanel
+            :moments="homeData.moments"
+            :limit="3"
+            :loading="pending"
+            :error-message="homeData.momentsError"
+            @retry="refresh"
+          />
+        </section>
       </div>
     </section>
   </div>
@@ -108,6 +126,8 @@
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 import HomeFeaturePanel from '~/components/home/HomeFeaturePanel.vue'
 import HomeNewestSection from '~/components/home/HomeNewestSection.vue'
+import FeatureMomentsPanel from '~/components/home/feature-panels/FeatureMomentsPanel.vue'
+import { getMomentList, type MomentItem } from '~/services/api/moments'
 import { getArticleList } from '~/services/api/article'
 import { getCategoryList } from '~/services/api/category'
 import { getCommentList } from '~/services/api/comments'
@@ -131,6 +151,9 @@ interface ArticleCard {
   publishDate: string
   categoryName: string
   categoryUrl: string
+  summary: string
+  isTop: boolean
+  dateTime: string
   tags: ArticleTag[]
 }
 
@@ -152,12 +175,13 @@ interface HomePayload {
   tags: TagItem[]
   recentArticles: FeatureArticleItem[]
   comments: NormalizedCommentItem[]
+  moments: MomentItem[]
+  momentsError: string
   basicSettings: Record<string, string>
   blogSettings: Record<string, string>
   error: string
 }
 
-const DEFAULT_COVER = 'https://picsum.photos/600/400?random=31'
 const DEFAULT_AVATAR = 'https://picsum.photos/200/200?random=7'
 const EMPTY_HOME_PAYLOAD: HomePayload = {
   articles: [],
@@ -166,6 +190,8 @@ const EMPTY_HOME_PAYLOAD: HomePayload = {
   tags: [],
   recentArticles: [],
   comments: [],
+  moments: [],
+  momentsError: '',
   basicSettings: {},
   blogSettings: {},
   error: ''
@@ -201,7 +227,7 @@ const mapBaseArticle = (item: ArticleListItem) => ({
   id: item.id,
   slug: resolveArticleSlug(item),
   title: item.title,
-  cover: proxyImageUrl(item.cover) || DEFAULT_COVER,
+  cover: proxyImageUrl(item.cover),
   publishDate: formatDate(item.publish_time),
   categoryName: item.category?.name || '未分类'
 })
@@ -209,6 +235,9 @@ const mapBaseArticle = (item: ArticleListItem) => ({
 const mapArticleCard = (item: ArticleListItem): ArticleCard => ({
   ...mapBaseArticle(item),
   categoryUrl: item.category?.url || '',
+  summary: item.summary?.trim() || item.excerpt?.trim() || '',
+  isTop: Boolean(item.is_top),
+  dateTime: item.publish_time?.slice(0, 10) || '',
   tags: item.tags?.map((tag) => ({ name: tag.name, url: tag.url })) || []
 })
 
@@ -216,7 +245,7 @@ const mapFeatureArticle = (item: ArticleListItem): FeatureArticleItem => mapBase
 
 const buildHomePayload = async (): Promise<HomePayload> => {
   try {
-    const [articlesResponse, categoriesResponse, tagsResponse, settingsResponse, blogSettingsResponse, commentsResponse] = await Promise.all([
+    const [articlesResponse, categoriesResponse, tagsResponse, settingsResponse, blogSettingsResponse, commentsResponse, momentsResponse] = await Promise.all([
       getArticleList({
         page: currentPage.value,
         page_size: pageSize
@@ -230,7 +259,8 @@ const buildHomePayload = async (): Promise<HomePayload> => {
         target_key: 'message',
         page: 1,
         page_size: 6
-      }).catch(() => null)
+      }).catch(() => null),
+      getMomentList({ page: 1, page_size: 6 }).catch(() => null)
     ])
 
     const articleList = articlesResponse.data.list || []
@@ -242,6 +272,8 @@ const buildHomePayload = async (): Promise<HomePayload> => {
       tags: tagsResponse.data.list || [],
       recentArticles: articleList.slice(0, 6).map(mapFeatureArticle),
       comments: normalizeCommentList(commentsResponse?.data?.list || []),
+      moments: momentsResponse?.code === 0 ? (momentsResponse.data.list || []).filter(item => item.is_publish !== false) : [],
+      momentsError: momentsResponse?.code === 0 ? '' : '动态暂时无法加载',
       basicSettings: settingsResponse.data || {},
       blogSettings: blogSettingsResponse.data || {},
       error: ''
@@ -255,7 +287,7 @@ const buildHomePayload = async (): Promise<HomePayload> => {
   }
 }
 
-const { data, pending } = await useAsyncData<HomePayload>('home-page', buildHomePayload, {
+const { data, pending, refresh } = await useAsyncData<HomePayload>('home-page', buildHomePayload, {
   watch: [currentPage]
 })
 
@@ -759,7 +791,40 @@ onBeforeUnmount(() => {
   padding: 72px 0 56px;
 }
 
+.home-moments {
+  width: min(1000px, 100%);
+  margin: 56px auto 0;
+  color: var(--home-text);
+}
+
+.moments-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+
+  h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 600;
+  }
+}
+
+.more-moments {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--home-text);
+  font-size: 14px;
+  text-decoration: none;
+
+  &:hover { color: var(--brand-accent); }
+  &:focus-visible { outline: 2px solid var(--home-text); outline-offset: 4px; }
+}
+
 @media (max-width: 1200px) {
+  .home-moments { width: min(700px, 100%); }
   .content-shell {
     width: min(760px, calc(100% - 60px));
     margin: 0 auto;
@@ -775,6 +840,9 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
+  .home-moments { width: min(368px, 100%); margin-top: 40px; }
+  .moments-heading { margin-bottom: 20px; }
+  .moments-heading h2 { font-size: 24px; }
   .hero-section {
     padding: 88px 16px 48px;
   }

@@ -2,7 +2,7 @@
   <section
     ref="featurePanelRef"
     class="feature-panel"
-    :class="{ 'scroll-reveal-enabled': scrollRevealReady }"
+    :class="{ 'scroll-reveal-enabled': scrollRevealReady, 'keyboard-navigation': keyboardNavigation }"
   >
     <div data-scroll-reveal class="section-heading">
       <h2>Feature</h2>
@@ -17,7 +17,14 @@
         :class="{ active: activeTab === item.key }"
         role="tab"
         :aria-selected="activeTab === item.key"
+        :tabindex="activeTab === item.key ? 0 : -1"
         @click="switchTab(item.key)"
+        @keydown.enter.prevent="switchTab(item.key, true)"
+        @keydown.space.prevent="switchTab(item.key, true)"
+        @keydown.right.prevent="moveTab(1)"
+        @keydown.left.prevent="moveTab(-1)"
+        @keydown.home.prevent="focusTab('author')"
+        @keydown.end.prevent="focusTab('notice')"
       >
         {{ item.label }}
       </li>
@@ -25,9 +32,9 @@
     </ul>
 
     <div data-scroll-reveal class="feature-body-reveal">
-      <transition name="fade">
+      <transition name="fade" :css="!keyboardNavigation">
         <div :key="activeTab" class="feature-body">
-          <component :is="activeComponent" v-bind="activeProps" />
+          <component :is="activeComponent" v-bind="activeProps" @retry="$emit('retry')" />
         </div>
       </transition>
     </div>
@@ -42,6 +49,7 @@ import FeatureMomentsPanel from '~/components/home/feature-panels/FeatureMoments
 import FeatureNoticePanel from '~/components/home/feature-panels/FeatureNoticePanel.vue'
 import { useScrollReveal } from '~/composables/useScrollReveal'
 import type { NormalizedCommentItem } from '~/utils/comments'
+import type { MomentItem } from '~/services/api/moments'
 
 interface CategoryItem {
   id: number
@@ -88,8 +96,12 @@ const props = defineProps<{
   tags: TagItem[]
   recentArticles: RecentArticleItem[]
   comments: NormalizedCommentItem[]
+  moments: MomentItem[]
+  momentsError: string
   loading: boolean
 }>()
+
+defineEmits<{ retry: [] }>()
 
 const featurePanelRef = ref<HTMLElement | null>(null)
 const { isReady: scrollRevealReady } = useScrollReveal(featurePanelRef)
@@ -103,12 +115,24 @@ const tabs: Array<{ key: FeatureTabKey; label: string }> = [
 ]
 
 const activeTab = ref<FeatureTabKey>('author')
+const keyboardNavigation = ref(false)
 const tabRefs = ref<Record<FeatureTabKey, HTMLElement | null>>({} as Record<FeatureTabKey, HTMLElement | null>)
 const indicatorPos = ref({ left: '0px', width: '0px', opacity: 0 })
 
-const switchTab = (key: FeatureTabKey) => {
+const switchTab = (key: FeatureTabKey, keyboard = false) => {
+  keyboardNavigation.value = keyboard
   activeTab.value = key
   updateIndicator()
+}
+
+const focusTab = (key: FeatureTabKey) => {
+  switchTab(key, true)
+  tabRefs.value[key]?.focus()
+}
+
+const moveTab = (direction: number) => {
+  const index = tabs.findIndex(item => item.key === activeTab.value)
+  focusTab(tabs[(index + direction + tabs.length) % tabs.length]!.key)
 }
 
 const updateIndicator = () => {
@@ -168,8 +192,8 @@ const activeProps = computed(() => {
       }
     case 'moments':
       return {
-        recentArticles: props.recentArticles,
-        tags: props.tags,
+        moments: props.moments,
+        errorMessage: props.momentsError,
         loading: props.loading
       }
     case 'comments':
@@ -265,6 +289,10 @@ const activeProps = computed(() => {
   pointer-events: none;
 }
 
+.keyboard-navigation .feature-tab-indicator {
+  transition: none;
+}
+
 .feature-tab {
   display: inline-block;
   padding: 6px 16px;
@@ -282,6 +310,11 @@ const activeProps = computed(() => {
 
   &.active {
     color: var(--brand-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--home-text);
+    outline-offset: -2px;
   }
 }
 
@@ -348,6 +381,19 @@ const activeProps = computed(() => {
   .feature-tab {
     font-size: 14px;
     padding: 6px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-tab-indicator,
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: none;
+  }
+
+  .fade-enter-from,
+  .fade-leave-to {
+    transform: none;
   }
 }
 </style>
