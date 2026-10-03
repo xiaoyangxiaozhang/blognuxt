@@ -6,9 +6,11 @@
   >
     <div v-if="browseMode === 'immersive'" class="immersive-background" aria-hidden="true">
       <div v-if="previewState.settled" class="immersive-scene-layer" :data-preview-id="previewState.settled.item.id">
+        <img v-if="previewState.settled.imageUrl" class="immersive-scene-backdrop" :src="previewState.settled.imageUrl" alt="" />
         <img v-if="previewState.settled.imageUrl" class="immersive-scene" :src="previewState.settled.imageUrl" alt="" loading="eager" fetchpriority="high" @error="handleSceneError('settled', previewState.settled.item.id)" />
       </div>
       <div v-if="previewState.entering" ref="incomingSceneRef" class="immersive-scene-layer immersive-scene-incoming" :style="{ clipPath: sceneRevealClip }" :data-preview-id="previewState.entering.item.id">
+        <img v-if="previewState.entering.imageUrl" class="immersive-scene-backdrop" :src="previewState.entering.imageUrl" alt="" />
         <img v-if="previewState.entering.imageUrl" class="immersive-scene" :src="previewState.entering.imageUrl" alt="" @error="handleSceneError('entering', previewState.entering.item.id)" />
       </div>
       <div class="immersive-shade"></div>
@@ -966,6 +968,8 @@ useSeoMeta({
 
 .immersive-scene-incoming { clip-path: inset(100% 0 0 0); }
 
+.immersive-scene-backdrop { display: none; }
+
 .immersive-scene {
   width: 100%;
   height: 100%;
@@ -1164,11 +1168,18 @@ useSeoMeta({
 }
 
 @media (max-width: 650px) {
+  .articles-page.is-immersive {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    min-height: 0;
+  }
+
   .is-immersive .articles-shell {
     display: flex;
     width: calc(100% - 36px);
-    height: calc(100dvh + 86px);
-    min-height: 650px;
+    height: 100%;
+    min-height: 0;
     flex-direction: column;
     padding: 96px 0 0;
   }
@@ -1194,17 +1205,38 @@ useSeoMeta({
   .immersive-scroll {
     position: relative;
     inset: auto;
-    min-height: 340px;
+    min-height: 0;
     flex: 1 1 auto;
     margin-top: 12px;
+    container-type: size;
+    touch-action: pan-y;
   }
 
-  .immersive-list { padding-block: max(110px, calc(24dvh - 35px)); }
+  // 按滚动区自身高度留白，让首尾标题都能进入选中区域。
+  .immersive-list { padding-block: max(0px, calc(50cqh - 42px)); }
   .immersive-entry, .immersive-ink-entry { min-height: 84px; }
   .immersive-entry a, .immersive-ink-link { min-height: 76px; }
   .immersive-title { font-size: clamp(28px, 7.8vw, 38px); }
   .immersive-meta { font-size: 10px; }
   .immersive-state, .immersive-empty { margin-top: 70px; font-size: 15px; }
+
+  .immersive-scene-backdrop {
+    position: absolute;
+    inset: -24px;
+    display: block;
+    width: calc(100% + 48px);
+    height: calc(100% + 48px);
+    object-fit: cover;
+    filter: blur(20px);
+    opacity: .4;
+  }
+
+  .immersive-scene {
+    position: relative;
+    object-fit: contain;
+  }
+
+  .immersive-shade { background: rgba(0, 0, 0, .4); }
 }
 
 @media (prefers-reduced-motion: reduce) {
