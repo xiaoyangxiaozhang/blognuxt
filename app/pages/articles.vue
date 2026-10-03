@@ -754,7 +754,6 @@ useSeoMeta({
   gap: 28px;
   margin-bottom: 0;
   padding: 18px 0 20px;
-  border-top: 1px solid var(--home-border);
 }
 
 .filter-field {
