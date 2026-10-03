@@ -82,7 +82,7 @@
           aria-label="沉浸浏览文章"
           @scroll.passive="handleImmersiveScroll"
           @pointermove="handleImmersivePointerMove"
-          @pointerleave="stopPointerScroll"
+          @pointerleave="handleImmersivePointerLeave"
           @pointerdown="stopPointerScroll"
           @wheel.passive="stopPointerScroll"
         >
@@ -489,6 +489,14 @@ const stopPointerScroll = () => {
   cancelAnimationFrame(pointerScrollFrame)
   pointerScrollFrame = 0
   pointerPoint = null
+}
+
+const handleImmersivePointerLeave = (event: PointerEvent) => {
+  stopPointerScroll()
+  if (event.pointerType !== 'mouse' || event.buttons) return
+  // 离开边缘时保留最后的指针位置，避免未完成的滚动回调回选中心文章。
+  pointerPoint = { x: event.clientX, y: event.clientY }
+  handleImmersiveScroll()
 }
 
 const handleEntryFocus = (event: FocusEvent, article: ImmersiveArticle) => {
