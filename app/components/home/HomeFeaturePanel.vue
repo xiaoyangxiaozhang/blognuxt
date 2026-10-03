@@ -288,6 +288,7 @@ const activeProps = computed(() => {
 .feature-body-reveal {
   --reveal-delay: 240ms;
   display: grid;
+  align-items: start;
 }
 
 .feature-body {
