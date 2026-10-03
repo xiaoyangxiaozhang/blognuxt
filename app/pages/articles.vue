@@ -942,7 +942,7 @@ useSeoMeta({
   isolation: isolate;
   background: #121113;
   color: #f8f5f8;
-  --immersive-accent: #f078ee;
+  --immersive-accent: var(--brand-accent);
 }
 
 .immersive-background,
