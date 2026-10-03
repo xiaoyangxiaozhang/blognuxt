@@ -1,72 +1,82 @@
 <template>
-  <div class="blog-archive">
-    <!-- 骨架屏幕布 -->
-    <PageCurtain v-model="curtainReady" @opened="onCurtainOpened" />
+  <div class="blog-archive" :aria-busy="pending">
+    <PageCurtain v-model="curtainReady" />
     <div class="archive-content">
       <div class="archive-hero">
-        <h1 class="archive-title">All Posts ({{ totalArticles }})</h1>
+        <h1 class="archive-title">归档</h1>
+        <span class="archive-count">{{ totalArticles }} 篇文章</span>
       </div>
-
       <div v-if="pending" class="archive-state">
         <el-skeleton :rows="8" animated />
       </div>
-
       <div v-else-if="pageError" class="archive-state">
         <el-alert :title="pageError" type="error" show-icon />
       </div>
-
       <div v-else-if="archiveGroups.length === 0" class="archive-state">
         <el-empty description="暂无文章归档" />
       </div>
-
       <div v-else class="archive-list">
         <section
           v-for="group in archiveGroups"
           :key="group.year"
           class="year-section"
-          :class="{ expanded: isYearExpanded(group.year) }"
+          :aria-labelledby="`archive-year-${group.year}`"
         >
-          <button
+          <h2
+            :id="`archive-year-${group.year}`"
             class="year-heading"
-            type="button"
-            :aria-expanded="isYearExpanded(group.year)"
-            :aria-controls="`archive-year-${group.year}`"
-            @click="toggleYear(group.year)"
+            :class="{ 'is-undated': group.year === '未分类' }"
+            :aria-label="group.year === '未分类' ? group.year : `${group.year}年`"
           >
-            <span class="year-value">{{ group.year }}年</span>
-            <span class="year-count">{{ group.monthGroups.reduce((total, month) => total + month.articles.length, 0) }} 篇</span>
-          </button>
-
-          <div :id="`archive-year-${group.year}`" class="year-panel">
-            <div class="month-groups">
-              <section v-for="monthGroup in group.monthGroups" :key="monthGroup.month" class="month-section">
-                <h2 class="month-title">{{ monthGroup.month }}月</h2>
-
-                <div class="article-items">
-                  <NuxtLink
-                    v-for="article in monthGroup.articles"
-                    :key="article.id"
-                    :to="`/article/${article.slug}`"
-                    class="article-item"
-                  >
-                    <div class="article-date">
-                      <span class="article-day">{{ article.day }}日</span>
-                    </div>
-
-                    <div class="article-main">
-                      <h3 class="article-title">{{ article.title }}</h3>
-                      <div class="article-meta">
-                        <span v-if="article.categoryName">{{ article.categoryName }}</span>
-                      </div>
-                    </div>
-                  </NuxtLink>
-                </div>
-              </section>
-            </div>
-          </div>
+            <span class="year-value" aria-hidden="true">{{ group.year }}</span>
+          </h2>
+          <ul class="article-items">
+            <li v-for="article in group.articles" :key="article.id">
+              <NuxtLink
+                :to="`/article/${article.slug}`"
+                class="article-item"
+                :class="{ 'is-previewing': coverVisible && hoverArticle?.id === article.id }"
+                @pointerenter="showCover(article, $event)"
+                @pointermove="moveCover($event)"
+                @pointerleave="hideCover"
+                @focus="showCover(article, $event)"
+                @blur="hideCover"
+                @click="hideCover"
+                @keydown.esc="hideCover"
+              >
+                <span class="article-title">{{ article.title }}</span>
+                <time v-if="article.dateTime" :datetime="article.dateTime" class="article-date">
+                  {{ article.month }}-{{ article.day }}
+                </time>
+              </NuxtLink>
+            </li>
+          </ul>
         </section>
       </div>
     </div>
+    <ClientOnly>
+      <Teleport to="body">
+        <div
+          ref="coverRef"
+          class="archive-hover-cover"
+          :class="{ 'is-visible': coverVisible && coverLoaded, 'is-instant': instantCover }"
+          aria-hidden="true"
+        >
+          <img
+            v-if="hoverArticle"
+            :key="hoverArticle.id"
+            :src="hoverArticle.cover"
+            :class="{ 'is-poster': hoverArticle.isPoster }"
+            alt=""
+            width="240"
+            height="300"
+            decoding="async"
+            @load="coverLoaded = true"
+            @error="hideCover"
+          />
+        </div>
+      </Teleport>
+    </ClientOnly>
   </div>
 </template>
 
@@ -74,91 +84,126 @@
 import { getArticleList } from '~/services/api/article'
 import type { ArticleListItem } from '~/types/api'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
+import { resolveArticleSlug } from '~/utils/article'
+import { proxyImageUrl } from '~/utils/image'
 
 interface ArchiveArticleItem {
   id: number
   slug: string
   title: string
-  categoryName: string
+  cover: string
+  isPoster: boolean
   year: string
   month: string
   day: string
+  dateTime: string
   sortTime: number
 }
 
-interface ArchiveMonthGroup {
-  month: string
-  articles: ArchiveArticleItem[]
-}
-
-interface ArchiveYearGroup {
-  year: string
-  monthGroups: ArchiveMonthGroup[]
-}
-
-const expandedYears = ref<string[]>([])
-const isRevealed = ref(false)
 const curtainReady = ref(false)
+const coverRef = ref<HTMLElement | null>(null)
+const hoverArticle = shallowRef<ArchiveArticleItem | null>(null)
+const coverVisible = ref(false)
+const coverLoaded = ref(false)
+const instantCover = ref(false)
+let hoverQuery: MediaQueryList | undefined
+let motionQuery: MediaQueryList | undefined
+let coverFrame = 0
+let activeLink: HTMLElement | null = null
+let position = { x: 0, y: 0 }
+let target = { x: 0, y: 0 }
+let previousTargetX = 0
+let rotation = 0
 
-const triggerReveal = () => {
-  setTimeout(() => {
-    curtainReady.value = true
-  }, 200)
+const hideCover = () => {
+  coverVisible.value = false
+  cancelAnimationFrame(coverFrame)
+  coverFrame = 0
 }
 
-const onCurtainOpened = () => {
-  isRevealed.value = true
+const paintCover = () => {
+  coverFrame = 0
+  if (!coverRef.value || !coverVisible.value) return
+  const remainingX = target.x - position.x
+  const remainingY = target.y - position.y
+  const progress = instantCover.value ? 1 : 0.08
+  position.x += remainingX * progress
+  position.y += remainingY * progress
+  const swing = instantCover.value ? 0 : Math.max(-60, Math.min(60, (target.x - previousTargetX) * 0.6))
+  previousTargetX = target.x
+  rotation += (swing - rotation) * progress
+  const moving = Math.abs(remainingX) + Math.abs(remainingY) > 0.2 || Math.abs(rotation) > 0.05
+  if (!moving) {
+    position = { ...target }
+    rotation = 0
+  }
+  coverRef.value.style.transform = `translate3d(${position.x}px, ${position.y}px, 0) rotate(${rotation}deg)`
+  if (moving && !instantCover.value) {
+    coverFrame = requestAnimationFrame(paintCover)
+  }
 }
 
-const resolveArticleSlug = (item: Pick<ArticleListItem, 'id' | 'slug' | 'url'>) => {
-  if (item.slug) {
-    return item.slug
+const setCoverTarget = (x: number, y: number) => {
+  if (!coverRef.value || !activeLink) return
+  const width = coverRef.value.offsetWidth
+  const height = coverRef.value.offsetHeight
+  target = {
+    x: Math.max(24, Math.min(x - width / 2, window.innerWidth - width - 24)),
+    y: Math.max(24, Math.min(y - height / 2, window.innerHeight - height - 24))
   }
+}
 
-  if (item.url) {
-    const matched = item.url.match(/\/([^/]+)\/?$/)
-    if (matched?.[1]) {
-      return decodeURIComponent(matched[1])
-    }
+const showCover = (article: ArchiveArticleItem, event: PointerEvent | FocusEvent) => {
+  if (!hoverQuery?.matches || !article.cover) {
+    hideCover()
+    return
   }
+  activeLink = event.currentTarget as HTMLElement
+  instantCover.value = event.type === 'focus' || Boolean(motionQuery?.matches)
+  if (hoverArticle.value?.id !== article.id) {
+    coverLoaded.value = false
+    hoverArticle.value = article
+  }
+  const rect = activeLink.getBoundingClientRect()
+  const pointerEvent = event as PointerEvent
+  const keyboard = event.type === 'focus'
+  setCoverTarget(keyboard ? rect.left + rect.width / 2 : pointerEvent.clientX, keyboard ? rect.top + rect.height / 2 : pointerEvent.clientY)
+  position = { ...target }
+  previousTargetX = target.x
+  rotation = 0
+  coverVisible.value = true
+  if (!coverFrame) paintCover()
+}
 
-  return String(item.id)
+const moveCover = (event: PointerEvent) => {
+  if (!coverVisible.value || instantCover.value) return
+  setCoverTarget(event.clientX, event.clientY)
+  if (!coverFrame) coverFrame = requestAnimationFrame(paintCover)
 }
 
 const toArchiveItem = (item: ArticleListItem): ArchiveArticleItem => {
   const parsedDate = item.publish_time ? new Date(item.publish_time.replace(/-/g, '/')) : null
-  const safeDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null
-
+  const date = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null
+  const year = date ? String(date.getFullYear()) : '未分类'
+  const month = date ? String(date.getMonth() + 1).padStart(2, '0') : '00'
+  const day = date ? String(date.getDate()).padStart(2, '0') : '--'
   return {
     id: item.id,
     slug: resolveArticleSlug(item),
     title: item.title,
-    categoryName: item.category?.name || '',
-    year: safeDate ? String(safeDate.getFullYear()) : '未分类',
-    month: safeDate ? String(safeDate.getMonth() + 1).padStart(2, '0') : '00',
-    day: safeDate ? String(safeDate.getDate()).padStart(2, '0') : '--',
-    sortTime: safeDate ? safeDate.getTime() : 0
+    cover: proxyImageUrl(item.cover),
+    isPoster: /\.png(?:\?|$)/i.test(item.cover || ''),
+    year,
+    month,
+    day,
+    dateTime: date ? `${year}-${month}-${day}` : '',
+    sortTime: date?.getTime() || 0
   }
 }
-
-const toggleYear = (year: string) => {
-  if (expandedYears.value.includes(year)) {
-    expandedYears.value = expandedYears.value.filter((item) => item !== year)
-    return
-  }
-
-  expandedYears.value = [...expandedYears.value, year]
-}
-
-const isYearExpanded = (year: string) => expandedYears.value.includes(year)
 
 const { data, pending } = await useAsyncData('archive-page', async () => {
   try {
-    const response = await getArticleList({
-      page: 1,
-      page_size: 500
-    })
-
+    const response = await getArticleList({ page: 1, page_size: 500 })
     return {
       list: (response.data.list || []).map(toArchiveItem),
       total: response.data.total || 0,
@@ -174,348 +219,175 @@ const { data, pending } = await useAsyncData('archive-page', async () => {
   }
 })
 
-const archiveGroups = computed<ArchiveYearGroup[]>(() => {
-  const groupedByYear = new Map<string, ArchiveArticleItem[]>()
+const archiveGroups = computed(() => {
+  const years = new Map<string, ArchiveArticleItem[]>()
   const sortedArticles = [...(data.value?.list || [])].sort((a, b) => b.sortTime - a.sortTime)
-
   for (const article of sortedArticles) {
-    const bucket = groupedByYear.get(article.year) || []
-    bucket.push(article)
-    groupedByYear.set(article.year, bucket)
+    const group = years.get(article.year) || []
+    group.push(article)
+    years.set(article.year, group)
   }
-
-  return Array.from(groupedByYear.entries()).map(([year, articles]) => {
-    const groupedByMonth = new Map<string, ArchiveArticleItem[]>()
-
-    for (const article of articles) {
-      const monthBucket = groupedByMonth.get(article.month) || []
-      monthBucket.push(article)
-      groupedByMonth.set(article.month, monthBucket)
-    }
-
-    return {
-      year,
-      monthGroups: Array.from(groupedByMonth.entries()).map(([month, monthArticles]) => ({
-        month,
-        articles: monthArticles
-      }))
-    }
-  })
+  return Array.from(years, ([year, articles]) => ({ year, articles }))
 })
-
 const totalArticles = computed(() => data.value?.total || 0)
 const pageError = computed(() => data.value?.error || '')
 
-watch(archiveGroups, (groups) => {
-  if (expandedYears.value.length === 0 && groups[0]) {
-    expandedYears.value = [groups[0].year]
-  }
-}, { immediate: true })
-
-// 检查数据加载状态触发入场动画
-watch(pending, (val) => {
-  if (!val && import.meta.client) {
-    triggerReveal()
-  }
+watch(pending, (value) => {
+  if (!value && import.meta.client) curtainReady.value = true
 })
-
 onMounted(() => {
-  if (!pending.value) {
-    triggerReveal()
-  }
+  curtainReady.value = !pending.value
+  hoverQuery = window.matchMedia('(hover: hover) and (pointer: fine)')
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  hoverQuery.addEventListener('change', hideCover)
+  motionQuery.addEventListener('change', hideCover)
+  window.addEventListener('resize', hideCover)
+  document.addEventListener('scroll', hideCover, { passive: true, capture: true })
+})
+onBeforeUnmount(() => {
+  hideCover()
+  hoverQuery?.removeEventListener('change', hideCover)
+  motionQuery?.removeEventListener('change', hideCover)
+  window.removeEventListener('resize', hideCover)
+  document.removeEventListener('scroll', hideCover, true)
 })
 </script>
 
 <style scoped lang="scss">
 .blog-archive {
-  min-height: 100vh;
-  background: var(--home-surface);
-  color: var(--home-text);
-  padding: 80px 0 72px;
+  min-height: calc(100dvh - 86px);
+  padding: 144px 0 96px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
-
 .archive-content {
-  width: min(1100px, calc(100% - 60px));
-  margin: 0 auto;
+  width: min(760px, calc(100% - 64px));
+  margin-inline: auto;
 }
-
 .archive-hero {
-  margin-bottom: 28px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 78px;
 }
-
 .archive-title {
   margin: 0;
-  display: inline-block;
-  font-size: 36px;
-  line-height: 1.08;
-  font-weight: 800;
-  color: var(--home-text);
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: 3px;
-    width: 100%;
-    height: 7px;
-    border-radius: 999px;
-    background: var(--brand-accent-soft);
-    z-index: -1;
-  }
-}
-
-.archive-state {
-  padding: 28px;
-  border-radius: 15px;
-  border: 1px solid var(--home-border);
-  background: var(--home-card-bg);
-  box-shadow: var(--home-shadow);
-}
-
-.archive-list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.year-section {
-  border-radius: 15px;
-  border: 1px solid var(--home-border);
-  background: var(--home-card-bg);
-  box-shadow: var(--home-shadow);
-  overflow: hidden;
-  transition:
-    box-shadow 0.35s ease,
-    border-color 0.35s ease,
-    background 0.35s ease,
-    transform 0.35s ease;
-}
-
-.year-section:hover {
-  border-color: var(--accent-border);
-  background: var(--home-card-hover);
-}
-
-.year-section.expanded {
-  border-color: var(--accent-border);
-  background: var(--home-card-hover);
-}
-
-.year-heading {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  padding: 22px 24px;
-  margin: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-}
-
-.year-count {
-  color: var(--home-text-muted);
-  font-size: 13px;
-  font-weight: 400;
-}
-
-.year-count {
-  margin-left: 14px;
-}
-
-.year-value {
-  font-size: 24px;
+  font-size: 34px;
   font-weight: 700;
-  color: var(--home-text);
-}
-
-.year-panel {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 260ms var(--ease-out-expo);
-}
-
-.year-section.expanded .year-panel {
-  grid-template-rows: 1fr;
-}
-
-.month-groups {
-  min-height: 0;
-  overflow: hidden;
-  padding: 0 24px;
-  opacity: 0;
-  transition:
-    padding 260ms var(--ease-out-expo),
-    opacity 180ms var(--ease-out-expo);
-}
-
-.year-section.expanded .month-groups {
-  padding: 8px 44px 34px;
-  opacity: 1;
-}
-
-.month-section + .month-section {
-  margin-top: 28px;
-}
-
-.month-title {
-  margin: 0 0 14px;
-  font-size: 19px;
   line-height: 1.2;
-  font-weight: 800;
-  color: var(--home-text);
 }
-
+.archive-count {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.archive-state { padding-block: 24px; }
+.year-section { position: relative; }
+.year-section + .year-section { margin-top: 76px; }
+.year-heading {
+  position: relative;
+  height: 32px;
+  margin: 0;
+  pointer-events: none;
+}
+.year-value {
+  position: absolute;
+  left: -32px;
+  top: -46px;
+  font-size: clamp(88px, 10vw, 132px);
+  line-height: 1;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text-primary) 3%, transparent);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+.is-undated .year-value { font-size: 64px; }
 .article-items {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-
-.article-items::before {
-  content: '';
-  position: absolute;
-  left: 12px;
-  top: 14px;
-  bottom: 44px;
-  width: 1px;
-  background: var(--home-border);
-}
-
 .article-item {
-  display: grid;
-  grid-template-columns: 108px minmax(0, 1fr);
-  align-items: start;
-  gap: 12px;
-  min-height: 58px;
-  text-decoration: none;
-  color: inherit;
-}
-
-.article-date {
   position: relative;
-  padding-left: 36px;
-  color: var(--home-text-muted);
-  font-size: 15px;
-  line-height: 1.8;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--home-text-muted);
-    transform: translateY(-50%);
-  }
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-height: 46px;
+  padding-block: 10px;
+  color: var(--text-primary);
+  text-decoration: none;
 }
-
-.article-item:hover .article-date::before {
-  background: var(--brand-accent);
+.article-item.is-previewing { z-index: 61; }
+.article-title {
+  min-width: 0;
+  font-size: 17px;
+  line-height: 1.65;
+  font-weight: 400;
+  text-wrap: pretty;
 }
-
-.article-day {
+.article-date {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-
-.article-main {
-  min-width: 0;
-  padding-top: 1px;
+.article-item:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 4px;
 }
-
-.article-title {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.75;
-  font-weight: 500;
-  color: var(--home-text);
-  transition: color 0.3s ease;
+.article-item:focus-visible .article-title {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
-
-.article-item:hover .article-title {
-  color: var(--brand-accent-hover);
+.article-item:active .article-title { opacity: 0.8; }
+.archive-hover-cover {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 240px;
+  height: min(300px, calc(100dvh - 48px));
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(-400px, -400px, 0);
+  transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-
-.article-meta {
-  display: flex;
-  gap: 12px;
-  margin-top: 2px;
-  color: var(--home-text-muted);
-  font-size: 12px;
+.archive-hover-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--bg-panel-solid);
+  transform: scale(0.96);
+  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-
-@media (max-width: 1200px) {
-  .archive-content {
-    width: min(760px, calc(100% - 60px));
-  }
-
-  .archive-title {
-    font-size: 32px;
-  }
-
+.archive-hover-cover img.is-poster { object-fit: contain; }
+.archive-hover-cover.is-visible { opacity: 1; }
+.archive-hover-cover.is-visible img { transform: scale(1); }
+.archive-hover-cover.is-instant,
+.archive-hover-cover.is-instant img { transition: none; }
+@media (hover: hover) and (pointer: fine) {
+  .article-item:hover .article-title { color: var(--brand-accent); }
+}
+@media (max-width: 767px) {
+  .blog-archive { padding: 124px 0 56px; }
+  .archive-content { width: calc(100% - 40px); }
+  .archive-title { font-size: 28px; }
+  .archive-hero { margin-bottom: 68px; }
   .year-value {
-    font-size: 22px;
+    left: -10px;
+    top: -32px;
+    font-size: 88px;
   }
+  .year-section + .year-section { margin-top: 60px; }
+  .article-title { font-size: 16px; }
+  .article-date { font-size: 12px; }
 }
-
-@media (max-width: 768px) {
-  .archive-content {
-    width: 100%;
-  }
-
-  .blog-archive {
-    padding-bottom: 48px;
-  }
-
-  .archive-title {
-    font-size: 28px;
-  }
-
-  .year-value {
-    font-size: 20px;
-  }
-
-  .year-heading {
-    padding: 20px;
-  }
-
-  .month-groups {
-    padding: 0 20px;
-  }
-
-  .year-section.expanded .month-groups {
-    padding: 0 20px 24px;
-  }
-
-  .month-section + .month-section {
-    margin-top: 28px;
-  }
-
-  .month-title {
-    font-size: 18px;
-    margin-bottom: 12px;
-  }
-
-  .article-item {
-    grid-template-columns: 88px minmax(0, 1fr);
-    gap: 10px;
-  }
-
-  .article-date {
-    padding-left: 28px;
-    font-size: 14px;
-  }
-
-  .article-item + .article-item .article-date::after {
-    left: 10px;
-  }
-
-  .article-title {
-    font-size: 15px;
-    line-height: 1.65;
-  }
+@media (hover: none), (pointer: coarse) {
+  .archive-hover-cover { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .archive-hover-cover,
+  .archive-hover-cover img { transition: none; }
 }
 </style>
