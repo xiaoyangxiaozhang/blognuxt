@@ -192,11 +192,6 @@ const PAGE_SIZE = 12
 const COVER_REVEAL_MS = 460
 const COVER_REVEAL_EASING = 'cubic-bezier(.33, 1, .68, 1)'
 const COVER_HURRY_MS = 110
-// 两张原封面含大字或放大后模糊，沉浸模式暂用站内视觉图。
-const IMMERSIVE_COVER_OVERRIDES: Record<string, string> = {
-  'github-actions-aliyun-ecs-cicd': '/immersive/deploy.jpg',
-  'hello-xiaoyangxiaozhang-blog': '/immersive/blog-launch.jpg'
-}
 
 const restoreState = useState<SavedArticleBrowse | null>('articles-return-state', () => null)
 const browseMode = useCookie<BrowseMode>('all-articles-browse-mode', { default: () => 'immersive' })
@@ -239,7 +234,7 @@ const mapImmersiveArticle = (item: ArticleListItem): ImmersiveArticle => {
   return {
     ...card,
     displayTitle: item.title.split(/[：:]/, 1)[0]?.trim() || item.title,
-    immersiveCover: IMMERSIVE_COVER_OVERRIDES[card.slug] || proxyImageUrl(item.cover) || '/hero-poster.jpg',
+    immersiveCover: proxyImageUrl(item.cover),
     publishedAt: item.publish_time
   }
 }
@@ -355,6 +350,7 @@ const coverLoads = new Map<string, CoverLoad>()
 
 const prepareCover = (article: ImmersiveArticle): Promise<string | null> => {
   const url = article.immersiveCover
+  if (!url) return Promise.resolve(null)
   const cached = coverLoads.get(url)
   if (cached) return cached.promise
 
