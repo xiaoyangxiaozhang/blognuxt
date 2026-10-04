@@ -185,6 +185,7 @@ const { data, pending } = await useAsyncData(
     if (!slug) {
       return {
         article: null,
+        statusCode: 404,
         error: 'Article not found.'
       }
     }
@@ -194,6 +195,7 @@ const { data, pending } = await useAsyncData(
       if (response.code !== 0 || !response.data) {
         return {
           article: null,
+          statusCode: response.code === 404 ? 404 : 502,
           error: response.message || 'Failed to load article details.'
         }
       }
@@ -204,17 +206,23 @@ const { data, pending } = await useAsyncData(
           cover: proxyImageUrl(response.data.cover),
           tags: response.data.tags || []
         },
+        statusCode: 200,
         error: ''
       }
     } catch (error) {
       console.error(error)
+      const status = (error as any)?.response?.status
       return {
         article: null,
-        error: 'Failed to load article details.'
+        statusCode: status === 404 ? 404 : status === 503 ? 503 : 502,
+        error: status === 404 ? 'Article not found.' : 'Failed to load article details.'
       }
     }
   }
 )
+
+// Preserve the inline error UI, but send the real status to crawlers and caches.
+if (data.value?.statusCode) setResponseStatus(data.value.statusCode)
 
 const {
   data: commentsPayload,
@@ -498,6 +506,7 @@ useSeoMeta({
 useHead(() => ({
   link: [{ rel: 'canonical', href: articleUrl.value }],
   meta: [
+    ...(pageError.value ? [{ name: 'robots', content: 'noindex' }] : []),
     { property: 'og:image:secure_url', content: articleShareImage.value },
     ...(article.value?.publish_time
       ? [{ property: 'article:published_time', content: article.value.publish_time }]

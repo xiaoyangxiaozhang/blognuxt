@@ -115,9 +115,6 @@ const props = defineProps<{
   authorAvatar: string
   authorGithub?: string
   sidebarSocial?: SidebarSocialItem[]
-  totalArticles: number
-  categories: any[]
-  tags: any[]
   loading: boolean
 }>()
 

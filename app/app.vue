@@ -12,6 +12,8 @@ import { proxyImageUrl } from '~/utils/image'
 
 const config = useRuntimeConfig()
 const siteUrl = String(config.public.siteUrl || '').replace(/\/$/, '')
+const route = useRoute()
+const canonicalUrl = computed(() => siteUrl + (route.path === '/' ? '' : route.path))
 const defaultShareImageUrl = new URL(defaultShareImage, `${siteUrl}/`).href
 const { settings: blogSettings } = useBlogSettings()
 
@@ -85,7 +87,7 @@ useSeoMeta({
   ogTitle: siteTitle,
   ogDescription: siteDescription,
   ogType: 'website',
-  ogUrl: siteUrl,
+  ogUrl: canonicalUrl,
   ogImage: shareImageUrl,
   ogImageAlt: siteTitle,
   twitterCard: 'summary_large_image',
@@ -96,7 +98,7 @@ useSeoMeta({
 
 useHead(() => ({
   link: [
-    { rel: 'canonical', href: siteUrl },
+    { rel: 'canonical', href: canonicalUrl.value },
     ...(configuredFont.value.url
       ? [{ key: 'blog-font', rel: 'stylesheet', href: configuredFont.value.url }]
       : [])

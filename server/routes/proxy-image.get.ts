@@ -1,95 +1,48 @@
+import { fetchPublicImage, validateImageURL } from '../utils/imageProxy'
+
 export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
-  const imageUrl = query.url as string
-
-  if (!imageUrl) {
-    throw createError({ statusCode: 400, statusMessage: 'Missing url parameter' })
-  }
-
-  // 安全检查：只允许代理 http/https 图片
-  if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid url' })
-  }
-
-  const fetchImage = (url: string) => $fetch.raw(url, {
-    responseType: 'stream',
-    headers: {
-      // 模拟浏览器请求，避免部分服务器拒绝
-      'User-Agent': 'Mozilla/5.0',
-      'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
-    }
-  })
+  const source = validateImageURL(getQuery(event).url)
+  const signal = AbortSignal.timeout(10_000)
 
   const resolveUploadFallback = async () => {
-    const source = new URL(imageUrl)
-    if (!source.pathname.startsWith('/uploads/')) {
-      return ''
-    }
-
+    if (!source.pathname.startsWith('/uploads/')) return ''
     const config = useRuntimeConfig(event)
     const configuredBase = String(config.public.uploadBase || '').trim()
-    if (configuredBase) {
-      return `${configuredBase.replace(/\/+$/, '')}${source.pathname}${source.search}`
-    }
+    if (configuredBase) return configuredBase.replace(/\/+$/, '') + source.pathname + source.search
 
-    const apiBase = String(config.public.apiBase || '').trim()
-    if (!apiBase) {
-      return ''
-    }
-
-    const apiURL = new URL(`${apiBase.replace(/\/+$/, '')}/settings/basic`, getRequestURL(event)).toString()
-    const settings = await $fetch<{ data?: Record<string, unknown> }>(apiURL)
-    const authorAvatar = settings.data?.['basic.author_avatar']
-    if (typeof authorAvatar !== 'string' || !authorAvatar.trim()) {
-      return ''
-    }
-
-    const assetOrigin = new URL(authorAvatar).origin
-    if (assetOrigin === source.origin) {
-      return ''
-    }
-    return `${assetOrigin}${source.pathname}${source.search}`
+    const apiBase = String(config.public.apiBase || '').replace(/\/+$/, '')
+    if (!apiBase) return ''
+    // API base comes from server configuration, never the request's Host header.
+    const settings = await $fetch<{ data?: Record<string, unknown> }>(apiBase + '/settings/basic', { signal, retry: 0 })
+    const avatar = settings.data?.['basic.author_avatar']
+    if (typeof avatar !== 'string' || !avatar.trim()) return ''
+    const assetOrigin = validateImageURL(avatar).origin
+    return assetOrigin === source.origin ? '' : assetOrigin + source.pathname + source.search
   }
 
-  let response
-  let resolvedImageUrl = imageUrl
   try {
-    response = await fetchImage(imageUrl)
-  } catch (originalError: any) {
+    let image
     try {
-      const fallbackUrl = await resolveUploadFallback()
-      if (!fallbackUrl) {
-        throw originalError
-      }
-      resolvedImageUrl = fallbackUrl
-      response = await fetchImage(fallbackUrl)
-    } catch (fallbackError: any) {
-      console.error(`[proxy-image] Failed to fetch: ${imageUrl}`, fallbackError.message)
-      throw createError({ statusCode: 502, statusMessage: `Failed to fetch image: ${fallbackError.message}` })
+      image = await fetchPublicImage(source.href, signal)
+    } catch (error: any) {
+      // Invalid targets and non-image responses must not enter the compatibility fallback.
+      if ([400, 403, 413, 415].includes(error.statusCode)) throw error
+      const fallback = await resolveUploadFallback()
+      if (!fallback) throw error
+      image = await fetchPublicImage(fallback, signal)
     }
-  }
-
-  try {
-    // 透传 Content-Type
-    const contentType = response.headers.get('content-type')
-    if (contentType) {
-      setHeader(event, 'Content-Type', contentType)
-    } else {
-      setHeader(event, 'Content-Type', 'image/png')
-    }
-
-    // 设置 CORS 头（方便其他场景使用）
+    setHeader(event, 'Content-Type', image.contentType)
+    setHeader(event, 'X-Content-Type-Options', 'nosniff')
+    // SVG remains usable, with active content disabled when opened as a document.
+    setHeader(event, 'Content-Security-Policy', "default-src 'none'; sandbox")
     setHeader(event, 'Access-Control-Allow-Origin', '*')
-
-    // 强缓存 7 天
     setHeader(event, 'Cache-Control', 'public, max-age=604800, immutable')
-
-    // 设置响应状态码
-    setResponseStatus(event, response.status)
-
-    return response.body
-  } catch (err: any) {
-    console.error(`[proxy-image] Failed to return: ${resolvedImageUrl}`, err.message)
-    throw createError({ statusCode: 502, statusMessage: `Failed to fetch image: ${err.message}` })
+    return image.body
+  } catch (error: any) {
+    if ([400, 403, 413, 415].includes(error.statusCode)) throw error
+    throw createError({
+      statusCode: signal.aborted ? 504 : 502,
+      statusMessage: signal.aborted ? 'Image request timed out' : 'Image upstream unavailable'
+    })
   }
 })

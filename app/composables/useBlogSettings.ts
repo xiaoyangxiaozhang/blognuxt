@@ -17,10 +17,15 @@ export const isVideoUrl = (value: string | undefined) => {
   return /\.(mp4|webm|ogg|mov|m4v)(?:$|[?#])/i.test(url)
 }
 
-export const useBlogSettings = () => {
-  const { data, pending, error, refresh } = useAsyncData<BlogSettingMap>('site-blog-settings', async () => {
-    const response = await getSettings('blog')
+const usePublicSettings = (group: 'blog' | 'basic') => {
+  const { data, pending, error, refresh } = useAsyncData<BlogSettingMap>(`site-${group}-settings`, async () => {
+    const response = await getSettings(group)
     return response.data || {}
+  }, {
+    dedupe: 'defer',
+    getCachedData: (key, nuxtApp, context) => context.cause === 'initial'
+      ? nuxtApp.payload.data[key] ?? nuxtApp.static.data[key]
+      : undefined
   })
 
   const settings = computed(() => data.value || {})
@@ -32,3 +37,6 @@ export const useBlogSettings = () => {
     refresh
   }
 }
+
+export const useBlogSettings = () => usePublicSettings('blog')
+export const useBasicSettings = () => usePublicSettings('basic')

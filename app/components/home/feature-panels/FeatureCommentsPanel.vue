@@ -4,6 +4,11 @@
       <el-skeleton :rows="6" animated />
     </div>
 
+    <div v-else-if="errorMessage" class="empty-text" role="status">
+      {{ errorMessage }}
+      <button type="button" class="retry-button" @click="$emit('retry')">重新加载</button>
+    </div>
+
     <div v-else-if="commentCards.length === 0" class="empty-text">暂无评论内容</div>
 
     <div v-else class="comment-grid">
@@ -26,7 +31,10 @@ import { formatDate } from '~/utils/date'
 const props = defineProps<{
   comments: NormalizedCommentItem[]
   loading: boolean
+  errorMessage?: string
 }>()
+
+defineEmits<{ retry: [] }>()
 
 const commentCards = computed(() => {
   return props.comments.slice(0, 6).map((comment) => ({
@@ -90,6 +98,22 @@ const commentCards = computed(() => {
   overflow: hidden;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
+}
+
+.retry-button {
+  display: block;
+  margin-top: 12px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  background: var(--home-card-bg);
+  color: var(--home-text);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover { color: var(--brand-accent); }
+  &:focus-visible { outline: 2px solid var(--home-text); outline-offset: 4px; }
 }
 
 .empty-text {

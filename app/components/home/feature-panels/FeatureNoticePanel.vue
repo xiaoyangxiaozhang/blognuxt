@@ -12,9 +12,6 @@ const props = defineProps<{
   authorName: string
   authorDesc: string
   announcementHtml?: string
-  totalArticles: number
-  categories: Array<unknown>
-  tags: Array<unknown>
 }>()
 
 const fallbackAnnouncement = computed(() => {

@@ -55,6 +55,7 @@ export const useApi = () => {
   const fetcher = $fetch.create({
     baseURL: getApiBase(),
     credentials: 'include',
+    timeout: 15_000,
     onRequest({ options }) {
       if (!accessToken.value) return
 

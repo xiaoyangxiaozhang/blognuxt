@@ -86,13 +86,13 @@
           :author-github="authorGithub"
           :sidebar-social="sidebarSocialList"
           :announcement-html="announcementHtml"
-          :total-articles="homeData.totalArticles"
-          :categories="homeData.categories"
-          :tags="homeData.tags"
           :recent-articles="homeData.recentArticles"
           :comments="homeData.comments"
+          :comments-error="homeData.commentsError"
+          :comments-loading="commentsLoading"
           :moments="homeData.moments"
           :moments-error="homeData.momentsError"
+          :moments-loading="momentsLoading"
           :loading="pending"
           @retry="refresh"
         />
@@ -112,7 +112,7 @@
           <FeatureMomentsPanel
             :moments="homeData.moments"
             :limit="3"
-            :loading="pending"
+            :loading="momentsLoading"
             :error-message="homeData.momentsError"
             @retry="refresh"
           />
@@ -129,15 +129,12 @@ import HomeNewestSection from '~/components/home/HomeNewestSection.vue'
 import FeatureMomentsPanel from '~/components/home/feature-panels/FeatureMomentsPanel.vue'
 import { getMomentList, type MomentItem } from '~/services/api/moments'
 import { getArticleList } from '~/services/api/article'
-import { getCategoryList } from '~/services/api/category'
 import { getCommentList } from '~/services/api/comments'
-import { getTagList } from '~/services/api/tag'
-import { getBasicSettings, getSettings } from '~/services/api/user'
-import type { ArticleListItem, CategoryItem, TagItem } from '~/types/api'
+import type { ArticleListItem } from '~/types/api'
 import { normalizeCommentList, type NormalizedCommentItem } from '~/utils/comments'
 import { formatDate } from '~/utils/date'
 import { proxyImageUrl } from '~/utils/image'
-import { isVideoUrl, parseBlogJson } from '~/composables/useBlogSettings'
+import { isVideoUrl, parseBlogJson, useBasicSettings, useBlogSettings } from '~/composables/useBlogSettings'
 interface ArticleTag {
   name: string
   url?: string
@@ -171,14 +168,10 @@ interface FeatureArticleItem {
 interface HomePayload {
   articles: ArticleCard[]
   totalArticles: number
-  categories: CategoryItem[]
-  tags: TagItem[]
   recentArticles: FeatureArticleItem[]
   comments: NormalizedCommentItem[]
   moments: MomentItem[]
   momentsError: string
-  basicSettings: Record<string, string>
-  blogSettings: Record<string, string>
   error: string
 }
 
@@ -186,14 +179,10 @@ const DEFAULT_AVATAR = 'https://picsum.photos/200/200?random=7'
 const EMPTY_HOME_PAYLOAD: HomePayload = {
   articles: [],
   totalArticles: 0,
-  categories: [],
-  tags: [],
   recentArticles: [],
   comments: [],
   moments: [],
   momentsError: '',
-  basicSettings: {},
-  blogSettings: {},
   error: ''
 }
 
@@ -243,57 +232,50 @@ const mapArticleCard = (item: ArticleListItem): ArticleCard => ({
 
 const mapFeatureArticle = (item: ArticleListItem): FeatureArticleItem => mapBaseArticle(item)
 
+const { settings: basicSettings } = useBasicSettings()
+const { settings: blogSettings } = useBlogSettings()
+
 const buildHomePayload = async (): Promise<HomePayload> => {
   try {
-    const [articlesResponse, categoriesResponse, tagsResponse, settingsResponse, blogSettingsResponse, commentsResponse, momentsResponse] = await Promise.all([
-      getArticleList({
-        page: currentPage.value,
-        page_size: pageSize
-      }),
-      getCategoryList({ page_size: 10 }),
-      getTagList({ page_size: 20 }),
-      getBasicSettings(),
-      getSettings('blog'),
-      getCommentList({
-        target_type: 'page',
-        target_key: 'message',
-        page: 1,
-        page_size: 6
-      }).catch(() => null),
-      getMomentList({ page: 1, page_size: 6 }).catch(() => null)
-    ])
-
-    const articleList = articlesResponse.data.list || []
-
+    const response = await getArticleList({ page: currentPage.value, page_size: pageSize })
+    if (response.code !== 0) throw new Error(response.message || 'Article request failed')
+    const articleList = response.data.list || []
     return {
+      ...EMPTY_HOME_PAYLOAD,
       articles: articleList.map(mapArticleCard),
-      totalArticles: articlesResponse.data.total || 0,
-      categories: categoriesResponse.data.list || [],
-      tags: tagsResponse.data.list || [],
-      recentArticles: articleList.slice(0, 6).map(mapFeatureArticle),
-      comments: normalizeCommentList(commentsResponse?.data?.list || []),
-      moments: momentsResponse?.code === 0 ? (momentsResponse.data.list || []).filter(item => item.is_publish !== false) : [],
-      momentsError: momentsResponse?.code === 0 ? '' : '动态暂时无法加载',
-      basicSettings: settingsResponse.data || {},
-      blogSettings: blogSettingsResponse.data || {},
-      error: ''
+      totalArticles: response.data.total || 0,
+      recentArticles: articleList.slice(0, 6).map(mapFeatureArticle)
     }
   } catch (error) {
     console.error(error)
-    return {
-      ...EMPTY_HOME_PAYLOAD,
-      error: '获取首页数据失败，请稍后重试'
-    }
+    return { ...EMPTY_HOME_PAYLOAD, error: '获取首页数据失败，请稍后重试' }
   }
 }
 
-const { data, pending, refresh } = await useAsyncData<HomePayload>('home-page', buildHomePayload, {
+const { data, pending, refresh: refreshArticles } = await useAsyncData<HomePayload>('home-page', buildHomePayload, {
   watch: [currentPage]
 })
+const { data: commentsData, error: commentsError, status: commentsStatus, refresh: refreshComments } = useAsyncData('home-comments', async () => {
+  const response = await getCommentList({ target_type: 'page', target_key: 'message', page: 1, page_size: 6 })
+  if (response.code !== 0) throw new Error(response.message || 'Comment request failed')
+  return normalizeCommentList(response.data?.list || [])
+}, { server: false, lazy: true })
+const { data: momentsData, error: momentsError, status: momentsStatus, refresh: refreshMoments } = useAsyncData('home-moments', async () => {
+  const response = await getMomentList({ page: 1, page_size: 6 })
+  if (response.code !== 0) throw new Error(response.message || 'Moment request failed')
+  return (response.data.list || []).filter(item => item.is_publish !== false)
+}, { server: false, lazy: true })
 
-const homeData = computed(() => data.value || EMPTY_HOME_PAYLOAD)
-const basicSettings = computed(() => homeData.value.basicSettings)
-const blogSettings = computed(() => homeData.value.blogSettings)
+const commentsLoading = computed(() => ['idle', 'pending'].includes(commentsStatus.value))
+const momentsLoading = computed(() => ['idle', 'pending'].includes(momentsStatus.value))
+const refresh = () => Promise.all([refreshArticles(), refreshComments(), refreshMoments()])
+const homeData = computed(() => ({
+  ...(data.value || EMPTY_HOME_PAYLOAD),
+  comments: commentsData.value || [],
+  commentsError: commentsError.value ? '留言暂时无法加载' : '',
+  moments: momentsData.value || [],
+  momentsError: momentsError.value ? '动态暂时无法加载' : ''
+}))
 const heroBackgroundUrl = computed(() => blogSettings.value['blog.background_image']?.trim() || '')
 const heroBackgroundIsVideo = computed(() => isVideoUrl(heroBackgroundUrl.value))
 const heroPosterUrl = computed(() => {

@@ -7,6 +7,8 @@
   },
   "packageManager": "npm@10.9.8",
   "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:ssr": "node scripts/check-ssr.mjs",
     "build": "nuxt build",
     "dev": "nuxt dev --host 127.0.0.1 --port 3000",
     "dev:public": "nuxt dev --host 0.0.0.0 --port 3000",

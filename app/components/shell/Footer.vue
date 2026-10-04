@@ -1,27 +1,26 @@
 <script setup lang="ts">
-import { getBasicSettings } from '~/services/api/user'
 import { getArticleList } from '~/services/api/article'
-import { parseBlogJson, useBlogSettings } from '~/composables/useBlogSettings'
+import { parseBlogJson, useBasicSettings, useBlogSettings } from '~/composables/useBlogSettings'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import IconRiBilibiliLine from '~icons/ri/bilibili-line'
 import { GithubLogoIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
 import { EnvelopeClosedIcon, GlobeIcon } from '~/utils/siteIcons'
 
-const { data: settingsData } = await useAsyncData('footer-settings', () => getBasicSettings())
+const { settings: basicSettings } = useBasicSettings()
 const { settings: blogSettings } = useBlogSettings()
 const isKimidouOpen = computed(() => blogSettings.value['blog.kimidou_enabled'] === 'true')
 
-const authorName = computed(() => settingsData.value?.data?.['basic.author'] || '小羊嚣张')
-const icp = computed(() => settingsData.value?.data?.['basic.icp'] || '')
+const authorName = computed(() => basicSettings.value?.['basic.author'] || '小羊嚣张')
+const icp = computed(() => basicSettings.value?.['basic.icp'] || '')
 const authorGithub = computed(() => {
   return (
-    settingsData.value?.data?.['basic.github'] ||
-    settingsData.value?.data?.['basic.author_github'] ||
-    settingsData.value?.data?.['basic.social_github'] ||
+    basicSettings.value?.['basic.github'] ||
+    basicSettings.value?.['basic.author_github'] ||
+    basicSettings.value?.['basic.social_github'] ||
     ''
   )
 })
-const socialBilibili = computed(() => settingsData.value?.data?.['basic.bilibili'] || '')
+const socialBilibili = computed(() => basicSettings.value?.['basic.bilibili'] || '')
 
 interface FooterSocialItem {
   name: string

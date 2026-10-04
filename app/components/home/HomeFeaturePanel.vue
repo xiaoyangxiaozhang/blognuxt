@@ -51,22 +51,6 @@ import { useScrollReveal } from '~/composables/useScrollReveal'
 import type { NormalizedCommentItem } from '~/utils/comments'
 import type { MomentItem } from '~/services/api/moments'
 
-interface CategoryItem {
-  id: number
-  name: string
-  slug: string
-  count: number
-  url?: string
-}
-
-interface TagItem {
-  id: number
-  name: string
-  slug: string
-  count: number
-  url?: string
-}
-
 interface RecentArticleItem {
   id: number
   slug: string
@@ -91,13 +75,13 @@ const props = defineProps<{
   authorGithub?: string
   sidebarSocial?: SidebarSocialItem[]
   announcementHtml?: string
-  totalArticles: number
-  categories: CategoryItem[]
-  tags: TagItem[]
   recentArticles: RecentArticleItem[]
   comments: NormalizedCommentItem[]
+  commentsError?: string
+  commentsLoading?: boolean
   moments: MomentItem[]
   momentsError: string
+  momentsLoading?: boolean
   loading: boolean
 }>()
 
@@ -180,9 +164,6 @@ const activeProps = computed(() => {
         authorAvatar: props.authorAvatar,
         authorGithub: props.authorGithub,
         sidebarSocial: props.sidebarSocial,
-        totalArticles: props.totalArticles,
-        categories: props.categories,
-        tags: props.tags,
         loading: props.loading
       }
     case 'articles':
@@ -194,21 +175,19 @@ const activeProps = computed(() => {
       return {
         moments: props.moments,
         errorMessage: props.momentsError,
-        loading: props.loading
+        loading: props.momentsLoading ?? props.loading
       }
     case 'comments':
       return {
         comments: props.comments,
-        loading: props.loading
+        errorMessage: props.commentsError || '',
+        loading: props.commentsLoading ?? props.loading
       }
     case 'notice':
       return {
         authorName: props.authorName,
         authorDesc: props.authorDesc,
         announcementHtml: props.announcementHtml,
-        totalArticles: props.totalArticles,
-        categories: props.categories,
-        tags: props.tags
       }
   }
 })

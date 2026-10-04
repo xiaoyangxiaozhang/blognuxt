@@ -43,11 +43,17 @@ jobs:
             "@rolldown/binding-linux-x64-gnu@${ROLLDOWN_VERSION}"
           npm run postinstall
 
+      - name: Run regression tests
+        run: npm test
+
       - name: Build Nuxt production output
         run: npm run build
 
       - name: Check build output
         run: test -f .output/server/index.mjs
+
+      - name: Verify production SSR with local mock APIs
+        run: npm run test:ssr
 
       - name: Configure SSH
         env:
