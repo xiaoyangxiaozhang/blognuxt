@@ -9,7 +9,7 @@ const marker = 'AUDIT_ARTICLE_MARKER'
 let mode = 'normal'
 let counts = {}
 const article = { id: 1, title: marker, url: '/posts/audit-article', slug: 'audit-article', summary: 'Audit only', publish_time: '2026-10-04T00:00:00Z', tags: [], category: { name: 'Audit', url: '/category/audit' } }
-const upstream = http.createServer(async (req, res) => {
+const upstream = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
@@ -23,12 +23,6 @@ const upstream = http.createServer(async (req, res) => {
     return
   }
   res.setHeader('content-type', 'application/json')
-  if (mode === 'category-failure' && path.endsWith('/categories')) {
-    res.statusCode = 503
-    res.end(JSON.stringify({ code: 503, message: 'Synthetic failure' }))
-    return
-  }
-  if (mode === 'slow-moments' && path.endsWith('/moments')) await delay(600)
   if (path === '/api/v1/articles/audit-unavailable') {
     res.statusCode = 503
     res.end(JSON.stringify({ code: 503, message: 'Synthetic unavailable' }))
@@ -89,7 +83,9 @@ try {
   counts = {}
   const home = await fetch(origin + '/')
   const homeHtml = await home.text()
-  assert(homeHtml.includes(marker), 'synthetic article missing on healthy home')
+  const visibleHtml = homeHtml.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+  assert(visibleHtml.includes(marker), 'synthetic article must render in healthy home HTML')
+  assert(!visibleHtml.includes('获取首页数据失败'))
   assert.equal(counts['/api/v1/settings/blog'], 1)
   assert.equal(counts['/api/v1/settings/basic'], 1)
   assert.equal(counts['/api/v1/categories'], undefined)
@@ -98,24 +94,6 @@ try {
   assert.equal(counts['/api/v1/moments'], undefined)
   console.log(JSON.stringify({ case: 'healthy home SSR', status: home.status, apiCounts: counts }))
 
-  counts = {}
-  mode = 'slow-moments'
-  const start = performance.now()
-  const slow = await fetch(origin + '/')
-  await slow.text()
-  assert.equal(counts['/api/v1/moments'], undefined, 'noncritical activity must not block SSR')
-  console.log(JSON.stringify({ case: 'home with synthetic 600ms moments delay', responseMs: Math.round(performance.now() - start) }))
-
-  mode = 'category-failure'
-  const failed = await fetch(origin + '/')
-  const failedHtml = await failed.text()
-  const visibleHtml = failedHtml.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-  const articleCardStillRendered = visibleHtml.includes(marker)
-  assert.equal(articleCardStillRendered, true, 'unrelated failures must not hide healthy articles')
-  assert(!visibleHtml.includes('获取首页数据失败'))
-  console.log(JSON.stringify({ case: 'category fails while articles succeed', status: failed.status, articleCardStillRendered, wholeHomeError: visibleHtml.includes('获取首页数据失败') }))
-
-  mode = 'normal'
   const list = await fetch(origin + '/articles')
   const listHtml = await list.text()
   const canonical = listHtml.match(/<link[^>]+rel="canonical"[^>]*>/)?.[0]
