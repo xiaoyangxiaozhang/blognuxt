@@ -673,7 +673,7 @@ onUnmounted(() => {
 .brand-route-item {
   padding: 8px 10px;
   border-radius: 8px;
-  color: var(--header-nav-color);
+  color: var(--text-primary);
   font-size: 14px;
   text-decoration: none;
   white-space: nowrap;
@@ -785,7 +785,7 @@ onUnmounted(() => {
   display: block;
   padding: 8px 12px;
   border-radius: 8px;
-  color: var(--header-nav-color);
+  color: var(--text-primary);
   font-size: 14px;
   white-space: nowrap;
   transition: background 0.2s ease, color 0.2s ease;
