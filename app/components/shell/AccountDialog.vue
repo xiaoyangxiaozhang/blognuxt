@@ -15,17 +15,19 @@
             <form class="dialog-form" @submit.prevent="resetAccountPassword">
               <label>
                 <span>邮箱</span>
-                <input v-model="resetForm.email" required type="email" placeholder="注册时使用的邮箱">
+                <input v-model="resetForm.email" required type="email" placeholder="注册时使用的邮箱" :aria-describedby="resetCodeError ? 'reset-code-error' : undefined">
               </label>
               <div class="code-row">
                 <label>
                   <span>验证码</span>
-                  <input v-model="resetForm.code" required inputmode="numeric" maxlength="6" placeholder="6 位验证码">
+                  <input v-model="resetForm.code" required inputmode="numeric" maxlength="6" placeholder="6 位验证码" :aria-describedby="resetCodeError ? 'reset-code-error' : undefined">
                 </label>
                 <button class="secondary-button" type="button" :disabled="sendingCode" @click="sendResetCode">
                   {{ sendingCode ? '发送中…' : '发送验证码' }}
                 </button>
               </div>
+              <button class="text-button code-help" type="button" @click="resetCodeError = emailDeliveryHelp">收不到验证码？</button>
+              <p v-if="resetCodeError" id="reset-code-error" class="status-text" role="alert">{{ resetCodeError }}</p>
               <label>
                 <span>新密码</span>
                 <input v-model="resetForm.password" required type="password" minlength="6" maxlength="20" autocomplete="new-password">
@@ -62,10 +64,36 @@
                 <div v-else class="avatar-fallback">{{ (currentUser?.nickname || '用').slice(0, 1) }}</div>
                 <div>
                   <strong>{{ currentUser?.nickname || '未设置昵称' }}</strong>
-                  <span>{{ currentUser?.email }}</span>
+                  <span>{{ accountEmail || '未绑定邮箱' }}</span>
                 </div>
               </div>
               <button type="button" class="text-button profile-edit-button" @click="startProfileEdit">编辑资料</button>
+            </div>
+
+            <div v-if="!accountEmail" class="email-binding">
+              <button v-if="!emailBindingOpen" type="button" class="text-button" @click="emailBindingOpen = true">绑定邮箱</button>
+              <form v-else class="dialog-form" :aria-busy="emailSending || emailBinding" @submit.prevent="submitEmailBinding">
+                <label>
+                  <span>绑定邮箱</span>
+                  <input v-model="emailForm.email" required type="email" maxlength="100" autocomplete="email" placeholder="输入可接收邮件的邮箱" :disabled="emailSending || emailBinding" :aria-invalid="Boolean(emailBindingError)" :aria-describedby="emailBindingError ? 'email-binding-hint email-binding-error' : 'email-binding-hint'">
+                </label>
+                <p id="email-binding-hint" class="status-text" role="status">{{ emailSentTo ? `验证码已发送至 ${emailSentTo}，10 分钟内有效。` : '验证邮箱后，可用于接收通知和找回密码。' }}</p>
+                <div class="code-row">
+                  <label>
+                    <span>邮箱验证码</span>
+                    <input v-model="emailForm.code" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6 位验证码" :disabled="emailSending || emailBinding" :aria-describedby="emailBindingError ? 'email-binding-error' : undefined">
+                  </label>
+                  <button class="secondary-button" type="button" :disabled="emailSending || emailBinding || emailResendIn > 0 || !emailForm.email.trim()" @click="requestEmailBindingCode">
+                    {{ emailSending ? '发送中…' : emailResendIn > 0 ? `${emailResendIn} 秒后重发` : emailSentTo ? '重新发送' : '发送验证码' }}
+                  </button>
+                </div>
+                <button class="text-button code-help" type="button" @click="emailBindingError = emailDeliveryHelp">收不到验证码？</button>
+                <p v-if="emailBindingError" id="email-binding-error" class="status-text" role="alert">{{ emailBindingError }}</p>
+                <div class="form-actions">
+                  <button type="button" class="text-button" :disabled="emailSending || emailBinding" @click="emailBindingOpen = false">取消</button>
+                  <button class="primary-button" type="submit" :disabled="emailSending || emailBinding || !emailSentTo || emailForm.email.trim().toLowerCase() !== emailSentTo || !/^[0-9]{6}$/.test(emailForm.code)">{{ emailBinding ? '绑定中…' : '确认绑定' }}</button>
+                </div>
+              </form>
             </div>
 
             <div class="profile-stats" aria-label="个人数据">
@@ -175,10 +203,12 @@ import { useBlogSettings } from '~/composables/useBlogSettings'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import {
+  bindUserEmail,
   changePassword,
   deactivateAccount,
   forgotPassword,
   resetPassword,
+  sendEmailBindingCode,
   setPassword,
   unbindOAuth,
   updateUserProfile
@@ -200,12 +230,39 @@ const avatarInput = ref<HTMLInputElement | null>(null)
 const passwordSaving = ref(false)
 const sendingCode = ref(false)
 const resetting = ref(false)
+const resetCodeError = ref('')
+const emailDeliveryHelp = '该邮箱无法接受验证码，请联系管理员～'
+const emailBindingOpen = ref(false)
+const emailSending = ref(false)
+const emailBinding = ref(false)
+const emailBindingError = ref('')
+const emailSentTo = ref('')
+const emailResendIn = ref(0)
+const emailForm = reactive({ email: '', code: '' })
+let emailResendTimer: ReturnType<typeof setInterval> | undefined
+
+onBeforeUnmount(() => clearInterval(emailResendTimer))
+
+watch(() => emailForm.email, () => {
+  emailForm.code = ''
+  emailSentTo.value = ''
+  emailBindingError.value = ''
+})
 
 const profileForm = reactive({ nickname: '', website: '' })
 const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const resetForm = reactive({ email: '', code: '', password: '', confirmPassword: '' })
 
+watch(() => resetForm.email, () => {
+  resetForm.code = ''
+  resetCodeError.value = ''
+})
+
 const hasPassword = computed(() => Boolean(currentUser.value?.has_password))
+const accountEmail = computed(() => {
+  const email = currentUser.value?.email?.trim() || ''
+  return /@virtual\.local$/i.test(email) ? '' : email
+})
 const supportedOAuthProviders = ['github', 'google', 'qq']
 const linkedProviders = computed(() => (currentUser.value?.linked_oauths || []).filter(provider => supportedOAuthProviders.includes(provider)))
 const canUnbindOAuth = computed(() => Boolean(currentUser.value?.has_password) || linkedProviders.value.length > 1)
@@ -227,8 +284,16 @@ const clearAvatarSelection = () => {
 watch(currentUser, (user) => {
   if (!user) return
   if (!profileEditing.value) syncProfileForm(user)
-  resetForm.email = user.email || resetForm.email
+  resetForm.email = accountEmail.value
 }, { immediate: true })
+
+watch(() => currentUser.value?.id, () => {
+  emailBindingOpen.value = false
+  emailForm.email = ''
+  emailForm.code = ''
+  emailSentTo.value = ''
+  emailBindingError.value = ''
+})
 
 watch(accountOpen, (open) => {
   if (open) {
@@ -240,7 +305,7 @@ watch(accountOpen, (open) => {
 })
 
 const close = () => {
-  if (profileSaving.value || passwordSaving.value || resetting.value || sendingCode.value) return
+  if (profileSaving.value || passwordSaving.value || resetting.value || sendingCode.value || emailSending.value || emailBinding.value) return
   accountOpen.value = false
   accountMode.value = 'profile'
   securityOpen.value = false
@@ -332,6 +397,64 @@ const savePassword = async () => {
   }
 }
 
+const requestEmailBindingCode = async () => {
+  if (emailSending.value || emailBinding.value || emailResendIn.value > 0) return
+  const accountID = currentUser.value?.id
+  const email = emailForm.email.trim().toLowerCase()
+  emailBindingError.value = ''
+  if (!/^\S+@\S+\.\S+$/.test(email) || /@virtual\.local$/i.test(email)) {
+    emailBindingError.value = '请输入可接收邮件的真实邮箱。'
+    return
+  }
+  emailSentTo.value = ''
+  emailForm.code = ''
+  emailSending.value = true
+  try {
+    const response = await sendEmailBindingCode(email)
+    if (currentUser.value?.id !== accountID) return
+    if (response.code !== 0) throw new Error(response.message || '验证码发送失败。')
+    emailSentTo.value = email
+    emailForm.code = ''
+    emailResendIn.value = 60
+    clearInterval(emailResendTimer)
+    emailResendTimer = setInterval(() => {
+      emailResendIn.value = Math.max(0, emailResendIn.value - 1)
+      if (!emailResendIn.value) clearInterval(emailResendTimer)
+    }, 1000)
+  } catch (error: any) {
+    if (currentUser.value?.id === accountID) emailBindingError.value = error?.data?.message || error?.message || '验证码发送失败，请稍后重试。'
+  } finally {
+    emailSending.value = false
+  }
+}
+
+const submitEmailBinding = async () => {
+  if (emailSending.value || emailBinding.value) return
+  const accountID = currentUser.value?.id
+  const email = emailForm.email.trim().toLowerCase()
+  if (email !== emailSentTo.value || !/^[0-9]{6}$/.test(emailForm.code)) {
+    emailBindingError.value = '请先发送验证码，再输入收到的 6 位验证码。'
+    return
+  }
+  emailBinding.value = true
+  emailBindingError.value = ''
+  try {
+    const response = await bindUserEmail(email, emailForm.code)
+    if (currentUser.value?.id !== accountID) return
+    if (response.code !== 0) throw new Error(response.message || '邮箱绑定失败。')
+    if (currentUser.value) currentUser.value = { ...currentUser.value, email, is_virtual_email: false }
+    emailBindingOpen.value = false
+    emailForm.email = ''
+    emailForm.code = ''
+    await fetchProfile()
+    ElMessage.success('邮箱已绑定。')
+  } catch (error: any) {
+    if (currentUser.value?.id === accountID) emailBindingError.value = error?.data?.message || error?.message || '邮箱绑定失败，请稍后重试。'
+  } finally {
+    emailBinding.value = false
+  }
+}
+
 const sendResetCode = async () => {
   if (!/^\S+@\S+\.\S+$/.test(resetForm.email.trim())) {
     ElMessage.warning('请输入正确的邮箱地址。')
@@ -339,12 +462,13 @@ const sendResetCode = async () => {
   }
 
   sendingCode.value = true
+  resetCodeError.value = ''
   try {
-    await forgotPassword({ email: resetForm.email.trim() })
+    const response = await forgotPassword({ email: resetForm.email.trim() })
+    if (response.code !== 0) throw new Error(response.message || '验证码发送失败。')
     ElMessage.success('验证码已发送。')
-  } catch (error) {
-    console.error(error)
-    ElMessage.error('验证码发送失败。')
+  } catch (error: any) {
+    resetCodeError.value = error?.data?.message || error?.message || '验证码发送失败，请稍后重试。'
   } finally {
     sendingCode.value = false
   }
@@ -588,6 +712,21 @@ const logout = async () => {
   font-weight: 600;
 }
 
+.email-binding {
+  margin: 0 0 24px;
+
+  button:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 3px;
+  }
+
+  button:disabled { opacity: 0.55; cursor: default; }
+  .code-row { flex-wrap: wrap; }
+  .code-row label { min-width: 130px; }
+  .secondary-button { white-space: nowrap; }
+  .status-text { overflow-wrap: anywhere; }
+}
+
 .profile-stats {
   display: flex;
   align-items: baseline;
@@ -734,6 +873,16 @@ const logout = async () => {
   margin: 0;
   color: var(--account-dialog-text);
   font-size: 12px;
+}
+
+.code-help {
+  justify-self: start;
+  min-height: 44px;
+
+  &:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 3px;
+  }
 }
 
 .oauth-section {

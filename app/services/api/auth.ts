@@ -50,7 +50,6 @@ export interface ResetPasswordPayload {
 
 export interface UpdateProfilePayload {
   nickname?: string
-  email?: string
   avatar?: string
   badge?: string
   website?: string
@@ -96,6 +95,14 @@ export const resetPassword = (body: ResetPasswordPayload) => {
 
 export const updateUserProfile = (body: UpdateProfilePayload) => {
   return apiPatch<AuthUserProfile>('/user/profile', body)
+}
+
+export const sendEmailBindingCode = (email: string) => {
+  return apiPost<null>('/user/email/code', { email })
+}
+
+export const bindUserEmail = (email: string, code: string) => {
+  return apiPost<null>('/user/email', { email, code })
 }
 
 export const changePassword = (body: ChangePasswordPayload) => {
