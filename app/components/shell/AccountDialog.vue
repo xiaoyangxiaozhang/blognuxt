@@ -397,6 +397,15 @@ const savePassword = async () => {
   }
 }
 
+const startEmailResendCooldown = (seconds: number) => {
+  emailResendIn.value = Math.ceil(seconds)
+  clearInterval(emailResendTimer)
+  emailResendTimer = setInterval(() => {
+    emailResendIn.value = Math.max(0, emailResendIn.value - 1)
+    if (!emailResendIn.value) clearInterval(emailResendTimer)
+  }, 1000)
+}
+
 const requestEmailBindingCode = async () => {
   if (emailSending.value || emailBinding.value || emailResendIn.value > 0) return
   const accountID = currentUser.value?.id
@@ -415,14 +424,13 @@ const requestEmailBindingCode = async () => {
     if (response.code !== 0) throw new Error(response.message || '验证码发送失败。')
     emailSentTo.value = email
     emailForm.code = ''
-    emailResendIn.value = 60
-    clearInterval(emailResendTimer)
-    emailResendTimer = setInterval(() => {
-      emailResendIn.value = Math.max(0, emailResendIn.value - 1)
-      if (!emailResendIn.value) clearInterval(emailResendTimer)
-    }, 1000)
+    startEmailResendCooldown(60)
   } catch (error: any) {
-    if (currentUser.value?.id === accountID) emailBindingError.value = error?.data?.message || error?.message || '验证码发送失败，请稍后重试。'
+    if (currentUser.value?.id === accountID) {
+      emailBindingError.value = error?.data?.message || error?.message || '验证码发送失败，请稍后重试。'
+      const retryAfter = Number(error?.response?.headers?.get('Retry-After'))
+      if (error?.response?.status === 429 && Number.isFinite(retryAfter) && retryAfter > 0) startEmailResendCooldown(retryAfter)
+    }
   } finally {
     emailSending.value = false
   }

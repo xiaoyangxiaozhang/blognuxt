@@ -143,3 +143,23 @@ test('binding displays the administrator hint when mail delivery fails', async (
   assert.equal(state.emailResendIn.value, 0)
   assert.deepEqual(module.notices, [])
 })
+
+test('binding respects Retry-After on a 429 response and allows retry when it expires', async () => {
+  const { state, module } = await accountFixture()
+  state.emailForm.email = 'reader@example.com'
+  module.setResponses(Promise.reject({
+    response: { status: 429, headers: new Headers({ 'Retry-After': '37' }) },
+    data: { message: '请求过于频繁，请在 37 秒后重试' }
+  }), { code: 0 })
+  await state.requestEmailBindingCode()
+  assert.equal(state.emailResendIn.value, 37)
+  assert.equal(state.emailBindingError.value, '请求过于频繁，请在 37 秒后重试')
+  assert.equal(state.emailSentTo.value, '')
+  await state.requestEmailBindingCode()
+  assert.equal(module.calls.length, 1)
+  module.advanceSeconds(37)
+  module.setResponses({ code: 0 }, { code: 0 })
+  await state.requestEmailBindingCode()
+  assert.equal(module.calls.length, 2)
+  assert.equal(state.emailSentTo.value, 'reader@example.com')
+})
