@@ -14,7 +14,8 @@ async function accountFixture() {
     import { computed, ref, reactive, watch, onBeforeUnmount } from 'vue';
     export const user = ref({ id: 7, email: 'qq_SYNTHETIC@virtual.local', nickname: '测试账号', linked_oauths: ['qq'] });
     export const calls = [], notices = [];
-    export let sendResult = { code: 0 }, bindResult = { code: 0 }, forgotResult = { code: 0 };
+    export let sendResult = { code: 0 }, bindResult = { code: 0 }, forgotResult = { code: 0 }, linkResult = { code: 0 };
+    export const setLinkResult = result => { linkResult = result; };
     export const setResponses = (send, bind) => { sendResult = send; bindResult = bind; };
     export const setForgotResult = result => { forgotResult = result; };
     const Cross1Icon = { render: () => null }, LoginDialog = { render: () => null };
@@ -22,7 +23,8 @@ async function accountFixture() {
     const useBlogSettings = () => ({ settings: ref({}) });
     export const mode = ref('profile');
     const useSiteOverlays = () => ({ accountOpen: ref(true), accountMode: mode });
-    const useCommentAuth = () => ({ currentUser: user, authReady: ref(true), isLoggedIn: ref(true), fetchProfile: async () => user.value, logoutUser: async () => {} });
+    const useCommentAuth = () => ({ currentUser: user, authReady: ref(true), isLoggedIn: ref(true), fetchProfile: async () => user.value, logoutUser: async () => {}, applyAuthResponse: async response => { calls.push(['session', response.data.access_token]); user.value = response.data.user; } });
+    const linkQQAccount = async (email, password, replace) => { calls.push(['link', email, password, replace]); return linkResult; };
     const sendEmailBindingCode = async email => { calls.push(['send', email]); return sendResult; };
     const bindUserEmail = async (email, code) => { calls.push(['bind', email, code]); return bindResult; };
     const forgotPassword = async body => { calls.push(['reset-code', body.email]); return forgotResult; };
@@ -35,7 +37,7 @@ async function accountFixture() {
   const component = compiled.content.replace(/^import[\s\S]*?from\s+(['"])([^'"]+)\1\s*;?/gm,
     (statement, _, path) => path === 'vue' ? statement : '')
     .replace('setup(__props) {', 'setup(__props, { expose }) {')
-    .replace('return (_ctx: any,_cache: any) => {', 'expose({ emailBindingOpen, emailForm, emailBindingError, emailSentTo, emailResendIn, requestEmailBindingCode, submitEmailBinding, resetForm, resetCodeError, sendResetCode, emailDeliveryHelp });\nreturn (_ctx: any,_cache: any) => {')
+    .replace('return (_ctx: any,_cache: any) => {', 'expose({ emailBindingOpen, emailForm, emailBindingError, emailSentTo, emailResendIn, emailLinkMode, emailReplaceRequired, requestEmailBindingCode, submitEmailBinding, resetForm, resetCodeError, sendResetCode, emailDeliveryHelp });\nreturn (_ctx: any,_cache: any) => {')
   const code = stripTypeScriptTypes(mocks + component)
     .replace(/from (['"])vue\1/g, `from ${JSON.stringify(import.meta.resolve('vue'))}`)
   // Fresh module state per fixture.
@@ -54,12 +56,59 @@ async function accountFixture() {
   return { module, state, html, render }
 }
 
-test('account offers binding for a placeholder email and hides it after binding', async () => {
+test('QQ account offers email binding and keeps rebind available after binding', async () => {
   const fixture = await accountFixture()
-  assert.match(fixture.html, /未绑定邮箱[\s\S]*绑定邮箱/)
+  assert.match(fixture.html, /未绑定邮箱[\s\S]*绑定 \/ 关联邮箱/)
   assert.doesNotMatch(fixture.html, /virtual\.local/)
   fixture.module.user.value.email = 'reader@example.com'
-  assert.doesNotMatch(await fixture.render(), /输入可接收邮件的邮箱|>绑定邮箱</)
+  assert.match(await fixture.render(), /换绑 \/ 关联邮箱/)
+  fixture.module.user.value.linked_oauths = []
+  assert.doesNotMatch(await fixture.render(), /换绑 \/ 关联邮箱/)
+})
+
+test('registered email offers password linking without claiming a verification email was sent', async () => {
+  const { state, module } = await accountFixture()
+  state.emailForm.email = ' Reader@Example.com '
+  module.setResponses({ code: 409, message: '邮箱已注册', data: { mode: 'link' } }, { code: 0 })
+  await state.requestEmailBindingCode()
+  assert.equal(state.emailLinkMode.value, true)
+  assert.equal(state.emailSentTo.value, '')
+  assert.equal(state.emailResendIn.value, 0)
+  state.emailForm.password = 'synthetic-password'
+  module.setLinkResult({ code: 500, message: '密码错误' })
+  await state.submitEmailBinding()
+  assert.equal(state.emailBindingError.value, '密码错误')
+  assert.equal(module.user.value.id, 7)
+  module.setLinkResult({ code: 409, message: '请确认替换 QQ', data: { mode: 'replace' } })
+  await state.submitEmailBinding()
+  assert.equal(state.emailReplaceRequired.value, true)
+  const count = module.calls.length
+  await state.submitEmailBinding()
+  assert.equal(module.calls.length, count)
+  state.emailForm.replaceQQ = true
+  module.setLinkResult({ code: 0, data: { access_token: 'synthetic-token', user: { id: 9, email: 'reader@example.com', role: 'user', linked_oauths: ['qq'] } } })
+  await state.submitEmailBinding()
+  assert.deepEqual(module.calls.at(-2), ['link', 'reader@example.com', 'synthetic-password', true])
+  assert.deepEqual(module.calls.at(-1), ['session', 'synthetic-token'])
+  assert.equal(module.user.value.id, 9)
+  assert.equal(state.emailForm.password, '')
+  assert.equal(state.emailForm.replaceQQ, false)
+  assert.deepEqual(module.notices, ['QQ 已关联，当前已登录原账号。'])
+})
+
+test('a pending account link does not replace a different active session', async () => {
+  const { state, module } = await accountFixture()
+  state.emailLinkMode.value = true
+  state.emailForm.email = 'reader@example.com'
+  state.emailForm.password = 'synthetic-password'
+  let complete
+  module.setLinkResult(new Promise(resolve => { complete = resolve }))
+  const pending = state.submitEmailBinding()
+  module.user.value = { id: 10, email: 'other@example.com' }
+  complete({ code: 0, data: { access_token: 'synthetic-token', user: { id: 9 } } })
+  await pending
+  assert.equal(module.user.value.id, 10)
+  assert.equal(module.calls.some(call => call[0] === 'session'), false)
 })
 
 test('binding validates input, respects resend cooldown and keeps server failures visible', async () => {

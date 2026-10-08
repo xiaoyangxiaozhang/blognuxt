@@ -134,6 +134,7 @@ export const useCommentAuth = () => {
     isLoggedIn,
     restoreSession,
     fetchProfile,
+    applyAuthResponse,
     loginWithPassword,
     registerWithEmail,
     logoutUser,

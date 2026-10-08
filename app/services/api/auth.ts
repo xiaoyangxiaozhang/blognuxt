@@ -98,11 +98,15 @@ export const updateUserProfile = (body: UpdateProfilePayload) => {
 }
 
 export const sendEmailBindingCode = (email: string) => {
-  return apiPost<null>('/user/email/code', { email })
+  return apiPost<{ mode?: string }>('/user/email/code', { email })
 }
 
 export const bindUserEmail = (email: string, code: string) => {
   return apiPost<null>('/user/email', { email, code })
+}
+
+export const linkQQAccount = (email: string, password: string, replaceQQ = false) => {
+  return apiPost<LoginResponseData & { mode?: string }>('/user/email/link', { email, password, replace_qq: replaceQQ })
 }
 
 export const changePassword = (body: ChangePasswordPayload) => {

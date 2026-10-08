@@ -70,15 +70,15 @@
               <button type="button" class="text-button profile-edit-button" @click="startProfileEdit">编辑资料</button>
             </div>
 
-            <div v-if="!accountEmail" class="email-binding">
-              <button v-if="!emailBindingOpen" type="button" class="text-button" @click="emailBindingOpen = true">绑定邮箱</button>
+            <div v-if="!accountEmail || linkedProviders.includes('qq')" class="email-binding">
+              <button v-if="!emailBindingOpen" type="button" class="text-button" @click="emailBindingOpen = true">{{ accountEmail ? '换绑 / 关联邮箱' : '绑定 / 关联邮箱' }}</button>
               <form v-else class="dialog-form" :aria-busy="emailSending || emailBinding" @submit.prevent="submitEmailBinding">
                 <label>
-                  <span>绑定邮箱</span>
-                  <input v-model="emailForm.email" required type="email" maxlength="100" autocomplete="email" placeholder="输入可接收邮件的邮箱" :disabled="emailSending || emailBinding" :aria-invalid="Boolean(emailBindingError)" :aria-describedby="emailBindingError ? 'email-binding-hint email-binding-error' : 'email-binding-hint'">
+                  <span>{{ emailLinkMode ? '原账号邮箱' : accountEmail ? '目标邮箱' : '绑定邮箱' }}</span>
+                  <input v-model="emailForm.email" required type="email" maxlength="100" autocomplete="email" placeholder="输入邮箱地址" :disabled="emailSending || emailBinding" :aria-invalid="Boolean(emailBindingError)" :aria-describedby="emailBindingError ? 'email-binding-hint email-binding-error' : 'email-binding-hint'">
                 </label>
-                <p id="email-binding-hint" class="status-text" role="status">{{ emailSentTo ? `验证码已发送至 ${emailSentTo}，10 分钟内有效。` : '验证邮箱后，可用于接收通知和找回密码。' }}</p>
-                <div class="code-row">
+                <p id="email-binding-hint" class="status-text" role="status">{{ emailLinkMode ? '验证原账号密码后，QQ 登录将进入原账号。两个账号的资料和内容保留，不自动合并。' : emailSentTo ? `验证码已发送至 ${emailSentTo}，10 分钟内有效。` : linkedProviders.includes('qq') ? '未注册邮箱通过验证码绑定；已注册邮箱验证原账号密码后关联 QQ。' : '验证邮箱后，可用于接收通知和找回密码。' }}</p>
+                <div v-if="!emailLinkMode" class="code-row">
                   <label>
                     <span>邮箱验证码</span>
                     <input v-model="emailForm.code" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6 位验证码" :disabled="emailSending || emailBinding" :aria-describedby="emailBindingError ? 'email-binding-error' : undefined">
@@ -87,11 +87,25 @@
                     {{ emailSending ? '发送中…' : emailResendIn > 0 ? `${emailResendIn} 秒后重发` : emailSentTo ? '重新发送' : '发送验证码' }}
                   </button>
                 </div>
-                <button class="text-button code-help" type="button" @click="emailBindingError = emailDeliveryHelp">收不到验证码？</button>
+                <template v-if="emailLinkMode">
+                  <label>
+                    <span>原账号密码</span>
+                    <input v-model="emailForm.password" type="password" required maxlength="72" autocomplete="current-password" :disabled="emailBinding" :aria-describedby="emailBindingError ? 'email-binding-error' : 'email-binding-hint'">
+                  </label>
+                  <label v-if="emailReplaceRequired" class="qq-replace-confirm">
+                    <input v-model="emailForm.replaceQQ" type="checkbox" :disabled="emailBinding">
+                    <span>替换原账号已关联的 QQ，原 QQ 将不能再登录该账号</span>
+                  </label>
+                  <button class="text-button" type="button" :disabled="emailBinding" @click="emailLinkMode = false; emailForm.password = ''; emailForm.replaceQQ = false; emailReplaceRequired = false; emailBindingError = ''">返回验证码绑定</button>
+                </template>
+                <template v-else>
+                  <button v-if="linkedProviders.includes('qq')" class="text-button" type="button" :disabled="emailSending || emailBinding" @click="emailLinkMode = true; emailBindingError = ''">已有账号？用密码关联</button>
+                  <button class="text-button code-help" type="button" @click="emailBindingError = emailDeliveryHelp">收不到验证码？</button>
+                </template>
                 <p v-if="emailBindingError" id="email-binding-error" class="status-text" role="alert">{{ emailBindingError }}</p>
                 <div class="form-actions">
                   <button type="button" class="text-button" :disabled="emailSending || emailBinding" @click="emailBindingOpen = false">取消</button>
-                  <button class="primary-button" type="submit" :disabled="emailSending || emailBinding || !emailSentTo || emailForm.email.trim().toLowerCase() !== emailSentTo || !/^[0-9]{6}$/.test(emailForm.code)">{{ emailBinding ? '绑定中…' : '确认绑定' }}</button>
+                  <button class="primary-button" type="submit" :disabled="emailSending || emailBinding || (emailLinkMode ? !emailForm.password || !emailForm.email.trim() || (emailReplaceRequired && !emailForm.replaceQQ) : !emailSentTo || emailForm.email.trim().toLowerCase() !== emailSentTo || !/^[0-9]{6}$/.test(emailForm.code))">{{ emailBinding ? '处理中…' : emailLinkMode ? emailReplaceRequired ? '确认换绑并登录' : '关联并登录原账号' : accountEmail ? '确认换绑' : '确认绑定' }}</button>
                 </div>
               </form>
             </div>
@@ -207,6 +221,7 @@ import {
   changePassword,
   deactivateAccount,
   forgotPassword,
+  linkQQAccount,
   resetPassword,
   sendEmailBindingCode,
   setPassword,
@@ -219,7 +234,7 @@ import { proxyImageUrl } from '~/utils/image'
 const { accountOpen, accountMode } = useSiteOverlays()
 const { settings: blogSettings } = useBlogSettings()
 const isKimidouOpen = computed(() => blogSettings.value['blog.kimidou_enabled'] === 'true')
-const { currentUser, authReady, isLoggedIn, fetchProfile, logoutUser } = useCommentAuth()
+const { currentUser, authReady, isLoggedIn, fetchProfile, logoutUser, applyAuthResponse } = useCommentAuth()
 const loginDialogOpen = ref(false)
 const profileSaving = ref(false)
 const profileEditing = ref(false)
@@ -238,12 +253,17 @@ const emailBinding = ref(false)
 const emailBindingError = ref('')
 const emailSentTo = ref('')
 const emailResendIn = ref(0)
-const emailForm = reactive({ email: '', code: '' })
+const emailForm = reactive({ email: '', code: '', password: '', replaceQQ: false })
+const emailLinkMode = ref(false)
+const emailReplaceRequired = ref(false)
 let emailResendTimer: ReturnType<typeof setInterval> | undefined
 
 onBeforeUnmount(() => clearInterval(emailResendTimer))
 
 watch(() => emailForm.email, () => {
+  emailReplaceRequired.value = false
+  emailForm.password = ''
+  emailForm.replaceQQ = false
   emailForm.code = ''
   emailSentTo.value = ''
   emailBindingError.value = ''
@@ -287,7 +307,18 @@ watch(currentUser, (user) => {
   resetForm.email = accountEmail.value
 }, { immediate: true })
 
+watch(emailBindingOpen, open => {
+  if (!open) {
+    emailForm.password = ''
+    emailForm.replaceQQ = false
+    emailReplaceRequired.value = false
+    emailLinkMode.value = false
+  }
+})
+
 watch(() => currentUser.value?.id, () => {
+  clearInterval(emailResendTimer)
+  emailResendIn.value = 0
   emailBindingOpen.value = false
   emailForm.email = ''
   emailForm.code = ''
@@ -296,6 +327,7 @@ watch(() => currentUser.value?.id, () => {
 })
 
 watch(accountOpen, (open) => {
+  if (!open) emailBindingOpen.value = false
   if (open) {
     profileEditing.value = false
     securityOpen.value = false
@@ -306,6 +338,7 @@ watch(accountOpen, (open) => {
 
 const close = () => {
   if (profileSaving.value || passwordSaving.value || resetting.value || sendingCode.value || emailSending.value || emailBinding.value) return
+  emailBindingOpen.value = false
   accountOpen.value = false
   accountMode.value = 'profile'
   securityOpen.value = false
@@ -421,6 +454,10 @@ const requestEmailBindingCode = async () => {
   try {
     const response = await sendEmailBindingCode(email)
     if (currentUser.value?.id !== accountID) return
+    if (response.code === 409 && response.data?.mode === 'link' && linkedProviders.value.includes('qq')) {
+      emailLinkMode.value = true
+      return
+    }
     if (response.code !== 0) throw new Error(response.message || '验证码发送失败。')
     emailSentTo.value = email
     emailForm.code = ''
@@ -440,6 +477,10 @@ const submitEmailBinding = async () => {
   if (emailSending.value || emailBinding.value) return
   const accountID = currentUser.value?.id
   const email = emailForm.email.trim().toLowerCase()
+  if (emailLinkMode.value) {
+    await submitAccountLink()
+    return
+  }
   if (email !== emailSentTo.value || !/^[0-9]{6}$/.test(emailForm.code)) {
     emailBindingError.value = '请先发送验证码，再输入收到的 6 位验证码。'
     return
@@ -458,6 +499,35 @@ const submitEmailBinding = async () => {
     ElMessage.success('邮箱已绑定。')
   } catch (error: any) {
     if (currentUser.value?.id === accountID) emailBindingError.value = error?.data?.message || error?.message || '邮箱绑定失败，请稍后重试。'
+  } finally {
+    emailBinding.value = false
+  }
+}
+
+const submitAccountLink = async () => {
+  const accountID = currentUser.value?.id
+  if (emailSending.value || emailBinding.value || !emailForm.password || (emailReplaceRequired.value && !emailForm.replaceQQ)) return
+  emailBinding.value = true
+  emailBindingError.value = ''
+  try {
+    const response = await linkQQAccount(emailForm.email.trim().toLowerCase(), emailForm.password, emailForm.replaceQQ)
+    if (currentUser.value?.id !== accountID) return
+    if (response.code === 409 && response.data?.mode === 'replace') {
+      emailReplaceRequired.value = true
+      emailForm.replaceQQ = false
+      emailBindingError.value = response.message
+      return
+    }
+    if (response.code !== 0) throw new Error(response.message || '账号关联失败。')
+    await applyAuthResponse(response)
+    emailForm.password = ''
+    emailForm.replaceQQ = false
+    emailLinkMode.value = false
+    emailReplaceRequired.value = false
+    emailBindingOpen.value = false
+    ElMessage.success('QQ 已关联，当前已登录原账号。')
+  } catch (error: any) {
+    if (currentUser.value?.id === accountID) emailBindingError.value = error?.data?.message || error?.message || '账号关联失败，请稍后重试。'
   } finally {
     emailBinding.value = false
   }
@@ -543,6 +613,19 @@ const logout = async () => {
 </script>
 
 <style scoped lang="scss">
+.dialog-form .qq-replace-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+
+  input[type='checkbox'] {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex: 0 0 auto;
+  }
+}
+
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -722,6 +805,12 @@ const logout = async () => {
 
 .email-binding {
   margin: 0 0 24px;
+
+  .primary-button {
+    border-color: var(--account-dialog-text);
+    background: var(--account-dialog-text);
+    color: var(--account-dialog-bg);
+  }
 
   button:focus-visible {
     outline: 2px solid var(--brand-accent);
