@@ -26,7 +26,14 @@
         </div>
         <p class="moment-text" :aria-hidden="item.text ? undefined : true">{{ item.text }}</p>
         <div v-if="item.cover" class="moment-cover">
-          <img :src="item.cover" :alt="item.text || '动态照片'" loading="lazy" />
+          <img
+            :src="proxyImageUrl(item.cover, 768)"
+            :srcset="proxyImageSrcSet(item.cover, [320, 480, 640, 768])"
+            sizes="(max-width: 765px) calc(100vw - 78px), 320px"
+            :alt="item.text || '动态照片'"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
       </NuxtLink>
     </div>
@@ -36,7 +43,7 @@
 <script setup lang="ts">
 import type { MomentItem } from '~/services/api/moments'
 import { formatDate } from '~/utils/date'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageSrcSet, proxyImageUrl } from '~/utils/image'
 
 const props = defineProps<{
   moments: MomentItem[]

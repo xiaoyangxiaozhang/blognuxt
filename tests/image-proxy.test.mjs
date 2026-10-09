@@ -4,7 +4,8 @@ import dns from 'node:dns/promises'
 import http from 'node:http'
 import { EventEmitter } from 'node:events'
 import { Readable } from 'node:stream'
-import { fetchPublicImage, isPublicImageAddress, validateImageURL, MAX_IMAGE_BYTES } from '../server/utils/imageProxy.ts'
+import sharp from 'sharp'
+import { fetchPublicImage, isPublicImageAddress, validateImageURL, resizePublicImage, MAX_IMAGE_BYTES } from '../server/utils/imageProxy.ts'
 
 test('proxy blocks private, mapped, reserved and non-HTTP destinations', () => {
   for (const address of ['127.0.0.1', '10.1.2.3', '100.64.1.1', '169.254.169.254', '172.16.1.1', '192.168.1.1', '0.0.0.0', '224.1.1.1', '::1', 'fc00::1', 'fe80::1', '::ffff:127.0.0.1', '::ffff:7f00:1', '64:ff9b::7f00:1', '2002:7f00:1::', '2001:db8::1']) {
@@ -43,6 +44,15 @@ test('public image succeeds using the validated DNS addresses', async t => {
   assert.equal(result.body.toString(), 'image-bytes')
   assert.equal(result.contentType, 'image/png')
   assert.deepEqual(destinations[0].resolved, [{ address: '8.8.8.8', family: 4 }])
+})
+
+test('responsive image variants resize raster images to WebP without enlarging', async () => {
+  const body = await sharp({ create: { width: 1024, height: 512, channels: 3, background: '#8183ff' } }).png().toBuffer()
+  const variant = await resizePublicImage({ contentType: 'image/png', body }, 256)
+  const metadata = await sharp(variant.body).metadata()
+  assert.equal(variant.contentType, 'image/webp')
+  assert.equal(metadata.width, 256)
+  assert.equal(metadata.height, 128)
 })
 
 test('DNS answers with any private address cannot establish a request', async t => {

@@ -32,7 +32,16 @@
             <NuxtLink :to="`/article/${article.slug}`" :aria-label="article.title" class="article-card" :class="{ featured: index === 0, compact: index >= 3 }">
               <div class="article-cover-link">
                 <div class="article-cover">
-                  <img v-if="article.cover" :src="article.cover" :alt="article.title" loading="lazy" class="lazy-image" />
+                  <img
+                    v-if="article.cover"
+                    :src="proxyImageUrl(article.cover, 960)"
+                    :srcset="proxyImageSrcSet(article.cover, [320, 480, 640, 960, 1280])"
+                    sizes="(max-width: 765px) calc(100vw - 48px), (max-width: 1072px) 430px, 620px"
+                    :alt="article.title"
+                    loading="lazy"
+                    decoding="async"
+                    class="lazy-image"
+                  />
                 </div>
               </div>
 

@@ -14,18 +14,23 @@
       >
         <img
           v-if="heroPosterUrl"
+          ref="heroPosterRef"
           class="viewport-bg-poster"
-          :src="heroPosterUrl"
+          :src="proxyImageUrl(heroPosterUrl, 1280)"
+          :srcset="heroPosterSrcSet"
+          sizes="100vw"
           alt=""
           aria-hidden="true"
           decoding="async"
           fetchpriority="high"
+          @load="onHeroPosterSettled"
+          @error="onHeroPosterSettled"
         />
         <video
           v-if="heroBackgroundIsVideo"
           ref="heroVideoRef"
           class="viewport-bg-video"
-          :src="heroBackgroundUrl"
+          :src="heroVideoCanLoad ? heroBackgroundUrl : undefined"
           loop
           muted
           playsinline
@@ -133,7 +138,7 @@ import { getCommentList } from '~/services/api/comments'
 import type { ArticleListItem } from '~/types/api'
 import { normalizeCommentList, type NormalizedCommentItem } from '~/utils/comments'
 import { formatDate } from '~/utils/date'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageSrcSet, proxyImageUrl } from '~/utils/image'
 import { isVideoUrl, parseBlogJson, useBasicSettings, useBlogSettings } from '~/composables/useBlogSettings'
 interface ArticleTag {
   name: string
@@ -190,7 +195,10 @@ const currentPage = ref(1)
 const pageSize = 10
 const displayedIntroChars = ref<string[]>([])
 const heroVisualRef = ref<HTMLElement | null>(null)
+const heroPosterRef = ref<HTMLImageElement | null>(null)
 const heroVideoRef = ref<HTMLVideoElement | null>(null)
+const heroPosterSettled = ref(false)
+const heroVideoCanLoad = ref(false)
 const heroVideoReady = ref(false)
 const heroVideoFailed = ref(false)
 let typingTimer: ReturnType<typeof setInterval> | null = null
@@ -198,6 +206,8 @@ let restartTimer: ReturnType<typeof setTimeout> | null = null
 let heroVideoObserver: IntersectionObserver | null = null
 let reducedMotionQuery: MediaQueryList | null = null
 let heroIsVisible = true
+let heroPageReady = false
+let heroDisposed = false
 
 const resolveArticleSlug = (item: Pick<ArticleListItem, 'id' | 'slug' | 'url'>) => {
   if (item.slug) return item.slug
@@ -290,6 +300,21 @@ const heroPosterUrl = computed(() => {
 
   return ''
 })
+const heroPosterWidths = [480, 768, 1280, 1920]
+const heroPosterSrcSet = computed(() => proxyImageSrcSet(heroPosterUrl.value, heroPosterWidths))
+
+useHead(() => ({
+  link: heroPosterUrl.value
+    ? [{
+        rel: 'preload',
+        as: 'image',
+        href: proxyImageUrl(heroPosterUrl.value, 1280),
+        imagesrcset: heroPosterSrcSet.value,
+        imagesizes: '100vw',
+        fetchpriority: 'high'
+      }]
+    : []
+}))
 
 const isRevealed = ref(false)
 const curtainReady = ref(false)
@@ -313,7 +338,7 @@ watch(pending, (val) => {
 
 const authorName = computed(() => basicSettings.value['basic.author'] || '')
 const authorDesc = computed(() => basicSettings.value['basic.author_desc'] || '')
-const authorAvatar = computed(() => proxyImageUrl(basicSettings.value['basic.author_avatar']) || DEFAULT_AVATAR)
+const authorAvatar = computed(() => proxyImageUrl(basicSettings.value['basic.author_avatar'], 640) || DEFAULT_AVATAR)
 const authorGithub = computed(() => {
   return (
     basicSettings.value['basic.github'] ||
@@ -376,9 +401,17 @@ const syncHeroVideoPlayback = async () => {
     return
   }
 
-  if (shouldAvoidHeroVideo() || !heroIsVisible || document.hidden || heroVideoFailed.value) {
+  if (heroDisposed || !heroPageReady || !heroPosterSettled.value || shouldAvoidHeroVideo() || !heroIsVisible || document.hidden || heroVideoFailed.value) {
     video.pause()
     return
+  }
+
+  if (!heroVideoCanLoad.value) {
+    // Give the loaded poster a paint before attaching the video source.
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    if (heroDisposed || !heroPosterSettled.value || shouldAvoidHeroVideo() || !heroIsVisible || document.hidden || heroVideoRef.value !== video) return
+    heroVideoCanLoad.value = true
+    await nextTick()
   }
 
   try {
@@ -388,6 +421,29 @@ const syncHeroVideoPlayback = async () => {
     console.warn('Hero background video autoplay was skipped', error)
   }
 }
+
+const onHeroPosterSettled = () => {
+  heroPosterSettled.value = true
+  void syncHeroVideoPlayback()
+}
+
+const onHeroPageLoad = async () => {
+  await document.fonts.ready
+  if (heroDisposed) return
+  heroPageReady = true
+  void syncHeroVideoPlayback()
+}
+
+watch([heroBackgroundUrl, heroPosterUrl], async () => {
+  if (!import.meta.client) return
+  heroVideoCanLoad.value = false
+  heroVideoReady.value = false
+  heroVideoFailed.value = false
+  await nextTick()
+  if (heroDisposed) return
+  heroPosterSettled.value = !heroPosterUrl.value || Boolean(heroPosterRef.value?.complete)
+  void syncHeroVideoPlayback()
+})
 
 const onHeroVideoPlaying = () => {
   if (!shouldAvoidHeroVideo()) {
@@ -450,6 +506,12 @@ onMounted(() => {
   reducedMotionQuery.addEventListener('change', handleMotionPreferenceChange)
   resetTyping()
   document.addEventListener('visibilitychange', handleDocumentVisibilityChange)
+  heroPosterSettled.value = !heroPosterUrl.value || Boolean(heroPosterRef.value?.complete)
+  if (document.readyState === 'complete') {
+    void onHeroPageLoad()
+  } else {
+    window.addEventListener('load', onHeroPageLoad, { once: true })
+  }
 
   if (heroVisualRef.value) {
     heroVideoObserver = new IntersectionObserver(([entry]) => {
@@ -470,6 +532,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  heroDisposed = true
+  window.removeEventListener('load', onHeroPageLoad)
   clearTypingTimers()
   heroVideoObserver?.disconnect()
   heroVideoObserver = null

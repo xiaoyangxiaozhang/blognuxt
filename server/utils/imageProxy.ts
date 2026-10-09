@@ -3,6 +3,7 @@ import http from 'node:http'
 import https from 'node:https'
 import { BlockList, isIP, type LookupFunction } from 'node:net'
 import { createError } from 'h3'
+import sharp from 'sharp'
 
 export const MAX_IMAGE_BYTES = 20 * 1024 * 1024
 const blocked = new BlockList()
@@ -100,4 +101,16 @@ export async function fetchPublicImage(value: string, signal = AbortSignal.timeo
     }
   }
   throw createError({ statusCode: 502, statusMessage: 'Image upstream unavailable' })
+}
+
+export async function resizePublicImage(image: { contentType: string; body: Buffer }, width: number) {
+  if (!/^image\/(?:jpeg|png|webp|avif)$/.test(image.contentType)) return image
+  return {
+    contentType: 'image/webp',
+    body: await sharp(image.body, { limitInputPixels: 40_000_000 })
+      .rotate()
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer()
+  }
 }

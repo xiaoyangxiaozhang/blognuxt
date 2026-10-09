@@ -12,6 +12,7 @@ async function loadPanel(name) {
   const compiled = compileScript(descriptor, { id: name, inlineTemplate: true })
   const code = stripTypeScriptTypes(`import { computed, ref } from 'vue';\n${compiled.content}`)
     .replace(/import \{ formatDate \} from ['"]~\/utils\/date['"]/, 'const formatDate = value => value')
+    .replace(/import \{ proxyImageSrcSet, proxyImageUrl \} from ['"]~\/utils\/image['"]/, 'const proxyImageSrcSet = () => undefined; const proxyImageUrl = value => value')
     .replace(/import \{ proxyImageUrl \} from ['"]~\/utils\/image['"]/, 'const proxyImageUrl = value => value')
     .replace(/import \{ renderCommentContent \} from ['"]~\/utils\/commentRenderer['"]/, 'const renderCommentContent = () => []')
     .replace(/import \{ ChevronRightIcon \} from ['"]~\/utils\/siteIcons['"]/, 'const ChevronRightIcon = { render: () => null }')

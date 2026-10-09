@@ -34,6 +34,13 @@ const configuredFont = computed(() => {
 
   return { url, family: `"${family}"` }
 })
+const fontOrigin = computed(() => {
+  try {
+    return /^https?:\/\//i.test(configuredFont.value.url) ? new URL(configuredFont.value.url).origin : ''
+  } catch {
+    return ''
+  }
+})
 const themeColor = computed(() => {
   const color = blogSettings.value['blog.theme_color']?.trim() || ''
   return /^#[\da-f]{6}$/i.test(color) ? color : ''
@@ -99,6 +106,12 @@ useSeoMeta({
 useHead(() => ({
   link: [
     { rel: 'canonical', href: canonicalUrl.value },
+    ...(fontOrigin.value
+      ? [
+          { key: 'blog-font-preconnect', rel: 'preconnect', href: fontOrigin.value, crossorigin: 'anonymous' },
+          { key: 'blog-font-css-preconnect', rel: 'preconnect', href: fontOrigin.value }
+        ]
+      : []),
     ...(configuredFont.value.url
       ? [{ key: 'blog-font', rel: 'stylesheet', href: configuredFont.value.url }]
       : [])

@@ -1,7 +1,15 @@
-import { fetchPublicImage, validateImageURL } from '../utils/imageProxy'
+import { fetchPublicImage, resizePublicImage, validateImageURL } from '../utils/imageProxy'
+
+const allowedWidths = new Set([128, 256, 320, 384, 480, 640, 768, 960, 1280, 1920])
 
 export default defineEventHandler(async (event) => {
-  const source = validateImageURL(getQuery(event).url)
+  const query = getQuery(event)
+  const source = validateImageURL(query.url)
+  const widthValue = query.width === undefined ? '' : String(query.width)
+  const width = widthValue ? Number(widthValue) : 0
+  if (widthValue && (!Number.isInteger(width) || !allowedWidths.has(width) || query.format !== 'webp')) {
+    throw createError({ statusCode: 400, statusMessage: 'Unsupported image variant' })
+  }
   const signal = AbortSignal.timeout(10_000)
 
   const resolveUploadFallback = async () => {
@@ -31,13 +39,17 @@ export default defineEventHandler(async (event) => {
       if (!fallback) throw error
       image = await fetchPublicImage(fallback, signal)
     }
-    setHeader(event, 'Content-Type', image.contentType)
+    const result = width ? await resizePublicImage(image, width) : image
+
+    setHeader(event, 'Content-Type', result.contentType)
     setHeader(event, 'X-Content-Type-Options', 'nosniff')
     // SVG remains usable, with active content disabled when opened as a document.
     setHeader(event, 'Content-Security-Policy', "default-src 'none'; sandbox")
     setHeader(event, 'Access-Control-Allow-Origin', '*')
-    setHeader(event, 'Cache-Control', 'public, max-age=604800, immutable')
-    return image.body
+    setHeader(event, 'Cache-Control', width
+      ? 'public, max-age=31536000, immutable'
+      : 'public, max-age=604800, immutable')
+    return result.body
   } catch (error: any) {
     if ([400, 403, 413, 415].includes(error.statusCode)) throw error
     throw createError({

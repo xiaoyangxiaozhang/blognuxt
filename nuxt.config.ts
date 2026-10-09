@@ -28,8 +28,12 @@ export default defineNuxtConfig({
         : process.env.NODE_ENV !== 'development'
     }
   },
-  routeRules: apiProxyTarget
-    ? {
+  routeRules: {
+    '/_nuxt/**': {
+      headers: { 'cache-control': 'public, max-age=31536000, immutable' }
+    },
+    ...(apiProxyTarget
+      ? {
         '/api/v1/**': {
           proxy: {
             to: `${apiProxyTarget}/api/v1/**`,
@@ -37,7 +41,8 @@ export default defineNuxtConfig({
           }
         }
       }
-    : undefined,
+      : {})
+  },
 vite: {
     plugins: [
       Icons({ compiler: 'vue3', autoInstall: true }),
