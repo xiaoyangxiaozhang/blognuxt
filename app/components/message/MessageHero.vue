@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AboutModel from '~/components/about/AboutModel.vue'
+const AboutModel = defineAsyncComponent(() => import('~/components/about/AboutModel.vue'))
 
 withDefaults(defineProps<{
   authorName?: string

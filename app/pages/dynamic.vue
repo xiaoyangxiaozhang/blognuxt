@@ -6,7 +6,10 @@
       <header class="moments-header">
         <div class="moments-cover">
           <div class="cover-media">
-            <img src="~/assets/img/background.png" alt="Moments cover" class="cover-image" />
+            <picture class="cover-picture">
+              <source v-if="!dynamicCover" :srcset="fallbackCoverWebp" type="image/webp" />
+              <img :src="dynamicCover || fallbackCover" alt="Moments cover" class="cover-image" />
+            </picture>
             <div class="cover-overlay"></div>
           </div>
 
@@ -180,6 +183,8 @@ import { formatDate } from '~/utils/date'
 import { parseBlogJson } from '~/composables/useBlogSettings'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
+import fallbackCover from '~/assets/img/background.png'
+import fallbackCoverWebp from '~/assets/img/background.webp'
 
 interface DynamicMomentItem {
   id: number
@@ -250,6 +255,7 @@ const { data, pending } = await useAsyncData(
 const moments = computed<DynamicMomentItem[]>(() => data.value?.moments || [])
 const settings = computed<Record<string, string>>(() => data.value?.settings || {})
 const blogSettings = computed<Record<string, string>>(() => data.value?.blogSettings || {})
+const dynamicCover = computed(() => proxyImageUrl(blogSettings.value['blog.dynamic_cover']))
 const pageError = computed(() => data.value?.error || '')
 const authorName = computed(() => settings.value['basic.author'] || 'XiaoLin')
 const authorDesc = computed(() => settings.value['basic.author_desc'] || 'Collecting daily notes and small inspirations.')
@@ -493,6 +499,12 @@ const formatMomentDate = formatDate
   min-height: min(68.75vw, 520px);
   overflow: hidden;
   background: var(--home-card-alt);
+}
+
+.cover-picture {
+  position: absolute;
+  inset: 0;
+  display: block;
 }
 
 .cover-image {

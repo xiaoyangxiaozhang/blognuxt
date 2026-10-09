@@ -6,7 +6,10 @@
       <header class="moments-header">
         <div class="moments-cover">
           <div class="cover-media">
-            <img :src="coverImage" alt="基米斗社区封面" class="cover-image" />
+            <picture class="cover-picture">
+              <source v-if="!hasConfiguredCover" :srcset="fallbackCoverWebp" type="image/webp" />
+              <img :src="coverImage" alt="基米斗社区封面" class="cover-image" />
+            </picture>
             <div class="cover-overlay"></div>
           </div>
 
@@ -185,6 +188,7 @@ import { formatDate } from '~/utils/date'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 import fallbackCover from '~/assets/img/background.png'
+import fallbackCoverWebp from '~/assets/img/background.webp'
 
 interface CommentState {
   comments: UnifiedCommentItem[]
@@ -248,6 +252,7 @@ const currentPage = ref(1)
 const loadingMore = ref(false)
 const hasMore = computed(() => moments.value.length < Number(data.value?.total || 0))
 const coverImage = computed(() => proxyImageUrl(blogSettings.value['blog.kimidou_cover']) || fallbackCover)
+const hasConfiguredCover = computed(() => Boolean(blogSettings.value['blog.kimidou_cover']?.trim()))
 const communityName = computed(() => currentUser.value?.nickname || '基米斗社区')
 const communityAvatar = computed(() => {
   return proxyImageUrl(currentUser.value?.avatar) || proxyImageUrl(settings.value['basic.author_avatar']) || DEFAULT_AVATAR
@@ -479,6 +484,8 @@ const formatMomentDate = formatDate
   overflow: hidden;
   background: var(--home-card-alt);
 }
+
+.cover-picture { position: absolute; inset: 0; display: block; }
 
 .cover-image { width: 100%; height: 100%; display: block; object-fit: cover; }
 
