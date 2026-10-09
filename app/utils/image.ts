@@ -31,11 +31,12 @@ export const proxyImageUrl = (url?: string | null, width?: number): string => {
   const source = getProxySource(normalizedUrl)
   if (!source) return normalizedUrl
 
-  const params = new URLSearchParams({ url: source })
+  const params = new URLSearchParams()
   if (width && responsiveWidths.has(width)) {
     params.set('width', String(width))
     params.set('format', 'webp')
   }
+  params.set('url', source)
 
   return `/proxy-image?${params.toString()}`
 }

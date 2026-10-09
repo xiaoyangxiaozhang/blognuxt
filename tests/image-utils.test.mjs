@@ -6,8 +6,8 @@ test('responsive proxy URLs retain the original source and request WebP widths',
   const original = 'https://admin.example/uploads/photo.jpg'
   const proxied = proxyImageUrl(original)
   assert.equal(proxyImageSrcSet(proxied, [320, 640, 999]), [
-    `/proxy-image?url=${encodeURIComponent(original)}&width=320&format=webp 320w`,
-    `/proxy-image?url=${encodeURIComponent(original)}&width=640&format=webp 640w`
+    `/proxy-image?width=320&format=webp&url=${encodeURIComponent(original)} 320w`,
+    `/proxy-image?width=640&format=webp&url=${encodeURIComponent(original)} 640w`
   ].join(', '))
 })
 
