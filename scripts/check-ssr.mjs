@@ -45,7 +45,7 @@ const upstream = http.createServer((req, res) => {
     if (req.url.includes('page_size=0')) {
       assert.equal(new URL(req.url, 'http://localhost').searchParams.get('page'), '0')
     }
-    const extraArticle = { ...article, id: 2, slug: '中文 & "slug"', category: { url: '/category/audit&test' }, tags: [{ url: '/tag/audit' }, { url: 'https://external.example/tag' }] }
+    const extraArticle = { ...article, id: 2, slug: '中文 & "slug"', category: { url: '/category/audit&test' }, tags: [{ url: '/tag/audit' }, { url: '/tag/阿里云 ECS' }, { url: 'https://external.example/tag' }] }
     data = mode === 'sitemap-empty' ? { list: null, total: 0 }
       : { list: mode === 'sitemap-new' ? [article, extraArticle] : [article], total: mode === 'sitemap-new' ? 2 : 1 }
   }
@@ -127,6 +127,8 @@ try {
   const updatedSitemap = await (await fetch(origin + '/sitemap.xml')).text()
   assert(updatedSitemap.includes(`/article/${encodeURIComponent('中文 & "slug"')}`))
   assert(updatedSitemap.includes('/category/audit&amp;test'))
+  assert(updatedSitemap.includes(`/tag/${encodeURIComponent('阿里云 ECS')}`))
+  for (const [, url] of updatedSitemap.matchAll(/<loc>(.*?)<\/loc>/g)) assert(!/[^\x21-\x7e]/.test(url), 'sitemap URLs must encode spaces and non-ASCII characters')
   assert.equal(updatedSitemap.match(/<loc>[^<]+\/tag\/audit<\/loc>/g)?.length, 1)
   assert(!updatedSitemap.includes('external.example'))
   mode = 'sitemap-empty'
