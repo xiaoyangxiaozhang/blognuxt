@@ -23,6 +23,10 @@ const upstream = http.createServer((req, res) => {
     return
   }
   res.setHeader('content-type', 'application/json')
+  if (path === '/api/v1/articles' && mode === 'sitemap-unavailable') {
+    res.end(JSON.stringify({ code: 500, message: 'Synthetic article list failure' }))
+    return
+  }
   if (path === '/api/v1/articles/audit-unavailable') {
     res.statusCode = 503
     res.end(JSON.stringify({ code: 503, message: 'Synthetic unavailable' }))
@@ -37,7 +41,14 @@ const upstream = http.createServer((req, res) => {
   if (path.endsWith('/settings/blog')) data = { 'blog.title': mode === 'new-settings' ? 'UPDATED_AUDIT_BLOG' : 'Audit Blog', 'blog.kimidou_enabled': 'false' }
   if (path.endsWith('/settings/basic')) data = { 'basic.author': 'Audit author' }
   if (path.endsWith('/settings/oauth')) data = {}
-  if (path.endsWith('/articles')) data = { list: [article], total: 1 }
+  if (path.endsWith('/articles')) {
+    if (req.url.includes('page_size=0')) {
+      assert.equal(new URL(req.url, 'http://localhost').searchParams.get('page'), '0')
+    }
+    const extraArticle = { ...article, id: 2, slug: '中文 & "slug"', category: { url: '/category/audit&test' }, tags: [{ url: '/tag/audit' }, { url: 'https://external.example/tag' }] }
+    data = mode === 'sitemap-empty' ? { list: null, total: 0 }
+      : { list: mode === 'sitemap-new' ? [article, extraArticle] : [article], total: mode === 'sitemap-new' ? 2 : 1 }
+  }
   if (path.endsWith('/moments')) data = { list: [{ id: 1, publish_time: '2026-10-04T00:00:00Z', content: { text: 'AUDIT_MOMENT_MARKER' }, is_publish: true }], total: 1 }
   if (path.endsWith('/chatbot/config')) data = { enabled: false }
   if (path.endsWith('/stats/site')) data = {}
@@ -99,6 +110,35 @@ try {
   const canonical = listHtml.match(/<link[^>]+rel="canonical"[^>]*>/)?.[0]
   assert(canonical?.includes(origin + '/articles'))
   console.log(JSON.stringify({ case: 'articles index canonical', canonical }))
+
+  const robots = await fetch(origin + '/robots.txt')
+  assert.equal(robots.status, 200)
+  assert((await robots.text()).includes(`Sitemap: ${origin}/sitemap.xml`))
+  const sitemap = await fetch(origin + '/sitemap.xml', { headers: { Host: 'untrusted.example' } })
+  const sitemapXml = await sitemap.text()
+  assert.equal(sitemap.status, 200)
+  assert(sitemap.headers.get('content-type')?.includes('application/xml'))
+  assert(sitemapXml.includes(`xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"`))
+  assert(sitemapXml.includes(`<loc>${origin}/article/audit-article</loc>`))
+  assert(!sitemapXml.includes('/posts/') && !sitemapXml.includes('untrusted.example'))
+  for (const path of ['/debug', '/oauth/callback', '/kimidou/mine']) assert(!sitemapXml.includes(`<loc>${origin}${path}</loc>`))
+
+  mode = 'sitemap-new'
+  const updatedSitemap = await (await fetch(origin + '/sitemap.xml')).text()
+  assert(updatedSitemap.includes(`/article/${encodeURIComponent('中文 & "slug"')}`))
+  assert(updatedSitemap.includes('/category/audit&amp;test'))
+  assert.equal(updatedSitemap.match(/<loc>[^<]+\/tag\/audit<\/loc>/g)?.length, 1)
+  assert(!updatedSitemap.includes('external.example'))
+  mode = 'sitemap-empty'
+  const emptySitemap = await fetch(origin + '/sitemap.xml')
+  assert.equal(emptySitemap.status, 200)
+  assert((await emptySitemap.text()).includes(`<loc>${origin}/articles</loc>`))
+  mode = 'sitemap-unavailable'
+  const failedSitemap = await fetch(origin + '/sitemap.xml')
+  assert.equal(failedSitemap.status, 503)
+  assert(!(await failedSitemap.text()).includes('<urlset'))
+  mode = 'normal'
+  console.log('PASS: sitemap public URLs, runtime origin, XML escaping, live updates, empty list and upstream failure')
 
   const missing = await fetch(origin + '/article/audit-missing')
   const missingHtml = await missing.text()

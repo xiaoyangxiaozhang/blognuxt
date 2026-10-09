@@ -79,6 +79,12 @@ npm run preview
 
 构建产物位于 `.output/`，SSR 服务入口为 `.output/server/index.mjs`。生产环境运行时仍需要正确配置 `NUXT_PUBLIC_API_BASE`，不能留空。
 
+### 搜索收录
+
+`/sitemap.xml` 从公开文章接口动态生成网站地图，包含公共页面、已发布文章及其分类和标签；新文章发布后自动加入。`/robots.txt` 声明网站地图地址，两者使用 `NUXT_PUBLIC_SITE_URL`（默认 `https://xiaoyangxiaozhang.xyz`），部署到其他域名时需同步修改。文章接口不可用时地图返回 503，供爬虫稍后重试。
+
+上线后可在搜索引擎站长平台提交 `https://xiaoyangxiaozhang.xyz/sitemap.xml`，并检查首页和文章的收录状态。网站地图帮助发现页面，不保证收录或排名。
+
 ## 页面
 
 | 路径 | 说明 |
