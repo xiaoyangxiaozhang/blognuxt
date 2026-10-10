@@ -1,5 +1,6 @@
 import http from 'node:http'
 import { spawn } from 'node:child_process'
+import { readFile } from 'node:fs/promises'
 import { setTimeout as delay } from 'node:timers/promises'
 import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
@@ -118,29 +119,15 @@ try {
   const sitemapXml = await sitemap.text()
   assert.equal(sitemap.status, 200)
   assert(sitemap.headers.get('content-type')?.includes('application/xml'))
-  assert(sitemapXml.includes(`xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"`))
-  assert(sitemapXml.includes(`<loc>${origin}/article/audit-article</loc>`))
-  assert(!sitemapXml.includes('/posts/') && !sitemapXml.includes('untrusted.example'))
-  for (const path of ['/debug', '/oauth/callback', '/kimidou/mine']) assert(!sitemapXml.includes(`<loc>${origin}${path}</loc>`))
-
-  mode = 'sitemap-new'
-  const updatedSitemap = await (await fetch(origin + '/sitemap.xml')).text()
-  assert(updatedSitemap.includes(`/article/${encodeURIComponent('中文 & "slug"')}`))
-  assert(updatedSitemap.includes('/category/audit&amp;test'))
-  assert(updatedSitemap.includes(`/tag/${encodeURIComponent('阿里云 ECS')}`))
-  for (const [, url] of updatedSitemap.matchAll(/<loc>(.*?)<\/loc>/g)) assert(!/[^\x21-\x7e]/.test(url), 'sitemap URLs must encode spaces and non-ASCII characters')
-  assert.equal(updatedSitemap.match(/<loc>[^<]+\/tag\/audit<\/loc>/g)?.length, 1)
-  assert(!updatedSitemap.includes('external.example'))
-  mode = 'sitemap-empty'
-  const emptySitemap = await fetch(origin + '/sitemap.xml')
-  assert.equal(emptySitemap.status, 200)
-  assert((await emptySitemap.text()).includes(`<loc>${origin}/articles</loc>`))
-  mode = 'sitemap-unavailable'
-  const failedSitemap = await fetch(origin + '/sitemap.xml')
-  assert.equal(failedSitemap.status, 503)
-  assert(!(await failedSitemap.text()).includes('<urlset'))
-  mode = 'normal'
-  console.log('PASS: sitemap public URLs, runtime origin, XML escaping, live updates, empty list and upstream failure')
+  const uploadedSitemap = await readFile(new URL('../public/sitemap.xml', import.meta.url), 'utf8')
+  assert.equal(sitemapXml, uploadedSitemap)
+  assert(sitemapXml.includes('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'))
+  const sitemapUrls = [...sitemapXml.matchAll(/<loc>(.*?)<\/loc>/g)].map(([, url]) => url)
+  assert.equal(sitemapUrls.length, 32)
+  assert.equal(new Set(sitemapUrls).size, 32)
+  assert(sitemapUrls.every(url => url.startsWith('https://xiaoyangxiaozhang.xyz/')))
+  assert(!sitemapXml.includes('untrusted.example'))
+  console.log('PASS: production sitemap is served byte-for-byte with 32 unique site URLs')
 
   const missing = await fetch(origin + '/article/audit-missing')
   const missingHtml = await missing.text()
