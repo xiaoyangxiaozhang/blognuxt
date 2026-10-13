@@ -75,11 +75,16 @@ export const optimizedImageAttrs = (
 
 /** Used by the capture listener as well as detached image preloads. Retry the source once. */
 export const restoreOriginalImage = (image: HTMLImageElement): boolean => {
-  const original = image.getAttribute('data-original-src')
+  const sources = image.parentElement?.tagName === 'PICTURE'
+    ? image.parentElement.querySelectorAll('source[srcset]')
+    : []
+  const original = image.getAttribute('data-original-src') || (sources.length ? image.getAttribute('src') : null)
   if (!original) return false
   image.removeAttribute('data-original-src')
   image.removeAttribute('srcset')
   image.removeAttribute('sizes')
+  // A picture source wins over img.src until its candidates are removed.
+  for (const source of sources) source.removeAttribute('srcset')
   image.src = original
   return true
 }

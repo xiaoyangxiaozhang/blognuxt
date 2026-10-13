@@ -44,3 +44,17 @@ test('Markdown and reader blocks share responsive images, loading rules and esca
   assert(!result.html.includes('<img src=x'))
   assert.equal(result.blocks.filter(block => block.html.includes('srcset=')).length, 2)
 })
+
+test('picture errors disable the failed WebP source and retry the PNG fallback only once', () => {
+  let srcset = '/background.webp'
+  const source = { removeAttribute: name => { if (name === 'srcset') srcset = '' } }
+  const attrs = new Map([['src', '/background.png']])
+  const image = {
+    parentElement: { tagName: 'PICTURE', querySelectorAll: () => srcset ? [source] : [] },
+    getAttribute: key => attrs.get(key), removeAttribute: key => attrs.delete(key), src: ''
+  }
+  assert.equal(restoreOriginalImage(image), true)
+  assert.equal(image.src, '/background.png')
+  assert.equal(srcset, '')
+  assert.equal(restoreOriginalImage(image), false)
+})

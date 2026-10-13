@@ -9,7 +9,7 @@ export default defineNuxtPlugin(nuxtApp => {
   }
   document.addEventListener('error', onError, true)
   const restoreEarlyFailures = () => {
-    document.querySelectorAll<HTMLImageElement>('img[data-original-src]').forEach(image => {
+    document.querySelectorAll<HTMLImageElement>('img[data-original-src], picture img').forEach(image => {
       if (image.complete && !image.naturalWidth) restoreOriginalImage(image)
     })
   }
