@@ -86,10 +86,33 @@ const copyrightYear = computed(() => {
   return `2023 - ${year}`
 })
 
-const startDate = new Date('2023-01-01')
 const runningDays = computed(() => {
-  const diff = Date.now() - startDate.getTime()
-  return Math.floor(diff / (1000 * 60 * 60 * 24))
+  const established = blogSettings.value['blog.established'] || ''
+  const matched = established.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+  if (!matched) return '—'
+
+  const [, yearText, monthText, dayText] = matched
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+  const establishedDate = new Date(Date.UTC(year, month - 1, day))
+  if (
+    establishedDate.getUTCFullYear() !== year ||
+    establishedDate.getUTCMonth() !== month - 1 ||
+    establishedDate.getUTCDate() !== day
+  ) {
+    return '—'
+  }
+
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date())
+  const values = Object.fromEntries(today.map((part) => [part.type, part.value]))
+  const todayDate = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day))
+  return String(Math.max(0, Math.floor((todayDate - establishedDate.getTime()) / 86400000)))
 })
 
 const { data: articleData } = await useAsyncData('footer-articles', () =>
