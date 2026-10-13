@@ -7,7 +7,7 @@
     <template v-else>
       <div class="author-main">
         <div class="author-avatar">
-          <img :src="authorAvatar" :alt="authorName || '站长头像'" />
+          <img v-bind="optimizedImageAttrs(authorAvatar, [128, 256], '100px')" :alt="authorName || '站长头像'" />
         </div>
 
         <div class="author-copy">
@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+import { optimizedImageAttrs } from '~/utils/image'
 import { GithubLogoIcon, TwitterLogoIcon } from '@svg-animated-icons/vue'
 import { EnvelopeClosedIcon, GlobeIcon } from '~/utils/siteIcons'
 

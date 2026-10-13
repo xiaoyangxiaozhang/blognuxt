@@ -5,7 +5,7 @@
         <section v-if="open" class="chatbot-panel" role="dialog" aria-label="和博主聊聊">
           <header class="chatbot-header">
             <div class="chatbot-heading">
-              <img :src="avatar || logoUrl" :alt="displayName" class="chatbot-avatar" />
+              <img v-bind="optimizedImageAttrs(avatar || logoUrl, [128], '40px')" :alt="displayName" class="chatbot-avatar" />
               <div class="chatbot-heading-copy">
                 <span class="chatbot-kicker">来聊两句</span>
                 <strong>{{ displayName }}</strong>
@@ -76,7 +76,7 @@
 import { Cross1Icon, PaperPlaneIcon } from '~/utils/siteIcons'
 import { getChatbotConfig, streamChatbotMessage } from '~/services/api/chatbot'
 import type { ChatbotMessage, PublicChatbotConfig } from '~/services/api/chatbot'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 import logoUrl from '~/assets/img/logo-sheep.png'
 
 const STORAGE_KEY = 'blog-chatbot-session-v2'

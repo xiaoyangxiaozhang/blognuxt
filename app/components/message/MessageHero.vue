@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { optimizedImageAttrs } from '~/utils/image'
 const AboutModel = defineAsyncComponent(() => import('~/components/about/AboutModel.vue'))
 
 withDefaults(defineProps<{
@@ -112,7 +113,7 @@ function onTitlePointerLeave(event: PointerEvent) {
             :enable-zoom="modelZoom"
             model-alt="博客作者的 3D 角色"
           />
-          <img v-else-if="fallbackImageUrl" :src="fallbackImageUrl" :alt="authorName" />
+          <img v-else-if="fallbackImageUrl" v-bind="optimizedImageAttrs(fallbackImageUrl, [320, 640], '(max-width: 765px) 100vw, 400px')" :alt="authorName" />
           <span v-else class="model-unavailable">暂未配置个人图片</span>
           <template #fallback>
             <span class="model-loading-fallback" role="status">正在加载…</span>

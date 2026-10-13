@@ -60,7 +60,7 @@
           <template v-else>
             <div class="profile-summary">
               <div class="profile-identity">
-                <img v-if="currentUser?.avatar" :src="currentUser.avatar" :alt="currentUser.nickname || '用户头像'">
+                <img v-if="currentUser?.avatar" v-bind="optimizedImageAttrs(currentUser.avatar, [128, 256], '64px')" :alt="currentUser.nickname || '用户头像'">
                 <div v-else class="avatar-fallback">{{ (currentUser?.nickname || '用').slice(0, 1) }}</div>
                 <div>
                   <strong>{{ currentUser?.nickname || '未设置昵称' }}</strong>
@@ -124,7 +124,7 @@
             <form v-if="profileEditing" class="dialog-form profile-editor" @submit.prevent="saveProfile">
               <div class="avatar-editor">
                 <div class="avatar-preview">
-                  <img v-if="profileAvatarUrl" :src="profileAvatarUrl" alt="头像预览">
+                  <img v-if="profileAvatarUrl" v-bind="optimizedImageAttrs(profileAvatarUrl, [128, 256], '80px')" alt="头像预览">
                   <span v-else>{{ (profileForm.nickname || '用').slice(0, 1) }}</span>
                 </div>
                 <div class="avatar-editor-copy">
@@ -229,7 +229,7 @@ import {
   updateUserProfile
 } from '~/services/api/auth'
 import { uploadFile } from '~/services/api/upload'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 
 const { accountOpen, accountMode } = useSiteOverlays()
 const { settings: blogSettings } = useBlogSettings()

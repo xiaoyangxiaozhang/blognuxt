@@ -65,7 +65,7 @@
           <img
             v-if="hoverArticle"
             :key="hoverArticle.id"
-            :src="hoverArticle.cover"
+            v-bind="optimizedImageAttrs(hoverArticle.cover, [320, 640, 960], '400px')"
             :class="{ 'is-poster': hoverArticle.isPoster }"
             alt=""
             width="240"
@@ -85,7 +85,7 @@ import { getArticleList } from '~/services/api/article'
 import type { ArticleListItem } from '~/types/api'
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 import { resolveArticleSlug } from '~/utils/article'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 
 interface ArchiveArticleItem {
   id: number

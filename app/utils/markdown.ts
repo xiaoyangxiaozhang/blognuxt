@@ -1,5 +1,6 @@
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js/lib/common'
+import { optimizedImageAttrs } from './image.ts'
 
 export interface MarkdownHeading {
   id: string
@@ -49,6 +50,17 @@ const markdown = new MarkdownIt({
   linkify: true,
   typographer: true
 })
+
+const renderImage = markdown.renderer.rules.image!
+markdown.renderer.rules.image = (tokens, index, options, env, renderer) => {
+  const token = tokens[index]!
+  const attrs = optimizedImageAttrs(token.attrGet('src'))
+  for (const [name, value] of Object.entries(attrs)) {
+    if (value !== undefined) token.attrSet(name, value)
+  }
+  if (!token.attrGet('loading')) token.attrSet('loading', 'lazy')
+  return renderImage(tokens, index, options, env, renderer)
+}
 
 markdown.renderer.rules.fence = (tokens, index) => {
   const token = tokens[index]
@@ -190,9 +202,16 @@ export const renderArticleMarkdown = (content?: string | null) => {
   const headings: MarkdownHeading[] = []
   const usedIds = new Set<string>()
   let headingIndex = 0
+  let firstImage = true
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index]
+    for (const child of token.children || []) {
+      if (child.type === 'image') {
+        child.attrSet('loading', firstImage ? 'eager' : 'lazy')
+        firstImage = false
+      }
+    }
     if (token.type !== 'heading_open') {
       continue
     }

@@ -3,6 +3,8 @@
  * 使用 Canvas API 采样像素，取平均色
  * 跨域图片通过 Nitro 代理路由中转（获取 CORS 头）以允许 canvas 读取像素
  */
+import { optimizedImageAttrs, restoreOriginalImage } from './image.ts'
+
 export const getDominantColor = (imageUrl: string): Promise<string> => {
   return new Promise((resolve) => {
     if (!import.meta.client) {
@@ -11,13 +13,11 @@ export const getDominantColor = (imageUrl: string): Promise<string> => {
     }
 
     // 对外部图片使用代理，确保 canvas 能读取像素
-    const proxyUrl = imageUrl.startsWith('http')
-      ? `/proxy-image?url=${encodeURIComponent(imageUrl)}`
-      : imageUrl
+    const attrs = optimizedImageAttrs(imageUrl, [128], '128px')
 
     const img = new Image()
     img.crossOrigin = 'anonymous'
-    img.src = proxyUrl
+    if (attrs['data-original-src']) img.setAttribute('data-original-src', attrs['data-original-src'])
 
     img.onload = () => {
       try {
@@ -54,6 +54,7 @@ export const getDominantColor = (imageUrl: string): Promise<string> => {
       }
     }
 
-    img.onerror = () => resolve('')
+    img.onerror = () => { if (!restoreOriginalImage(img)) resolve('') }
+    img.src = attrs.src
   })
 }

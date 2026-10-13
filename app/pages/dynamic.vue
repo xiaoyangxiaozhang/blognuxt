@@ -8,7 +8,7 @@
           <div class="cover-media">
             <picture class="cover-picture">
               <source v-if="!dynamicCover" :srcset="fallbackCoverWebp" type="image/webp" />
-              <img :src="dynamicCover || fallbackCover" alt="Moments cover" class="cover-image" />
+              <img v-bind="optimizedImageAttrs(dynamicCover || fallbackCover, [640, 960, 1280, 1920], '100vw')" loading="eager" fetchpriority="high" alt="Moments cover" class="cover-image" />
             </picture>
             <div class="cover-overlay"></div>
           </div>
@@ -20,7 +20,7 @@
               </div>
 
               <div class="profile-avatar">
-                <img :src="authorAvatar" :alt="authorName" />
+                <img v-bind="optimizedImageAttrs(authorAvatar, [128, 256], '100px')" :alt="authorName" />
               </div>
             </div>
 
@@ -46,7 +46,7 @@
         <template v-else>
           <article v-for="item in moments" :id="`moment-${item.id}`" :key="item.id" class="moment-row">
             <div class="row-avatar">
-              <img :src="authorAvatar" :alt="authorName" loading="lazy" />
+              <img v-bind="optimizedImageAttrs(authorAvatar, [128], '48px')" :alt="authorName" loading="lazy" />
             </div>
 
             <div class="row-main">
@@ -70,7 +70,7 @@
                   class="media-item"
                   :class="{ large: item.images.length === 1 }"
                 >
-                  <img :src="image" :alt="item.text || `moment image ${index + 1}`" loading="lazy" />
+                  <img v-bind="optimizedImageAttrs(image, [320, 480, 640, 960, 1280], item.images.length === 1 ? '(max-width: 480px) calc(100vw - 42px), (max-width: 768px) calc(100vw - 114px), 260px' : '(max-width: 480px) calc((100vw - 50px) / 2), (max-width: 768px) calc((100vw - 132px) / 3), 147px')" :alt="item.text || `moment image ${index + 1}`" loading="lazy" />
                 </div>
               </div>
 
@@ -178,7 +178,7 @@ import { normalizeCommentList } from '~/utils/comments'
 import { createComment, getCommentList } from '~/services/api/comments'
 import { getMomentList, setMomentLike, type MomentLikeUser } from '~/services/api/moments'
 import { getBasicSettings, getSettings } from '~/services/api/user'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 import { formatDate } from '~/utils/date'
 import { parseBlogJson } from '~/composables/useBlogSettings'
 import { useCommentAuth } from '~/composables/useCommentAuth'

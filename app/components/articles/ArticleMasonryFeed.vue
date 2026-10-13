@@ -41,7 +41,7 @@
           <NuxtLink :to="`/article/${encodeURIComponent(article.slug)}`" :aria-label="article.title" class="article-card" :class="{ featured: !isControlled && index === 0 }">
             <div class="article-cover-link">
               <div class="article-cover">
-                <img :src="article.cover" :alt="article.title" loading="lazy" decoding="async" />
+                <img v-bind="optimizedImageAttrs(article.cover, [320, 480, 640, 960, 1280], '(max-width: 765px) calc(100vw - 48px), 620px')" :alt="article.title" loading="lazy" decoding="async" />
                 <span v-if="isControlled && article.isTop" class="article-pin">置顶</span>
               </div>
             </div>
@@ -86,6 +86,7 @@
 </template>
 
 <script setup lang="ts">
+import { optimizedImageAttrs } from '~/utils/image'
 import { nextTick } from 'vue'
 import { ArchiveIcon, MagnifyingGlassIcon } from '~/utils/siteIcons'
 import { getArticleList } from '~/services/api/article'

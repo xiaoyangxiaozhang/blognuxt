@@ -18,13 +18,14 @@
     </div>
 
     <div v-else-if="status === 'error'" class="model-error" role="status">
-      <img v-if="fallbackImageUrl" :src="fallbackImageUrl" :alt="fallbackAlt" />
+      <img v-if="fallbackImageUrl" v-bind="optimizedImageAttrs(fallbackImageUrl, [320, 640], '(max-width: 765px) 100vw, 400px')" :alt="fallbackAlt" />
       <span>3D 模型暂时无法加载</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { optimizedImageAttrs } from '~/utils/image'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'

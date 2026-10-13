@@ -18,6 +18,7 @@
           class="viewport-bg-poster"
           :src="proxyImageUrl(heroPosterUrl, 1280)"
           :srcset="heroPosterSrcSet"
+          :data-original-src="originalImageUrl(heroPosterUrl)"
           sizes="100vw"
           alt=""
           aria-hidden="true"
@@ -138,7 +139,7 @@ import { getCommentList } from '~/services/api/comments'
 import type { ArticleListItem } from '~/types/api'
 import { normalizeCommentList, type NormalizedCommentItem } from '~/utils/comments'
 import { formatDate } from '~/utils/date'
-import { proxyImageSrcSet, proxyImageUrl } from '~/utils/image'
+import { proxyImageSrcSet, proxyImageUrl, originalImageUrl } from '~/utils/image'
 import { isVideoUrl, parseBlogJson, useBasicSettings, useBlogSettings } from '~/composables/useBlogSettings'
 interface ArticleTag {
   name: string

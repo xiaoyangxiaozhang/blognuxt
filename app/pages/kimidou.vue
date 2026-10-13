@@ -8,7 +8,7 @@
           <div class="cover-media">
             <picture class="cover-picture">
               <source v-if="!hasConfiguredCover" :srcset="fallbackCoverWebp" type="image/webp" />
-              <img :src="coverImage" alt="基米斗社区封面" class="cover-image" />
+              <img v-bind="optimizedImageAttrs(coverImage, [640, 960, 1280, 1920], '100vw')" loading="eager" fetchpriority="high" alt="基米斗社区封面" class="cover-image" />
             </picture>
             <div class="cover-overlay"></div>
           </div>
@@ -20,7 +20,7 @@
               </div>
 
               <div class="profile-avatar">
-                <img :src="communityAvatar" :alt="communityName" />
+                <img v-bind="optimizedImageAttrs(communityAvatar, [128, 256], '100px')" :alt="communityName" />
               </div>
             </div>
 
@@ -46,7 +46,7 @@
         <template v-else>
           <article v-for="item in moments" :id="`kimidou-moment-${item.id}`" :key="item.id" class="moment-row">
             <div class="row-avatar">
-              <img v-if="item.author?.avatar" :src="proxyImageUrl(item.author.avatar)" :alt="momentAuthor(item)" loading="lazy" />
+              <img v-if="item.author?.avatar" v-bind="optimizedImageAttrs(item.author.avatar, [128], '48px')" :alt="momentAuthor(item)" loading="lazy" />
               <span v-else>{{ momentAuthor(item).slice(0, 1) }}</span>
             </div>
 
@@ -74,7 +74,7 @@
                   class="media-item"
                   :class="{ large: item.content.images.length === 1 }"
                 >
-                  <img :src="proxyImageUrl(image)" :alt="item.content.text || `社区动态图片 ${index + 1}`" loading="lazy" />
+                  <img v-bind="optimizedImageAttrs(image, [320, 480, 640, 960, 1280], item.content.images.length === 1 ? '(max-width: 480px) calc(100vw - 42px), (max-width: 768px) calc(100vw - 114px), 260px' : '(max-width: 480px) calc((100vw - 50px) / 2), (max-width: 768px) calc((100vw - 132px) / 3), 147px')" :alt="item.content.text || `社区动态图片 ${index + 1}`" loading="lazy" />
                 </div>
               </div>
 
@@ -183,7 +183,7 @@ import { getKimidouMomentList, type KimidouMomentItem } from '~/services/api/kim
 import { setMomentLike, type MomentLikeUser } from '~/services/api/moments'
 import { getBasicSettings, getSettings } from '~/services/api/user'
 import { normalizeCommentList } from '~/utils/comments'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 import { formatDate } from '~/utils/date'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import PageCurtain from '~/components/shell/PageCurtain.vue'

@@ -36,7 +36,7 @@
           <article v-for="item in items" :key="item.id" class="moment-card">
             <div class="moment-card-head">
               <div class="author">
-                <img v-if="item.author?.avatar" :src="proxyImageUrl(item.author.avatar)" :alt="item.author.nickname" />
+                <img v-if="item.author?.avatar" v-bind="optimizedImageAttrs(item.author.avatar, [128], '48px')" :alt="item.author.nickname" />
                 <span v-else>{{ (item.author?.nickname || currentUser?.nickname || '我').slice(0, 1) }}</span>
                 <strong>{{ item.author?.nickname || currentUser?.nickname || '我' }}</strong>
               </div>
@@ -49,7 +49,7 @@
               <img
                 v-for="(image, index) in item.content.images.slice(0, 9)"
                 :key="`${item.id}-${index}`"
-                :src="proxyImageUrl(image)"
+                v-bind="optimizedImageAttrs(image, [320, 640, 960], '(max-width: 765px) calc(100vw - 48px), 320px')"
                 :alt="`动态图片 ${index + 1}`"
                 loading="lazy"
               />
@@ -135,7 +135,7 @@ import {
 } from '~/services/api/kimidou'
 import { uploadFile } from '~/services/api/upload'
 import { formatDate } from '~/utils/date'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 
 const { currentUser, authReady, isLoggedIn, fetchProfile } = useCommentAuth()
 const { openAccount } = useSiteOverlays()

@@ -78,7 +78,7 @@
       <main class="article-reader-main">
         <section class="article-reader-cover-pane" aria-label="文章封面">
           <div class="reader-cover-frame">
-            <img :src="article.cover" :alt="article.title" class="reader-cover" />
+            <img v-bind="optimizedImageAttrs(article.cover, [320, 640, 960, 1280], '(max-width: 765px) 100vw, 50vw')" :alt="article.title" class="reader-cover" />
           </div>
 
           <div v-if="blocks.length" class="article-reader-progress" aria-label="文章阅读进度">
@@ -187,6 +187,7 @@
 </template>
 
 <script setup lang="ts">
+import { optimizedImageAttrs, restoreOriginalImage } from '~/utils/image'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, type ComponentPublicInstance } from 'vue'
 import { GearIcon, PlayIcon, TrackNextIcon, TrackPreviousIcon } from '~/utils/siteIcons'
 import type { ArticleListItem } from '~/types/api'
@@ -706,10 +707,11 @@ const loadAlbumImage = (source: string) => new Promise<HTMLImageElement>((resolv
   const image = new Image()
   image.crossOrigin = 'anonymous'
   image.onload = () => resolve(image)
-  image.onerror = () => reject(new Error(`封面加载失败：${source}`))
-  image.src = /^https?:\/\//i.test(source)
-    ? `/proxy-image?url=${encodeURIComponent(source)}`
-    : source
+  const attrs = optimizedImageAttrs(source, [640], '640px')
+  const original = /^https?:\/\//i.test(source) ? `/proxy-image?url=${encodeURIComponent(source)}` : attrs['data-original-src']
+  if (original) image.setAttribute('data-original-src', original)
+  image.onerror = () => { if (!restoreOriginalImage(image)) reject(new Error(`封面加载失败：${source}`)) }
+  image.src = attrs.src
 })
 
 const initBackground = async () => {

@@ -9,7 +9,7 @@
     <div v-else class="article-grid">
       <NuxtLink v-for="article in articleCards" :key="article.id" :to="`/article/${article.slug}`" :aria-label="article.title" class="article-card">
         <div class="thumb">
-          <img v-if="article.cover" :src="article.cover" :alt="article.title" loading="lazy" />
+          <img v-if="article.cover" v-bind="optimizedImageAttrs(article.cover, [128, 256], '85px')" :alt="article.title" loading="lazy" />
         </div>
         <div class="card-body">
           <span class="category-label">{{ article.categoryName }}</span>
@@ -22,6 +22,7 @@
 </template>
 
 <script setup lang="ts">
+import { optimizedImageAttrs } from '~/utils/image'
 interface RecentArticleItem {
   id: number
   slug: string

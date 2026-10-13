@@ -27,9 +27,7 @@
         <p class="moment-text" :aria-hidden="item.text ? undefined : true">{{ item.text }}</p>
         <div v-if="item.cover" class="moment-cover">
           <img
-            :src="proxyImageUrl(item.cover, 768)"
-            :srcset="proxyImageSrcSet(item.cover, [320, 480, 640, 768])"
-            sizes="(max-width: 765px) calc(100vw - 78px), 320px"
+            v-bind="optimizedImageAttrs(item.cover, [320, 480, 640, 768], '(max-width: 765px) calc(100vw - 78px), 320px')"
             :alt="item.text || '动态照片'"
             loading="lazy"
             decoding="async"
@@ -43,7 +41,7 @@
 <script setup lang="ts">
 import type { MomentItem } from '~/services/api/moments'
 import { formatDate } from '~/utils/date'
-import { proxyImageSrcSet, proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 
 const props = defineProps<{
   moments: MomentItem[]

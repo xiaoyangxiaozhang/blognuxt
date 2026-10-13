@@ -8,13 +8,13 @@
       <div v-if="previewState.settled" class="immersive-scene-layer" :data-preview-id="previewState.settled.item.id">
         <div class="immersive-scene-content">
           <img v-if="previewState.settled.imageUrl && coverBackdrops.get(previewState.settled.imageUrl)" class="immersive-scene-backdrop" :src="coverBackdrops.get(previewState.settled.imageUrl)" alt="" />
-          <img v-if="previewState.settled.imageUrl" class="immersive-scene" :src="previewState.settled.imageUrl" alt="" loading="eager" fetchpriority="high" @load="prepareSceneBackdrop($event.target as HTMLImageElement)" @error="handleSceneError('settled', previewState.settled.item.id)" />
+          <img v-if="previewState.settled.imageUrl" class="immersive-scene" :src="previewState.settled.imageUrl" :data-original-src="originalImageUrl(previewState.settled.imageUrl)" alt="" loading="eager" fetchpriority="high" @load="prepareSceneBackdrop($event.target as HTMLImageElement)" @error="handleSceneError('settled', previewState.settled.item.id)" />
         </div>
       </div>
       <div v-if="previewState.entering" ref="incomingSceneRef" class="immersive-scene-layer immersive-scene-incoming" :style="{ transform: sceneRevealTransform }" :data-preview-id="previewState.entering.item.id">
         <div ref="incomingSceneContentRef" class="immersive-scene-content" :style="{ transform: sceneContentTransform }">
           <img v-if="previewState.entering.imageUrl && coverBackdrops.get(previewState.entering.imageUrl)" class="immersive-scene-backdrop" :src="coverBackdrops.get(previewState.entering.imageUrl)" alt="" />
-          <img v-if="previewState.entering.imageUrl" class="immersive-scene" :src="previewState.entering.imageUrl" alt="" @load="prepareSceneBackdrop($event.target as HTMLImageElement)" @error="handleSceneError('entering', previewState.entering.item.id)" />
+          <img v-if="previewState.entering.imageUrl" class="immersive-scene" :src="previewState.entering.imageUrl" :data-original-src="originalImageUrl(previewState.entering.imageUrl)" alt="" @load="prepareSceneBackdrop($event.target as HTMLImageElement)" @error="handleSceneError('entering', previewState.entering.item.id)" />
         </div>
       </div>
       <div class="immersive-shade"></div>
@@ -176,7 +176,7 @@ import ArticleMasonryFeed from '~/components/articles/ArticleMasonryFeed.vue'
 import { getArticleList } from '~/services/api/article'
 import type { ArticleListItem } from '~/types/api'
 import { mapArticleCard, type DisplayArticleCard } from '~/utils/article'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, originalImageUrl, restoreOriginalImage } from '~/utils/image'
 import { createImmersivePreview, type PreviewSnapshot } from '~/utils/immersivePreview'
 
 type BrowseMode = 'immersive' | 'list'
@@ -243,7 +243,7 @@ const mapImmersiveArticle = (item: ArticleListItem): ImmersiveArticle => {
   return {
     ...card,
     displayTitle: item.title.split(/[：:]/, 1)[0]?.trim() || item.title,
-    immersiveCover: proxyImageUrl(item.cover),
+    immersiveCover: proxyImageUrl(item.cover, 1920),
     publishedAt: item.publish_time
   }
 }
@@ -414,7 +414,8 @@ const prepareCover = (article: ImmersiveArticle): Promise<string | null> => {
       }
     }
     image.onload = settleLoaded
-    image.onerror = () => finish(null)
+    image.setAttribute('data-original-src', originalImageUrl(url))
+    image.onerror = () => { if (!image || !restoreOriginalImage(image)) finish(null) }
     image.src = url
     if (image.complete && image.naturalWidth) settleLoaded()
   })

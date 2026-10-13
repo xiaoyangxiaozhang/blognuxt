@@ -105,12 +105,28 @@ export async function fetchPublicImage(value: string, signal = AbortSignal.timeo
 
 export async function resizePublicImage(image: { contentType: string; body: Buffer }, width: number) {
   if (!/^image\/(?:jpeg|png|webp|avif)$/.test(image.contentType)) return image
-  return {
-    contentType: 'image/webp',
-    body: await sharp(image.body, { limitInputPixels: 40_000_000 })
+  try {
+    const pipeline = sharp(image.body, { limitInputPixels: 40_000_000 })
+    const metadata = await pipeline.metadata()
+    // Animated WebP and PNG must not silently become a single frame.
+    if ((metadata.pages || 1) > 1) return image
+    // libvips' PNG decoder does not expose APNG frame counts; acTL precedes IDAT.
+    if (metadata.format === 'png') {
+      for (let offset = 8; offset + 12 <= image.body.length;) {
+        const chunk = image.body.toString('ascii', offset + 4, offset + 8)
+        if (chunk === 'acTL') return image
+        if (chunk === 'IDAT' || chunk === 'IEND') break
+        offset += image.body.readUInt32BE(offset) + 12
+      }
+    }
+    const body = await pipeline
       .rotate()
       .resize({ width, withoutEnlargement: true })
-      .webp({ quality: 82 })
+      .webp({ quality: 82, lossless: metadata.format === 'png' })
       .toBuffer()
+    return body.length < image.body.length ? { contentType: 'image/webp', body } : image
+  } catch {
+    // Unsupported/corrupt decoders and conversion failures preserve the source response.
+    return image
   }
 }

@@ -41,7 +41,7 @@
                 @blur="hidePreview(friend.id)"
                 @keydown.esc="hidePreview(friend.id)"
               >
-                <img v-if="friend.avatar" class="friend-avatar" :src="proxyImageUrl(friend.avatar)" :alt="friend.name">
+                <img v-if="friend.avatar" class="friend-avatar" v-bind="optimizedImageAttrs(friend.avatar, [128, 256], '64px')" :alt="friend.name">
                 <div v-else class="friend-avatar friend-avatar-fallback">{{ friend.name.slice(0, 1) }}</div>
                 <div class="friend-copy">
                   <h3>{{ friend.name }}</h3>
@@ -151,7 +151,7 @@ import PageCurtain from '~/components/shell/PageCurtain.vue'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import { applyFriend, getFriendList, getFriendPreview, type ApplyFriendPayload, type FriendGroup, type FriendItem, type FriendPreview } from '~/services/api/friends'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 
 const { data, pending, error: requestError } = await useAsyncData('friends-page', getFriendList)
 const groups = computed<FriendGroup[]>(() => data.value?.data.groups || [])

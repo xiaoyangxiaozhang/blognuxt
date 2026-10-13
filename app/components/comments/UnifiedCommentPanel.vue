@@ -62,7 +62,7 @@
 
         <div v-if="showAuthenticatedState && currentUser && !deferIdentity" class="login-banner">
           <div class="login-profile">
-            <img v-if="currentUser.avatar" :src="currentUser.avatar" :alt="currentUser.nickname || 'user'" />
+            <img v-if="currentUser.avatar" v-bind="optimizedImageAttrs(currentUser.avatar, [128], '48px')" :alt="currentUser.nickname || 'user'" />
             <span v-else>{{ (currentUser.nickname || currentUser.email || 'U').slice(0, 1) }}</span>
             <p>
               Signed in as
@@ -90,7 +90,7 @@
               <template v-for="(block, index) in previewBlocks" :key="`${block.type}-${index}`">
                 <p v-if="block.type === 'text'" class="preview-text">{{ block.content }}</p>
                 <div v-else class="preview-image-wrap">
-                  <img :src="block.src" alt="Preview image" class="preview-image" />
+                  <img v-bind="optimizedImageAttrs(block.src)" loading="lazy" alt="Preview image" class="preview-image" />
                 </div>
               </template>
             </template>
@@ -199,7 +199,7 @@
             <footer class="board-meta">
               <div class="board-author">
                 <div class="comment-avatar">
-                  <img v-if="item.avatar" :src="item.avatar" :alt="item.author" loading="lazy" />
+                  <img v-if="item.avatar" v-bind="optimizedImageAttrs(item.avatar, [128], '48px')" :alt="item.author" loading="lazy" />
                   <span v-else>{{ item.author.slice(0, 1) }}</span>
                 </div>
 
@@ -228,7 +228,7 @@
               <template v-for="(block, index) in renderCommentBlocks(item.content)" :key="`${item.id}-${block.type}-${index}`">
                 <p v-if="block.type === 'text'" class="comment-text">{{ block.content }}</p>
                 <div v-else class="comment-image-wrap">
-                  <img :src="block.src" alt="Comment image" class="comment-image" />
+                  <img v-bind="optimizedImageAttrs(block.src)" loading="lazy" alt="Comment image" class="comment-image" />
                 </div>
               </template>
             </div>
@@ -243,7 +243,7 @@
             :class="{ reply: Boolean(item.replyTo) }"
           >
             <div class="comment-avatar">
-              <img v-if="item.avatar" :src="item.avatar" :alt="item.author" loading="lazy" />
+              <img v-if="item.avatar" v-bind="optimizedImageAttrs(item.avatar, [128], '48px')" :alt="item.author" loading="lazy" />
               <span v-else>{{ item.author.slice(0, 1) }}</span>
             </div>
 
@@ -270,7 +270,7 @@
                 <template v-for="(block, index) in renderCommentBlocks(item.content)" :key="`${item.id}-${block.type}-${index}`">
                   <p v-if="block.type === 'text'" class="comment-text">{{ block.content }}</p>
                   <div v-else class="comment-image-wrap">
-                    <img :src="block.src" alt="Comment image" class="comment-image" />
+                    <img v-bind="optimizedImageAttrs(block.src)" loading="lazy" alt="Comment image" class="comment-image" />
                   </div>
                 </template>
               </div>
@@ -327,7 +327,7 @@ import { ElMessage } from 'element-plus'
 import { ChatBubbleIcon, Cross1Icon, EyeOpenIcon, FaceIcon, ImageIcon, InfoCircledIcon, PersonIcon } from '~/utils/siteIcons'
 import LoginDialog from '~/components/shell/LoginDialog.vue'
 import { renderCommentContent, extractCommentImageUrls } from '~/utils/commentRenderer'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 import { uploadFile } from '~/services/api/upload'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'

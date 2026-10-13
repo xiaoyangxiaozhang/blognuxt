@@ -17,7 +17,7 @@
             class="article-card"
           >
             <div v-if="article.cover" class="article-cover">
-              <img :src="article.cover" :alt="article.title" />
+              <img v-bind="optimizedImageAttrs(article.cover, [640, 960, 1280, 1920], '(max-width: 765px) calc(100vw - 48px), 960px')" :alt="article.title" loading="eager" fetchpriority="high" />
             </div>
 
             <header class="article-header">
@@ -128,7 +128,7 @@ import { normalizeCommentList } from '~/utils/comments'
 import { createComment, getCommentList } from '~/services/api/comments'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
-import { proxyImageUrl } from '~/utils/image'
+import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 import { formatDate } from '~/utils/date'
 import { renderArticleMarkdown, type MarkdownHeading } from '~/utils/markdown'
 import { getArticleList } from '~/services/api/article'

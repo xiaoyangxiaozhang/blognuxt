@@ -34,9 +34,7 @@
                 <div class="article-cover">
                   <img
                     v-if="article.cover"
-                    :src="proxyImageUrl(article.cover, 960)"
-                    :srcset="proxyImageSrcSet(article.cover, [320, 480, 640, 960, 1280])"
-                    sizes="(max-width: 765px) calc(100vw - 48px), (max-width: 1072px) 430px, 620px"
+                    v-bind="optimizedImageAttrs(article.cover, [320, 480, 640, 960, 1280], '(max-width: 765px) calc(100vw - 48px), (max-width: 1072px) 430px, 620px')"
                     :alt="article.title"
                     loading="lazy"
                     decoding="async"
@@ -79,6 +77,7 @@
 </template>
 
 <script setup lang="ts">
+import { optimizedImageAttrs } from '~/utils/image'
 import { nextTick } from 'vue'
 import { ArchiveIcon } from '~/utils/siteIcons'
 import { getDominantColor } from '~/utils/dominantColor'

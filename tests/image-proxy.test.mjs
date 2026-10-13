@@ -5,6 +5,7 @@ import http from 'node:http'
 import { EventEmitter } from 'node:events'
 import { Readable } from 'node:stream'
 import sharp from 'sharp'
+import { crc32 } from 'node:zlib'
 import { fetchPublicImage, isPublicImageAddress, validateImageURL, resizePublicImage, MAX_IMAGE_BYTES } from '../server/utils/imageProxy.ts'
 
 test('proxy blocks private, mapped, reserved and non-HTTP destinations', () => {
@@ -53,6 +54,36 @@ test('responsive image variants resize raster images to WebP without enlarging',
   assert.equal(variant.contentType, 'image/webp')
   assert.equal(metadata.width, 256)
   assert.equal(metadata.height, 128)
+  const larger = await resizePublicImage({ contentType: 'image/png', body }, 1920)
+  assert.equal((await sharp(larger.body).metadata()).width, 1024)
+})
+
+test('PNG variants preserve visible pixels and alpha losslessly', async () => {
+  const body = await sharp({ create: { width: 128, height: 64, channels: 4, background: { r: 80, g: 20, b: 200, alpha: .5 } } }).png().toBuffer()
+  const variant = await resizePublicImage({ contentType: 'image/png', body }, 128)
+  assert.equal(variant.contentType, 'image/webp')
+  assert.deepEqual(await sharp(variant.body).raw().toBuffer(), await sharp(body).raw().toBuffer())
+})
+
+test('animated WebP, APNG and unsupported conversions return the source bytes', async () => {
+  const pixels = Buffer.alloc(32 * 64 * 4, 255)
+  pixels.fill(0, 32 * 32 * 4)
+  const webp = await sharp(pixels, { raw: { width: 32, height: 64, channels: 4, pageHeight: 32 } }).webp({ lossless: true, delay: [100, 100] }).toBuffer()
+  assert.equal((await sharp(webp).metadata()).pages, 2)
+  const animated = { contentType: 'image/webp', body: webp }
+  assert.strictEqual(await resizePublicImage(animated, 128), animated)
+  const png = await sharp({ create: { width: 32, height: 32, channels: 3, background: '#333' } }).png().toBuffer()
+  const acTL = Buffer.alloc(20)
+  acTL.writeUInt32BE(8)
+  acTL.write('acTL', 4)
+  acTL.writeUInt32BE(2, 8)
+  acTL.writeUInt32BE(crc32(acTL.subarray(4, 16)), 16)
+  const apng = { contentType: 'image/png', body: Buffer.concat([png.subarray(0, 33), acTL, png.subarray(33)]) }
+  assert.strictEqual(await resizePublicImage(apng, 128), apng)
+  for (const contentType of ['image/jpeg', 'image/gif', 'image/svg+xml']) {
+    const source = { contentType, body: Buffer.from('unsupported-image') }
+    assert.strictEqual(await resizePublicImage(source, 128), source)
+  }
 })
 
 test('DNS answers with any private address cannot establish a request', async t => {

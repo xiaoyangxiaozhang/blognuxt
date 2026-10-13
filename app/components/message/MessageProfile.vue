@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { optimizedImageAttrs } from '~/utils/image'
 import { computed } from 'vue'
 
 interface ProfileItem {
@@ -119,7 +120,7 @@ const hasResources = computed(() => Boolean(
     </div>
 
     <figure v-if="exhibition" class="exhibition">
-      <img :src="exhibition" alt="关于本站的展示图片" loading="lazy" />
+      <img v-bind="optimizedImageAttrs(exhibition)" alt="关于本站的展示图片" loading="lazy" />
     </figure>
 
     <p v-if="authorName" class="signature" :aria-label="`${authorName}的签名`">{{ authorName }}</p>
