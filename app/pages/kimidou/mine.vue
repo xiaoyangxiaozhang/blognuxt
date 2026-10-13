@@ -84,6 +84,7 @@
             <textarea v-model="contentText" rows="6" maxlength="1000" placeholder="分享你和小猫的日常。" />
           </label>
 
+          <ImageUploadOptions :disabled="saving" />
           <label>
             <span>图片（最多 9 张）</span>
             <input ref="fileInput" type="file" accept="image/*" multiple @change="handleFileChange" />
@@ -120,6 +121,7 @@
 </template>
 
 <script setup lang="ts">
+import ImageUploadOptions from '~/components/common/ImageUploadOptions.vue'
 import { ElMessage } from 'element-plus'
 import { ArrowLeftIcon, Cross1Icon } from '~/utils/siteIcons'
 import LoginDialog from '~/components/shell/LoginDialog.vue'

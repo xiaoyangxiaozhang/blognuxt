@@ -38,6 +38,7 @@
               <span>说明</span>
               <textarea v-model="form.description" required maxlength="5000" rows="5" placeholder="请填写具体内容" />
             </label>
+            <ImageUploadOptions :disabled="uploading || submitting" />
             <label class="file-field">
               <span>附件</span>
               <input ref="fileInput" type="file" accept="image/*,.pdf,.doc,.docx" multiple @change="uploadAttachments">
@@ -90,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import ImageUploadOptions from '~/components/common/ImageUploadOptions.vue'
 import { Cross1Icon } from '~/utils/siteIcons'
 import { ElMessage } from 'element-plus'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'

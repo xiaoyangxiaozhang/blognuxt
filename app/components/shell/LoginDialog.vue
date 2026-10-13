@@ -35,6 +35,7 @@
 
             <div v-if="mode === 'register'" class="form-group avatar-group">
               <label for="register-avatar">头像（可选）</label>
+              <ImageUploadOptions :disabled="loading" />
               <div class="avatar-picker">
                 <div class="avatar-preview">
                   <img v-if="avatarPreviewUrl" :src="avatarPreviewUrl" alt="头像预览">
@@ -140,6 +141,7 @@
 </template>
 
 <script setup lang="ts">
+import ImageUploadOptions from '~/components/common/ImageUploadOptions.vue'
 import { Cross1Icon, EyeOpenIcon, PersonIcon } from '~/utils/siteIcons'
 import { ElMessage } from 'element-plus'
 import { useCommentAuth } from '~/composables/useCommentAuth'

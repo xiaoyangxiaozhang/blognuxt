@@ -122,6 +122,7 @@
             </div>
 
             <form v-if="profileEditing" class="dialog-form profile-editor" @submit.prevent="saveProfile">
+              <ImageUploadOptions :disabled="profileSaving" />
               <div class="avatar-editor">
                 <div class="avatar-preview">
                   <img v-if="profileAvatarUrl" v-bind="optimizedImageAttrs(profileAvatarUrl, [128, 256], '80px')" alt="头像预览">
@@ -210,6 +211,7 @@
 </template>
 
 <script setup lang="ts">
+import ImageUploadOptions from '~/components/common/ImageUploadOptions.vue'
 import { Cross1Icon } from '~/utils/siteIcons'
 import { ElMessage } from 'element-plus'
 import LoginDialog from '~/components/shell/LoginDialog.vue'

@@ -125,6 +125,8 @@
           </div>
         </div>
 
+        <ImageUploadOptions :disabled="submitting || processingSubmit || uploadingCount > 0" />
+
         <footer class="composer-footer">
           <div class="toolbar-group">
             <button type="button" class="plain-icon" aria-label="Insert emoji" @click="toggleEmojiPanel">
@@ -322,6 +324,7 @@
 </template>
 
 <script setup lang="ts">
+import ImageUploadOptions from '~/components/common/ImageUploadOptions.vue'
 import { markRaw } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChatBubbleIcon, Cross1Icon, EyeOpenIcon, FaceIcon, ImageIcon, InfoCircledIcon, PersonIcon } from '~/utils/siteIcons'
