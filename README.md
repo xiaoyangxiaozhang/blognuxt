@@ -25,15 +25,17 @@
 
 ## 环境要求
 
-- Node.js 22.19.0 或更高版本
+- Node.js 22.23.4（推荐），或下述受支持分支的安全版本
 - npm 10 或更高版本
 - 可访问的博客后端 API
 
-项目声明的 Node.js 范围为 `^22.19.0 || ^24.11.0 || >=26.0.0`，推荐使用 Node.js 22 LTS。
+项目声明的 Node.js 范围为 `^22.23.4 || ^24.22.1 || ^26.12.1`，本地与 CI 统一使用 `.nvmrc` 中的 Node.js 22 LTS 安全版本。
 
 ## 本地开发
 
 ```bash
+nvm install
+nvm use
 npm ci
 npm run dev
 ```
@@ -129,7 +131,7 @@ blognuxt/
 
 ## 自动部署
 
-合并并推送到 `main` 或 `master` 主分支后，GitHub Actions 会使用 Node.js 22.19.0 安装依赖、构建 `.output`，再上传到阿里云 ECS，并通过 systemd 切换当前 release。部署成功后会在本次提交上自动创建递增的带注释 Git tag，格式为 `v1.0.0`、`v1.0.1`、`v1.0.2`……其他分支不会触发发布流程。
+合并并推送到 `main` 或 `master` 主分支后，GitHub Actions 会使用 `.nvmrc` 指定的 Node.js 版本（当前为 22.23.4）安装依赖、构建 `.output`，再上传到阿里云 ECS，并通过 systemd 切换当前 release。部署成功后会在本次提交上自动创建递增的带注释 Git tag，格式为 `v1.0.0`、`v1.0.1`、`v1.0.2`……其他分支不会触发发布流程。
 
 部署所需的 SSH 密钥、主机和 API 配置通过 GitHub Actions Secrets/Variables 注入。不要把私钥、Token 或生产环境敏感配置提交到仓库。
 

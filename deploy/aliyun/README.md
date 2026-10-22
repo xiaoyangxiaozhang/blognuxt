@@ -13,7 +13,7 @@ push main
 
 ## 1. 初始化 ECS
 
-下面以 Ubuntu/Debian 系统为例。服务器需要 Node.js 22.19.x、24.11.x 或 26+、`curl`、`rsync` 和 Nginx；Node 版本必须满足项目 `package.json` 中的 engines。
+下面以 Ubuntu/Debian 系统为例。服务器需要 Node.js 22.23.4+（22.x）、24.22.1+（24.x）或 26.12.1+（26.x）、`curl`、`rsync` 和 Nginx；Node 版本必须满足项目 `package.json` 中的 engines，推荐与 `.nvmrc` 保持一致。
 
 ```bash
 sudo apt update
@@ -21,6 +21,8 @@ sudo apt install -y curl nginx rsync
 node --version
 command -v node
 ```
+
+升级时先检查 `systemctl show blognuxt -p ExecStart -p MainPID`，确认服务实际使用的 Node 路径。更新该路径对应的运行时，或修改 unit 中的 `ExecStart` 后执行 `sudo systemctl daemon-reload`、`sudo systemctl restart blognuxt`，再检查服务状态和 `http://127.0.0.1:3000/`。仅更新登录 shell 的 Node 或 CI 版本不会升级正在运行的 SSR 服务。
 
 创建只用于部署和运行的用户及目录：
 
