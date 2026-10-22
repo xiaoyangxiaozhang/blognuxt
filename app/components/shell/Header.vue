@@ -1,5 +1,5 @@
 <template>
-  <header class="blog-header" :class="[`state-${headerState}`, { 'actions-open': actionsOpen }]">
+  <header ref="headerElement" class="blog-header" :class="[`state-${headerState}`, { 'actions-open': actionsOpen }]">
     <div class="header-stage">
       <div
         class="header-layer header-layer-full"
@@ -67,6 +67,7 @@
 
             <div class="header-actions action-menu" @keydown.esc="handleActionsEscape">
               <button
+                key="toggle"
                 class="action-btn action-menu-toggle"
                 type="button"
                 :aria-label="actionsOpen ? '收起快捷操作' : '展开快捷操作'"
@@ -77,7 +78,7 @@
                 <HamburgerMenuIcon :active="actionsOpen" :instant="iconInputInstant" aria-hidden="true" />
               </button>
               <Transition name="action-menu" :css="!iconInputInstant" @after-leave="updateIslandIndicator()">
-                <div v-show="actionsOpen" id="header-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作">
+                <div v-if="actionsOpen" key="actions" id="header-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作">
                   <button class="action-btn action-theme island-theme-btn" :title="themeButtonTitle" :aria-label="themeButtonTitle" type="button" @click="toggleTheme">
                     <ThemeIcon :active="theme === 'blue-white'" :instant="iconInputInstant" aria-hidden="true" />
                   </button>
@@ -107,6 +108,7 @@
                   </button>
                 </div>
               </Transition>
+              <MusicPlayerTrigger v-if="headerState === 'full'" key="music" />
             </div>
           </div>
         </div>
@@ -120,6 +122,7 @@
           <button class="mini-logo" type="button" aria-label="返回顶部" @click="scrollToTop">
             <img class="mini-logo-mark" :src="logoUrl" alt="" aria-hidden="true" />
           </button>
+          <MusicPlayerTrigger v-if="headerState === 'logo'" compact />
         </div>
       </div>
 
@@ -152,6 +155,7 @@
 
             <div class="island-actions action-menu" @keydown.esc="handleActionsEscape">
               <button
+                key="toggle"
                 class="action-btn action-menu-toggle"
                 type="button"
                 :aria-label="actionsOpen ? '收起快捷操作' : '展开快捷操作'"
@@ -162,7 +166,7 @@
                 <HamburgerMenuIcon :active="actionsOpen" :instant="iconInputInstant" aria-hidden="true" />
               </button>
               <Transition name="action-menu" :css="!iconInputInstant" @after-leave="updateIslandIndicator()">
-                <div v-show="actionsOpen" id="island-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作">
+                <div v-if="actionsOpen" key="actions" id="island-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作">
                   <button class="action-btn action-theme" :title="themeButtonTitle" :aria-label="themeButtonTitle" type="button" @click="toggleTheme">
                     <ThemeIcon :active="theme === 'blue-white'" :instant="iconInputInstant" aria-hidden="true" />
                   </button>
@@ -192,6 +196,7 @@
                   </button>
                 </div>
               </Transition>
+              <MusicPlayerTrigger v-if="headerState === 'island'" key="music" compact />
             </div>
           </div>
         </div>
@@ -211,14 +216,17 @@ import AccountDialog from '~/components/shell/AccountDialog.vue'
 import FeedbackDialog from '~/components/shell/FeedbackDialog.vue'
 import SearchDialog from '~/components/shell/SearchDialog.vue'
 import SubscribeDialog from '~/components/shell/SubscribeDialog.vue'
+import MusicPlayerTrigger from '~/components/music/MusicPlayerTrigger.vue'
 import logoUrl from '~/assets/img/logo-sheep.png'
 import { useBlogSettings } from '~/composables/useBlogSettings'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
+import { useMusicPlayerStore } from '~/stores/music'
 
 type ThemeMode = 'midnight-blue' | 'blue-white'
 type HeaderState = 'full' | 'logo' | 'island'
 
 const theme = ref<ThemeMode>('midnight-blue')
+const music = useMusicPlayerStore()
 const { settings: blogSettings } = useBlogSettings()
 const isKimidouOpen = computed(() => blogSettings.value['blog.kimidou_enabled'] === 'true')
 const { openFeedback, openAccount, openSubscribe, subscribeOpen } = useSiteOverlays()
@@ -227,12 +235,54 @@ const headerState = ref<HeaderState>('full')
 const brandMenuOpen = ref(false)
 const actionsOpen = ref(false)
 const iconInputInstant = ref(false)
+const headerElement = ref<HTMLElement | null>(null)
+let actionLayoutAnimations: Animation[] = []
+
+const cancelActionLayout = () => {
+  actionLayoutAnimations.forEach(animation => animation.cancel())
+  actionLayoutAnimations = []
+}
+
+watch(actionsOpen, async (_open, _previous, onCleanup) => {
+  const header = headerElement.value
+  if (!import.meta.client || !header) return
+  // 先记录屏幕上正在显示的位置，再取消旧动画，快速反向时也能接续移动。
+  const positions = [...header.querySelectorAll<HTMLElement>('.header-layer.active .music-trigger, .header-layer.active .action-menu-toggle')]
+    .map(element => ({ element, rect: element.getBoundingClientRect() }))
+  cancelActionLayout()
+  if (iconInputInstant.value || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  let cancelled = false
+  onCleanup(() => { cancelled = true })
+  await nextTick()
+  if (cancelled) return
+  const easing = getComputedStyle(header).getPropertyValue('--ease-out-expo').trim() || 'ease-out'
+  for (const { element, rect } of positions) {
+    if (!element.isConnected) continue
+    const target = element.getBoundingClientRect()
+    const x = rect.left - target.left
+    const y = rect.top - target.top
+    if (Math.abs(x) < .5 && Math.abs(y) < .5) continue
+    actionLayoutAnimations.push(element.animate([
+      { transform: `translate(${x}px, ${y}px)` },
+      { transform: 'translate(0, 0)' }
+    ], { duration: 220, easing }))
+  }
+}, { flush: 'pre' })
+
 const toggleActions = (event: MouseEvent) => {
   iconInputInstant.value = event.detail === 0
   closeBrandMenu()
   actionsOpen.value = !actionsOpen.value
 }
 const searchDialogOpen = ref(false)
+watch(headerState, () => music.closePanel(false))
+watch(actionsOpen, open => { if (open) music.closePanel(false) })
+watch(() => music.panelOpen, open => {
+  if (open) {
+    closeBrandMenu()
+    actionsOpen.value = false
+  }
+})
 let brandMenuCloseTimer: ReturnType<typeof setTimeout> | null = null
 const lastScrollY = ref(0)
 const lastDirection = ref<'up' | 'down' | null>(null)
@@ -419,6 +469,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  cancelActionLayout()
   cancelBrandMenuClose()
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('resize', handleIslandResize)
@@ -816,9 +867,10 @@ onUnmounted(() => {
 }
 
 .action-menu {
+  --action-gap: 4px;
   position: relative;
   flex-direction: row-reverse;
-  gap: 4px;
+  gap: var(--action-gap);
 }
 
 .action-menu-panel {
@@ -832,6 +884,12 @@ onUnmounted(() => {
 .action-menu-enter-active,
 .action-menu-leave-active {
   transition: opacity 140ms var(--ease-out-expo), transform 180ms var(--ease-out-expo);
+}
+
+.action-menu-panel.action-menu-leave-active {
+  position: absolute;
+  top: 0;
+  right: calc(44px + var(--action-gap));
 }
 
 .action-menu-enter-from,
@@ -1014,11 +1072,10 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1100px) {
-  .blog-header:is(.actions-open, :has(.action-menu-leave-active)) {
+  // 跟随面板参与布局的时机，确保唱片的起止位置在同一次更新中确定。
+  .blog-header:has(.action-menu-panel:not(.action-menu-leave-active)) {
     .nav-menu,
-    .island-nav {
-      display: none;
-    }
+    .island-nav { display: none; }
   }
 }
 
@@ -1077,7 +1134,8 @@ onUnmounted(() => {
   }
 
   .header-actions {
-    gap: 8px;
+    --action-gap: 8px;
+    gap: var(--action-gap);
   }
 
   .island-shell {
@@ -1100,7 +1158,8 @@ onUnmounted(() => {
     min-height: 60px;
   }
 
-  .container {
+  .container,
+  .state-full .container {
     width: calc(100% - 16px);
   }
 
@@ -1113,7 +1172,8 @@ onUnmounted(() => {
   }
 
   .header-actions {
-    gap: 0;
+    --action-gap: 0px;
+    gap: var(--action-gap);
   }
 
   .mini-logo-mark {
@@ -1124,19 +1184,13 @@ onUnmounted(() => {
 }
 
 @media (max-width: 600px) {
-  .blog-header:is(.actions-open, :has(.action-menu-leave-active)) {
+  .blog-header:has(.action-menu-panel:not(.action-menu-leave-active)) {
     .brand-menu-wrap,
-    .mini-logo-inline {
-      display: none;
-    }
+    .mini-logo-inline { display: none; }
 
-    .action-menu {
-      gap: 0;
-    }
-
-    .action-menu-panel {
-      gap: 2px;
-    }
+    .action-menu { --action-gap: 0px; }
+    .action-menu-panel { gap: 0; }
+    .island-shell { padding-inline: 0; max-width: calc(100% - 8px); }
   }
 }
 
@@ -1149,7 +1203,7 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .action-menu-enter-active,
   .action-menu-leave-active {
-    transition-duration: 1ms;
+    transition: none;
   }
 }
 </style>

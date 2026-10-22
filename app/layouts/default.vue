@@ -1,5 +1,5 @@
 <template>
-  <div class="blog-layout">
+  <div class="blog-layout" :class="{ 'music-active': music.hasStarted }">
     <Header />
 
     <main class="blog-main" :class="{ 'blog-main-article': route.path.startsWith('/article/') }">
@@ -13,6 +13,7 @@
     <Footer />
 
     <ChatbotWidget />
+    <ClientOnly><MusicPlayer /></ClientOnly>
 
   </div>
 </template>
@@ -21,8 +22,16 @@
 import Header from '~/components/shell/Header.vue'
 import Footer from '~/components/shell/Footer.vue'
 import ChatbotWidget from '~/components/chat/ChatbotWidget.vue'
+import MusicPlayer from '~/components/music/MusicPlayer.client.vue'
+import { useMusicPlayerStore } from '~/stores/music'
+import { useBlogSettings } from '~/composables/useBlogSettings'
+import { parseMusicPlaylist } from '~/data/music'
 
 const route = useRoute()
+const music = useMusicPlayerStore()
+const { settings } = useBlogSettings()
+watch(() => settings.value['blog.music_playlist'], value => music.setPlaylist(parseMusicPlaylist(value)), { immediate: true })
+useHead(() => ({ htmlAttrs: { 'data-music-active': music.hasStarted ? 'true' : null } }))
 </script>
 
 <style scoped lang="scss">
@@ -50,6 +59,14 @@ const route = useRoute()
 }
 
 @media (max-width: 768px) {
+  .music-active {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
+  :global(html[data-music-active='true'] .chatbot-launcher) {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+
   .blog-main {
     padding:  0;
     margin-top: -72px;
