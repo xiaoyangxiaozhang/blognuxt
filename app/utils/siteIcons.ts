@@ -2,7 +2,7 @@ import { defineComponent, h } from 'vue'
 import { MorphIcon, type IconInput } from 'morphicons/vue'
 import {
   Archive, ArrowLeft, Bell, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleCheck,
-  Ellipsis, Eye, EyeOff, Globe, Heart, Image, Info, Mail, MapPin,
+  Download, Ellipsis, Eye, EyeOff, Globe, Heart, Image, Info, Mail, MapPin,
   Menu, MessageCircle, Moon, Pause, Play, Search, Send, Settings,
   SkipBack, SkipForward, Smile, Sun, TriangleAlert, UserRound, X
 } from 'lucide'
@@ -37,6 +37,7 @@ export const ChevronLeftIcon = createIcon(ChevronLeft)
 export const ChevronRightIcon = createIcon(ChevronRight)
 export const Cross1Icon = createIcon(X)
 export const DotsHorizontalIcon = createIcon(Ellipsis)
+export const DownloadIcon = createIcon(Download)
 export const EnvelopeClosedIcon = createIcon(Mail)
 export const ExclamationTriangleIcon = createIcon(TriangleAlert)
 export const EyeOpenIcon = createIcon(Eye, EyeOff)

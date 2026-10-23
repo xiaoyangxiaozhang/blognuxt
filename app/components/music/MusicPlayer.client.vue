@@ -90,8 +90,20 @@
             <PlayIcon v-if="index === music.currentIndex && music.isPlaying" active instant aria-hidden="true" />
             <span v-if="track.duration" class="music-track-duration">{{ formatMusicTime(track.duration) }}</span>
           </button>
+          <button
+            v-if="downloadEnabled"
+            class="music-icon-button music-download"
+            type="button"
+            :disabled="!!downloadingId"
+            :aria-label="`下载${track.title}伴奏`"
+            :aria-busy="downloadingId === track.id"
+            :title="downloadingId === track.id ? '正在准备下载' : '下载伴奏'"
+            @click="downloadTrack(track)"
+          ><DownloadIcon instant aria-hidden="true" /></button>
         </li>
       </ul>
+      <p v-if="downloadingId" class="music-download-status" role="status">正在准备下载…</p>
+      <p v-if="downloadError" class="music-error" role="alert">{{ downloadError }}</p>
     </dialog>
 
     <div v-if="music.hasStarted" class="music-mini" role="region" aria-label="音乐迷你播放器">
@@ -110,12 +122,18 @@
 
 <script setup lang="ts">
 import VinylRecord from './VinylRecord.vue'
-import { Cross1Icon, PlayIcon, TrackNextIcon, TrackPreviousIcon } from '~/utils/siteIcons'
-import { formatMusicTime } from '~/data/music'
+import { Cross1Icon, DownloadIcon, PlayIcon, TrackNextIcon, TrackPreviousIcon } from '~/utils/siteIcons'
+import { formatMusicTime, type MusicTrack } from '~/data/music'
 import { useMusicPlayerStore } from '~/stores/music'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
+import { useBlogSettings } from '~/composables/useBlogSettings'
 
 const music = useMusicPlayerStore()
+const { settings } = useBlogSettings()
+const api = useApi()
+const downloadEnabled = computed(() => settings.value['blog.music_download_enabled'] === 'true')
+const downloadingId = ref('')
+const downloadError = ref('')
 const route = useRoute()
 const dialog = ref<HTMLDialogElement | null>(null)
 const mainPlayButton = ref<HTMLButtonElement | null>(null)
@@ -125,6 +143,31 @@ const displayedProgress = computed(() => music.duration > 0 ? Math.min(100, disp
 const { feedbackOpen, accountOpen, subscribeOpen } = useSiteOverlays()
 let mobileQuery: MediaQueryList
 let previousOverflow: string | null = null
+
+async function downloadTrack(track: MusicTrack) {
+  if (!downloadEnabled.value || downloadingId.value) return
+  downloadingId.value = track.id
+  downloadError.value = ''
+  try {
+    const file = await api<Blob>(`/music/${encodeURIComponent(track.id)}/download`, {
+      responseType: 'blob', timeout: 120_000, retry: 0
+    })
+    if (!file.size || file.type.includes('json')) throw new Error('Invalid audio response')
+    const extension = new URL(track.src, window.location.href).pathname.match(/\.(mp3|wav|ogg|aac|flac|m4a|opus|aiff)$/i)?.[0] || '.mp3'
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(file)
+    link.href = url
+    link.download = `${track.title.replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, '_')}_伴奏${extension}`
+    document.body.append(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch (cause: any) {
+    downloadError.value = cause?.response?.status === 403
+      ? '伴奏下载已关闭，请刷新页面。'
+      : '下载失败，请稍后重试。'
+  } finally { downloadingId.value = '' }
+}
 
 function previewProgress(event: Event) {
   const seconds = Number((event.target as HTMLInputElement).value)
@@ -281,8 +324,12 @@ onBeforeUnmount(() => {
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
+.music-playlist > li { display: flex; align-items: center; gap: 2px; }
+.music-panel .music-download { color: var(--text-secondary); }
+.music-download:disabled { opacity: .4; cursor: wait; }
+.music-download-status { margin: 10px 0 0; font-size: 12px; color: var(--text-secondary); }
 .music-track {
-  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; text-align: left;
+  display: flex; flex: 1; min-width: 0; align-items: center; gap: 12px; width: 100%; min-height: 44px; text-align: left;
   padding: 0 10px; border: 0; border-radius: 8px; background: transparent; font-size: 14px !important;
   &[aria-current='true'] { color: var(--music-accent); background: var(--bg-soft); }
   > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
