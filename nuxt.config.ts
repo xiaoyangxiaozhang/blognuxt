@@ -1,6 +1,27 @@
 import Icons from 'unplugin-icons/vite'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 const apiProxyTarget = process.env.NUXT_API_PROXY_TARGET?.replace(/\/+$/, '')
+const browserTargets = ['safari13', 'ios13', 'chrome80', 'edge80', 'firefox78']
+
+// Run before Nuxt's payload reviver and router, including their dependencies.
+const browserCompatPlugin = {
+  name: 'blog-browser-compat',
+  enforce: 'pre' as const,
+  applyToEnvironment: (environment: { name: string }) => environment.name === 'client',
+  resolveId(source: string, importer?: string) {
+    // Nuxt 4.5 hashes cache keys with BigInt, which Safari 13 cannot parse.
+    if (source === 'fnv1a-64' && /\/nuxt\/dist\/app\/utils\/hash\.js$/.test(importer || '')) {
+      return fileURLToPath(new URL('./app/compat/hash.js', import.meta.url))
+    }
+  },
+  transform(code: string, id: string) {
+    if (/\/nuxt\/dist\/app\/entry(?:\.async)?\.js$/.test(id.replace(/\\/g, '/'))) {
+      return { code: `import '~/compat/browser';\n${code}`, map: null }
+    }
+  }
+}
 
 // Nitro 的图片代理在开发和生产环境共用地址及响应校验。
 const animatedIconsStylePlugin = {
@@ -44,14 +65,21 @@ export default defineNuxtConfig({
       : {})
   },
 vite: {
+    build: { target: browserTargets, cssTarget: browserTargets },
     plugins: [
+      browserCompatPlugin,
       Icons({ compiler: 'vue3', autoInstall: true }),
       animatedIconsStylePlugin
     ]
   },
   app:{
     head:{
-      title:'小羊嚣张'
+      title:'小羊嚣张',
+      script: [{
+        key: 'blog-startup-fallback',
+        tagPriority: 'critical',
+        innerHTML: readFileSync(new URL('./app/compat/startup-fallback.js', import.meta.url), 'utf8')
+      }]
     }
   }
 
