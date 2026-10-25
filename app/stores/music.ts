@@ -16,6 +16,8 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   const hasStarted = ref(false)
   const error = ref('')
   const panelOpen = ref(false)
+  const panelView = ref<'lyrics' | 'songs'>('lyrics')
+  const shuffle = ref(false)
   const panelPosition = ref({ top: 72, right: 20 })
   const instant = ref(false)
   const progress = computed(() => duration.value > 0 ? Math.min(100, currentTime.value / duration.value * 100) : 0)
@@ -28,13 +30,16 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   let playAttempt = 0
   let lastSavedAt = 0
   let trigger: HTMLElement | null = null
+  let unplayedTrackIds: string[] = []
+  let shuffleHistory: string[] = []
+  let shuffleHistoryIndex = 0
   const listeners: [string, EventListener][] = []
 
   function save() {
     if (!initialized || typeof window === 'undefined') return
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        trackId: currentTrack.value?.id, currentTime: currentTime.value, volume: volume.value
+        trackId: currentTrack.value?.id, currentTime: currentTime.value, volume: volume.value, shuffle: shuffle.value
       }))
       lastSavedAt = Date.now()
     } catch { /* 播放不依赖浏览器存储权限。 */ }
@@ -53,6 +58,8 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
         if (Number.isFinite(saved.currentTime)) currentTime.value = Math.max(0, duration.value > 0 ? Math.min(saved.currentTime, duration.value - 1) : saved.currentTime)
       }
       if (Number.isFinite(saved.volume)) volume.value = Math.max(0, Math.min(1, saved.volume))
+      shuffle.value = saved.shuffle === true
+      resetShuffle()
     } catch { /* 无效或不可访问的偏好使用默认值，刷新后始终等待主动播放。 */ }
   }
 
@@ -85,8 +92,14 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       audio = new Audio()
       audio.preload = 'none'
       const on = (type: string, handler: EventListener) => {
-        listeners.push([type, handler])
-        audio!.addEventListener(type, handler)
+        const currentHandler: EventListener = event => {
+          const track = currentTrack.value
+          if (!track || loadedTrackId !== track.id ||
+            audio?.currentSrc !== new URL(track.src, window.location.href).href) return
+          handler(event)
+        }
+        listeners.push([type, currentHandler])
+        audio!.addEventListener(type, currentHandler)
       }
       on('loadedmetadata', () => {
         if (Number.isFinite(audio!.duration) && audio!.duration > 0) duration.value = audio!.duration
@@ -113,12 +126,12 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       on('waiting', () => { if (wantsToPlay) isLoading.value = true })
       on('pause', () => {
         isPlaying.value = false
-        isLoading.value = false
+        if (!wantsToPlay) isLoading.value = false
         updateMediaSession()
         save()
       })
       on('ended', () => { if (wantsToPlay) next() })
-      on('error', () => fail('这首伴奏暂时无法播放，请重试或换一首。'))
+      on('error', () => { if (audio?.error) fail('这首伴奏暂时无法播放，请重试或换一首。') })
       if (typeof navigator !== 'undefined' && navigator.mediaSession) {
         for (const [action, handler] of [
           ['play', play], ['pause', pause], ['previoustrack', previous], ['nexttrack', next],
@@ -178,10 +191,14 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     else void play()
   }
 
-  function selectTrack(index: number) {
+  function changeTrack(index: number, restart = false) {
     if (!Number.isInteger(index) || index < 0 || index >= tracks.value.length) return
     initialize()
-    if (currentIndex.value !== index) {
+    if (!restart && currentIndex.value === index && (isPlaying.value || isLoading.value)) return
+    if (restart || currentIndex.value !== index) {
+      ++playAttempt
+      audio?.pause()
+      if (restart && currentIndex.value === index && audio && audio.readyState > 0) audio.currentTime = 0
       currentIndex.value = index
       currentTime.value = 0
       duration.value = currentTrack.value?.duration || 0
@@ -191,8 +208,65 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     void play()
   }
 
-  function next() { if (tracks.value.length) selectTrack((currentIndex.value + 1) % tracks.value.length) }
-  function previous() { if (tracks.value.length) selectTrack((currentIndex.value + tracks.value.length - 1) % tracks.value.length) }
+  function resetShuffle() {
+    unplayedTrackIds = tracks.value.filter(track => track.id !== currentTrack.value?.id).map(track => track.id)
+    shuffleHistory = currentTrack.value ? [currentTrack.value.id] : []
+    shuffleHistoryIndex = 0
+  }
+
+  function rememberShuffleTrack(id: string) {
+    shuffleHistory = shuffleHistory.slice(0, shuffleHistoryIndex + 1)
+    shuffleHistory.push(id)
+    // 最多保留一百首回退记录，长时间播放不持续累积历史。
+    if (shuffleHistory.length > 100) shuffleHistory.shift()
+    shuffleHistoryIndex = shuffleHistory.length - 1
+    unplayedTrackIds = unplayedTrackIds.filter(trackId => trackId !== id)
+  }
+
+  function toggleShuffle() {
+    initialize()
+    shuffle.value = !shuffle.value
+    resetShuffle()
+    save()
+  }
+
+  function selectTrack(index: number) {
+    if (!Number.isInteger(index) || index < 0 || index >= tracks.value.length) return
+    initialize()
+    if (shuffle.value && currentIndex.value !== index) rememberShuffleTrack(tracks.value[index]!.id)
+    changeTrack(index)
+  }
+
+  function next() {
+    initialize()
+    const count = tracks.value.length
+    if (!count) return
+    if (!shuffle.value || count === 1) {
+      changeTrack((currentIndex.value + 1) % count, true)
+      return
+    }
+    if (shuffleHistoryIndex < shuffleHistory.length - 1) {
+      const id = shuffleHistory[++shuffleHistoryIndex]
+      changeTrack(tracks.value.findIndex(track => track.id === id), true)
+      return
+    }
+    if (!unplayedTrackIds.length) unplayedTrackIds = tracks.value.filter(track => track.id !== currentTrack.value?.id).map(track => track.id)
+    const id = unplayedTrackIds[Math.floor(Math.random() * unplayedTrackIds.length)]!
+    rememberShuffleTrack(id)
+    changeTrack(tracks.value.findIndex(track => track.id === id), true)
+  }
+
+  function previous() {
+    initialize()
+    if (!tracks.value.length) return
+    if (!shuffle.value) {
+      changeTrack((currentIndex.value + tracks.value.length - 1) % tracks.value.length, true)
+      return
+    }
+    if (shuffleHistoryIndex > 0) shuffleHistoryIndex--
+    const id = shuffleHistory[shuffleHistoryIndex] || currentTrack.value!.id
+    changeTrack(tracks.value.findIndex(track => track.id === id), true)
+  }
 
   function setPlaylist(playlist: readonly MusicTrack[]) {
     const previousTrack = currentTrack.value
@@ -206,6 +280,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     }
     tracks.value = playlist
     currentIndex.value = Math.max(0, index)
+    resetShuffle()
     if (index < 0) {
       currentTime.value = 0
       duration.value = currentTrack.value?.duration || 0
@@ -264,7 +339,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
 
   return {
     tracks, currentTrack, currentIndex, currentTime, duration, volume,
-    isPlaying, isLoading, hasStarted, error, progress, panelOpen, panelPosition, instant,
-    initialize, setPlaylist, play, pause, togglePlayback, selectTrack, next, previous, seek, setVolume, openPanel, closePanel
+    isPlaying, isLoading, hasStarted, error, progress, panelOpen, panelView, shuffle, panelPosition, instant,
+    initialize, setPlaylist, play, pause, togglePlayback, toggleShuffle, selectTrack, next, previous, seek, setVolume, openPanel, closePanel
   }
 })

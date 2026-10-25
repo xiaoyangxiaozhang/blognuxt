@@ -4,7 +4,7 @@ import {
   Archive, ArrowLeft, Bell, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleCheck,
   Download, Ellipsis, Eye, EyeOff, Globe, Heart, Image, Info, Mail, MapPin,
   Menu, MessageCircle, Moon, Pause, Play, Search, Send, Settings,
-  SkipBack, SkipForward, Smile, Sun, TriangleAlert, UserRound, X
+  Shuffle, SkipBack, SkipForward, Smile, Sun, TriangleAlert, UserRound, X
 } from 'lucide'
 
 // 常用操作共享 Lucide 的线条和 Morphicons 的状态变形，平台标志保留原组件。
@@ -54,6 +54,7 @@ export const PaperPlaneIcon = createIcon(Send)
 export const PersonIcon = createIcon(UserRound)
 export const PlayIcon = createIcon(Play, Pause)
 export const SewingPinIcon = createIcon(MapPin)
+export const ShuffleIcon = createIcon(Shuffle)
 export const ThemeIcon = createIcon(Sun, Moon)
 export const TrackNextIcon = createIcon(SkipForward)
 export const TrackPreviousIcon = createIcon(SkipBack)
