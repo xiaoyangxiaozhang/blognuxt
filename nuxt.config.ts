@@ -35,6 +35,20 @@ const animatedIconsStylePlugin = {
 }
 
 export default defineNuxtConfig({
+  // 音乐面板由用户首次展开时加载，避免SSR为动态组件生成提前下载提示。
+  hooks: {
+    'build:manifest': (manifest) => {
+      for (const [id, asset] of Object.entries(manifest)) {
+        if (id.replace(/\\/g, '/').includes('components/music/MusicPlayer.client.vue') || /(?:^|\/)MusicPlayer\.[^/]+\.css$/.test(asset.file || '')) {
+          asset.prefetch = false
+          asset.preload = false
+          for (const css of asset.css || []) {
+            if (manifest[css]) { manifest[css].prefetch = false; manifest[css].preload = false }
+          }
+        }
+      }
+    }
+  },
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   modules: ['@pinia/nuxt', '@element-plus/nuxt'],

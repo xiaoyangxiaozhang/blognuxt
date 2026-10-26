@@ -6,6 +6,7 @@
       :aria-label="music.panelOpen ? '收起音乐面板' : '打开音乐面板'"
       :title="music.panelOpen ? '收起音乐面板' : '打开音乐面板'"
       :aria-expanded="music.panelOpen"
+      :aria-busy="music.panelOpen && !music.panelReady"
       aria-controls="site-music-panel"
       @click="music.panelOpen ? music.closePanel() : music.openPanel($event)"
     >
@@ -30,6 +31,7 @@ const music = useMusicPlayerStore()
   color: inherit; background: transparent; cursor: pointer;
   &:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
   &:active { opacity: .7; }
+  &[aria-busy='true'] { opacity: .6; cursor: progress; }
 }
 @media (hover: hover) and (pointer: fine) { .music-record-toggle:hover { color: var(--music-accent); } }
 </style>

@@ -16,18 +16,30 @@
         <Cross1Icon aria-hidden="true" />
       </button>
 
-      <img v-if="music.currentTrack.cover" class="music-cover-background" :src="proxyImageUrl(music.currentTrack.cover, 384)" alt="" aria-hidden="true">
+      <img v-if="music.panelOpen && music.currentTrack.cover" class="music-cover-background" :src="proxyImageUrl(music.currentTrack.cover, 384)" alt="" aria-hidden="true">
       <div class="music-current">
         <VinylRecord class="music-current-icon" detailed :cover="music.currentTrack.cover" :playing="music.isPlaying && !music.isLoading" :instant="music.instant" />
         <div class="music-current-info">
           <h3>{{ music.currentTrack.title }}</h3>
-          <p>{{ music.currentTrack.artist }}</p>
+          <p>{{ displayArtist }}</p>
         </div>
       </div>
 
-      <div class="music-view-tabs" role="tablist" aria-label="音乐面板视图" @keydown="handleTabKey">
-        <button id="music-tab-lyrics" role="tab" type="button" :aria-selected="music.panelView === 'lyrics'" aria-controls="music-view-lyrics" :tabindex="music.panelView === 'lyrics' ? 0 : -1" @click="setPanelView('lyrics', $event)">歌词</button>
-        <button id="music-tab-songs" role="tab" type="button" :aria-selected="music.panelView === 'songs'" aria-controls="music-view-songs" :tabindex="music.panelView === 'songs' ? 0 : -1" @click="setPanelView('songs', $event)">选歌</button>
+      <div class="music-toolbar" :class="{ 'has-source': music.canMix || music.availableModes.length > 1 }">
+        <label v-if="music.canMix" class="music-source-blend music-segmented" :style="{ '--music-blend-value': music.mixBalance }">
+          <span class="music-blend-highlight" aria-hidden="true" />
+          <span v-for="selected in [false, true]" :key="String(selected)" class="music-blend-labels" :class="{ 'is-selected': selected }" aria-hidden="true">
+            <span>伴奏</span><span>混合</span><span>人声</span>
+          </span>
+          <input type="range" aria-label="伴奏与人声比例" :aria-valuetext="mixDescription" min="0" max="100" step="1" :value="Math.round(music.mixBalance * 100)" @input="music.setMixBalance(Number(($event.target as HTMLInputElement).value) / 100)" @pointerdown.prevent="startBlendDrag" @pointermove="moveBlendDrag" @pointerup="endBlendDrag">
+        </label>
+        <div v-else-if="music.availableModes.length > 1" class="music-source-modes" role="radiogroup" aria-label="歌曲音源" :aria-busy="music.isSwitching" @keydown="handleModeKey">
+          <button v-for="mode in music.availableModes" :key="mode" :id="`music-source-${mode}`" type="button" role="radio" :aria-checked="music.activeMode === mode" :tabindex="music.activeMode === mode ? 0 : -1" @click="music.setMode(mode)">{{ musicModeLabels[mode] }}</button>
+        </div>
+        <div class="music-view-tabs music-segmented" role="tablist" aria-label="音乐面板视图" @keydown="handleTabKey">
+          <button id="music-tab-lyrics" role="tab" type="button" :aria-selected="music.panelView === 'lyrics'" aria-controls="music-view-lyrics" :tabindex="music.panelView === 'lyrics' ? 0 : -1" @click="setPanelView('lyrics', $event)">歌词</button>
+          <button id="music-tab-songs" role="tab" type="button" :aria-selected="music.panelView === 'songs'" aria-controls="music-view-songs" :tabindex="music.panelView === 'songs' ? 0 : -1" @click="setPanelView('songs', $event)">选歌</button>
+        </div>
       </div>
 
       <div class="music-content" :class="{ 'music-view-instant': viewInstant }">
@@ -35,7 +47,7 @@
           <section v-show="music.panelView === 'lyrics'" id="music-view-lyrics" class="music-view music-lyrics-view" role="tabpanel" aria-labelledby="music-tab-lyrics" :inert="music.panelView !== 'lyrics'" :aria-hidden="music.panelView !== 'lyrics'" :aria-busy="lyricsLoading" tabindex="0">
             <div v-if="lyricsLoading" class="music-content-message" role="status">正在寻找歌词…</div>
             <template v-else-if="lyrics.length">
-              <p v-if="!lyricsSynced" class="music-lyrics-note">内嵌歌词 · 暂无时间轴</p>
+              <p v-if="!lyricsSynced" class="music-lyrics-note">{{ lyricsPending ? '时间轴准备中' : '内嵌歌词 · 暂无时间轴' }}</p>
               <div ref="lyricsScroller" class="music-lyrics" :class="{ 'is-synced': lyricsSynced }" @wheel.passive="holdLyricsScroll" @touchstart.passive="holdLyricsScroll">
                 <template v-for="(line, index) in lyrics" :key="index">
                   <button v-if="line.time !== null" class="music-lyric-line" type="button" :data-line="index" :class="{ 'is-active': index === activeLyricIndex }" :aria-current="index === activeLyricIndex ? 'true' : undefined" :aria-label="`跳转到 ${formatMusicTime(line.time)}，${line.text}`" @click="seekLyric(line.time)">{{ line.text }}</button>
@@ -44,14 +56,14 @@
               </div>
             </template>
             <div v-else class="music-content-message" :role="lyricsError ? 'status' : undefined">
-              <span>{{ lyricsError || '暂无歌词' }}</span>
+              <span>{{ lyricsError || (lyricsPending ? '歌词准备中…' : '暂无歌词') }}</span>
               <button v-if="lyricsError" type="button" @click="loadLyrics(true)">重新加载</button>
             </div>
           </section>
         </Transition>
         <Transition name="music-view">
           <section v-show="music.panelView === 'songs'" id="music-view-songs" class="music-view" role="tabpanel" aria-labelledby="music-tab-songs" :inert="music.panelView !== 'songs'" :aria-hidden="music.panelView !== 'songs'" tabindex="0">
-            <ul ref="songsScroller" class="music-playlist" aria-label="伴奏歌单" @scroll.passive="rememberSongsScroll">
+            <ul v-if="music.panelOpen && music.panelView === 'songs'" ref="songsScroller" class="music-playlist" aria-label="歌曲列表" @scroll.passive="rememberSongsScroll">
               <li v-for="(track, index) in music.tracks" :key="track.id">
                 <button class="music-track" type="button" :aria-current="track.id === music.currentTrack.id ? 'true' : undefined" :aria-label="`${track.id === music.currentTrack.id ? '当前曲目，' : '播放'}${track.title}，${track.artist}`" @click="music.selectTrack(index)">
                   <span class="music-track-cover">
@@ -73,7 +85,8 @@
           <span v-if="music.error" role="alert">{{ music.error }} <button type="button" @click="music.play">重试</button></span>
           <span v-else-if="downloadError" role="alert">{{ downloadError }}</span>
           <span v-else-if="downloadingId">正在准备下载…</span>
-          <span v-else-if="music.isLoading">正在加载伴奏…</span>
+          <span v-else-if="music.isSwitching">正在切换音源…</span>
+          <span v-else-if="music.isLoading">正在加载音频…</span>
         </div>
         <input class="music-range" type="range" aria-label="播放进度" :aria-valuetext="`${formatMusicTime(displayedTime)} / ${formatMusicTime(music.duration)}`" :max="music.duration" :value="displayedTime" :style="{ '--music-range-value': `${displayedProgress}%` }" min="0" step="0.1" @input="previewProgress" @change="commitProgress" @pointercancel="progressPreviewTime = null" @blur="progressPreviewTime = null">
         <div class="music-time"><span>{{ formatMusicTime(displayedTime) }}</span><span>{{ formatMusicTime(music.duration) }}</span></div>
@@ -82,7 +95,7 @@
           <button class="music-icon-button" type="button" aria-label="上一首" @click="music.previous"><TrackPreviousIcon aria-hidden="true" /></button>
           <button ref="mainPlayButton" class="music-icon-button music-main-play" type="button" :aria-label="music.isPlaying || music.isLoading ? '暂停音乐' : '播放音乐'" @click="music.togglePlayback"><PlayIcon :active="music.isPlaying || music.isLoading" :instant="music.instant" aria-hidden="true" /></button>
           <button class="music-icon-button" type="button" aria-label="下一首" @click="music.next"><TrackNextIcon aria-hidden="true" /></button>
-          <button v-if="downloadEnabled" class="music-icon-button music-download" type="button" :disabled="!!downloadingId" :aria-label="`下载${music.currentTrack.title}伴奏`" :aria-busy="downloadingId === music.currentTrack.id" @click="downloadTrack(music.currentTrack)"><DownloadIcon instant aria-hidden="true" /></button>
+          <button v-if="downloadEnabled && instrumentalSource" class="music-icon-button music-download" type="button" :disabled="!!downloadingId" :aria-label="`下载${music.currentTrack.title}伴奏`" :aria-busy="downloadingId === music.currentTrack.id" @click="downloadTrack(music.currentTrack)"><DownloadIcon instant aria-hidden="true" /></button>
           <span v-else class="music-control-spacer" aria-hidden="true" />
         </div>
         <label class="music-volume">
@@ -110,12 +123,12 @@
 <script setup lang="ts">
 import VinylRecord from './VinylRecord.vue'
 import { Cross1Icon, DownloadIcon, PlayIcon, ShuffleIcon, TrackNextIcon, TrackPreviousIcon } from '~/utils/siteIcons'
-import { formatMusicTime, type MusicTrack } from '~/data/music'
+import { formatMusicTime, musicModeLabels, musicSourceFor, type MusicTrack } from '~/data/music'
 import { useMusicPlayerStore } from '~/stores/music'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import { useBlogSettings } from '~/composables/useBlogSettings'
 import { proxyImageUrl } from '~/utils/image'
-import { matchSyncedLyrics, parseMusicLyrics, type MusicLyricLine } from '~/utils/musicLyrics'
+import { parseMusicLyrics, type MusicLyricLine } from '~/utils/musicLyrics'
 import type { ApiResponse } from '~/types/api'
 
 const music = useMusicPlayerStore()
@@ -130,6 +143,37 @@ const accentText = computed(() => {
   const luminance = .2126 * r! + .7152 * g! + .0722 * b!
   return luminance > .183 ? '#050505' : '#ffffff'
 })
+const instrumentalSource = computed(() => musicSourceFor(music.currentTrack, 'instrumental'))
+const mixDescription = computed(() => `伴奏 ${Math.round(music.instrumentalLevel * 100)}%，人声 ${Math.round(music.vocalLevel * 100)}%${music.mixBalance === .5 ? '，等量混合' : ''}`)
+function startBlendDrag(event: PointerEvent) {
+  if (event.button !== 0) return
+  const input = event.currentTarget as HTMLInputElement
+  input.focus({ preventScroll: true })
+  input.setPointerCapture(event.pointerId)
+  moveBlendDrag(event)
+}
+function moveBlendDrag(event: PointerEvent) {
+  const input = event.currentTarget as HTMLInputElement
+  if (!input.hasPointerCapture(event.pointerId)) return
+  const rect = input.parentElement!.querySelector('.music-blend-labels')!.getBoundingClientRect()
+  music.setMixBalance(Math.round((event.clientX - rect.left - rect.width / 6) / (rect.width * 2 / 3) * 100) / 100)
+}
+function endBlendDrag(event: PointerEvent) {
+  const input = event.currentTarget as HTMLInputElement
+  if (!input.hasPointerCapture(event.pointerId)) return
+  moveBlendDrag(event)
+  input.releasePointerCapture(event.pointerId)
+}
+const displayArtist = computed(() => (music.currentTrack?.artist || '').replace(/\s*[·•|]\s*(?:伴奏|人声|原曲)\s*$/, ''))
+function handleModeKey(event: KeyboardEvent) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  event.preventDefault()
+  const modes = music.availableModes
+  const index = modes.indexOf(music.activeMode)
+  const target = event.key === 'Home' ? 0 : event.key === 'End' ? modes.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + modes.length) % modes.length
+  const mode = modes[target]
+  if (mode) { music.setMode(mode); document.getElementById(`music-source-${mode}`)?.focus({ preventScroll: true }) }
+}
 const api = useApi()
 const downloadEnabled = computed(() => settings.value['blog.music_download_enabled'] === 'true')
 const downloadingId = ref('')
@@ -145,9 +189,12 @@ let mobileQuery: MediaQueryList
 let previousOverflow: string | null = null
 
 const viewInstant = ref(false)
-const lyrics = ref<MusicLyricLine[]>([])
+const lyricText = ref('')
+const lyricOffset = ref(0)
+const lyrics = computed<MusicLyricLine[]>(() => parseMusicLyrics(lyricText.value, lyricOffset.value + (music.currentSource?.offset_ms || 0)))
 const lyricsLoading = ref(false)
 const lyricsError = ref('')
+const lyricsPending = ref(false)
 const lyricsScroller = ref<HTMLElement | null>(null)
 const songsScroller = ref<HTMLElement | null>(null)
 const lyricsSynced = computed(() => lyrics.value.some(line => line.time !== null))
@@ -158,7 +205,7 @@ const activeLyricIndex = computed(() => {
   }
   return -1
 })
-const lyricCache = new Map<string, MusicLyricLine[]>()
+let lyricsPoll: ReturnType<typeof setTimeout> | undefined
 let lyricsRequest = 0
 let lyricsController: AbortController | null = null
 let songsScrollTop = 0
@@ -190,29 +237,25 @@ async function centerLyric(force = false) {
   scroller.scrollTo({ top: Math.max(0, top), behavior: force || viewInstant.value || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
 }
 function seekLyric(time: number) { lyricsScrollHeldUntil = 0; music.seek(time); void centerLyric() }
-async function loadLyrics(retry = false) {
+async function loadLyrics(_retry = false, background = false) {
   const track = music.currentTrack
   if (!track || !music.panelOpen) return
-  const key = `${track.id}:${track.src}:${track.title}:${track.artist}:${track.duration}`
   const request = ++lyricsRequest
+  clearTimeout(lyricsPoll)
   lyricsController?.abort()
   lyricsError.value = ''
-  lyrics.value = []
-  if (!retry && lyricCache.has(key)) { lyrics.value = lyricCache.get(key)!; lyricsLoading.value = false; void centerLyric(true); return }
+  if (!background) { lyricText.value = ''; lyricsPending.value = false }
   const controller = new AbortController()
   lyricsController = controller
-  lyricsLoading.value = true
+  if (!background) lyricsLoading.value = true
   try {
-    let lines = await matchSyncedLyrics(track, controller.signal)
+    const result = await api<ApiResponse<{ text: string; offset_ms?: number; status?: string }>>(`/music/${encodeURIComponent(track.id)}/lyrics`, { signal: controller.signal, timeout: 15000, retry: 0 })
+    if (result.code !== 0) throw new Error('Lyrics unavailable')
     if (controller.signal.aborted || request !== lyricsRequest) return
-    if (!lines.length) {
-      const embedded = await api<ApiResponse<{ text: string }>>(`/music/${encodeURIComponent(track.id)}/lyrics`, { signal: controller.signal, timeout: 15000, retry: 0 })
-      if (embedded.code !== 0) throw new Error('Lyrics unavailable')
-      lines = parseMusicLyrics(embedded.data?.text || '')
-    }
-    if (controller.signal.aborted || request !== lyricsRequest) return
-    lyrics.value = lines
-    lyricCache.set(key, lines)
+    lyricText.value = result.data?.text || ''
+    lyricOffset.value = result.data?.offset_ms || 0
+    lyricsPending.value = result.data?.status === 'pending' || result.data?.status === 'processing'
+    if (lyricsPending.value) lyricsPoll = setTimeout(() => { void loadLyrics(false, true) }, 5000)
     void centerLyric(true)
   } catch {
     if (!controller.signal.aborted && request === lyricsRequest) lyricsError.value = '歌词暂时无法加载'
@@ -224,23 +267,26 @@ watch(() => music.panelView, async view => {
   if (view === 'lyrics') void centerLyric(true)
   else if (songsScroller.value) songsScroller.value.scrollTop = songsScrollTop
 })
-watch([() => music.currentTrack?.id, () => music.currentTrack?.src], () => {
+watch([() => music.currentTrack?.id, () => music.currentTrack?.src, () => music.currentTrack?.title, () => music.currentTrack?.artist, () => music.currentTrack?.duration], () => {
   ++lyricsRequest
+  clearTimeout(lyricsPoll)
   lyricsController?.abort()
-  lyrics.value = []
+  lyricText.value = ''
+  lyricsPending.value = false
   if (music.panelOpen) void loadLyrics()
 })
 
 async function downloadTrack(track: MusicTrack) {
-  if (!downloadEnabled.value || downloadingId.value) return
+  if (!downloadEnabled.value || !instrumentalSource.value || downloadingId.value) return
   downloadingId.value = track.id
   downloadError.value = ''
   try {
+    const source = instrumentalSource.value
     const file = await api<Blob>(`/music/${encodeURIComponent(track.id)}/download`, {
       responseType: 'blob', timeout: 120_000, retry: 0
     })
     if (!file.size || file.type.includes('json')) throw new Error('Invalid audio response')
-    const extension = new URL(track.src, window.location.href).pathname.match(/\.(mp3|wav|ogg|aac|flac|m4a|opus|aiff)$/i)?.[0] || '.mp3'
+    const extension = new URL(source.src, window.location.href).pathname.match(/\.(mp3|wav|ogg|aac|flac|m4a|opus|aiff)$/i)?.[0] || '.mp3'
     const link = document.createElement('a')
     const url = URL.createObjectURL(file)
     link.href = url
@@ -275,12 +321,16 @@ function releaseScroll() {
   }
 }
 
-watch(() => music.panelOpen, async open => {
+async function syncPanel(open: boolean) {
   await nextTick()
   if (open !== music.panelOpen) return
   const panel = dialog.value
   if (!panel) return
   if (!open) {
+    ++lyricsRequest
+    clearTimeout(lyricsPoll)
+    lyricsController?.abort()
+    lyricsLoading.value = false
     rememberSongsScroll()
     progressPreviewTime.value = null
     panel.close()
@@ -298,7 +348,8 @@ watch(() => music.panelOpen, async open => {
   void loadLyrics()
   if (music.panelView === 'songs' && songsScroller.value) songsScroller.value.scrollTop = songsScrollTop
   if (music.instant) mainPlayButton.value?.focus({ preventScroll: true })
-})
+}
+watch(() => music.panelOpen, syncPanel)
 
 watch(() => route.fullPath, () => music.closePanel(false))
 watch([feedbackOpen, accountOpen, subscribeOpen], values => {
@@ -332,15 +383,19 @@ function handleEscape(event: KeyboardEvent) {
 function handleResize() { music.closePanel(false) }
 
 onMounted(() => {
+  music.panelReady = true
   music.initialize()
   mobileQuery = window.matchMedia('(max-width: 768px)')
   document.addEventListener('pointerdown', handleOutside)
   document.addEventListener('keydown', handleEscape)
   window.addEventListener('resize', handleResize)
+  if (music.panelOpen) void syncPanel(true)
 })
 
 onBeforeUnmount(() => {
+  music.panelReady = false
   ++lyricsRequest
+  clearTimeout(lyricsPoll)
   lyricsController?.abort()
   music.closePanel(false)
   releaseScroll()
@@ -374,7 +429,7 @@ onBeforeUnmount(() => {
   &::backdrop { background: var(--overlay-strong); }
 }
 .music-cover-background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(32px); opacity: .07; pointer-events: none; }
-.music-current, .music-view-tabs, .music-content, .music-controls { position: relative; z-index: 1; min-width: 0; }
+.music-current, .music-toolbar, .music-view-tabs, .music-content, .music-controls { position: relative; z-index: 1; min-width: 0; }
 .music-panel-close { position: absolute; z-index: 2; top: 4px; right: 4px; }
 .music-icon-button {
   display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px;
@@ -386,10 +441,28 @@ onBeforeUnmount(() => {
 .music-current-info { width: 100%; min-width: 0; text-align: center; }
 .music-current h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; font-size: 21px; font-weight: 600; line-height: 1.4; }
 .music-current p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 3px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.music-toolbar { display: flex; align-items: center; justify-content: center; gap: 8px;
+  &.has-source > :first-child { flex: 3; min-width: 0; }
+  &.has-source .music-view-tabs { flex: 2; }
+}
+.music-segmented { height: 30px; padding: 3px; border: 1px solid var(--border-color); border-radius: 9px; background: color-mix(in srgb, var(--bg-soft) 70%, transparent); box-sizing: border-box; }
+.music-source-blend { position: relative; display: block; min-width: 0;
+  input { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; box-sizing: border-box; padding: 0; border: 0; margin: 0; opacity: 0; cursor: ew-resize; touch-action: none; }
+  &:has(input:focus-visible) { outline: 2px solid var(--music-accent); outline-offset: 2px; }
+}
+.music-blend-highlight { position: absolute; inset: 3px auto 3px 3px; width: calc((100% - 6px) / 3); border-radius: 5px; background: var(--music-tab-accent); transform: translateX(calc(var(--music-blend-value) * 200%)); pointer-events: none; }
+.music-blend-labels { position: absolute; inset: 3px; display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; text-align: center; color: var(--text-secondary); font-size: 12px; font-weight: 500; pointer-events: none;
+  &.is-selected { color: var(--music-accent-text); clip-path: inset(0 calc((1 - var(--music-blend-value)) * 66.666667%) 0 calc(var(--music-blend-value) * 66.666667%)); }
+}
+.music-source-modes { display: flex; align-items: center; justify-content: center; gap: 12px; height: 32px;
+  button { position: relative; min-width: 48px; min-height: 44px; padding: 0 6px; border: 0; background: transparent; color: var(--text-secondary); font-size: 12px; }
+  button[aria-checked='true'] { color: var(--music-accent); font-weight: 600; }
+  button[aria-checked='true']::after { content: ''; position: absolute; bottom: 5px; left: calc(50% - 9px); width: 18px; height: 2px; border-radius: 1px; background: currentColor; }
+}
+@media (hover: hover) and (pointer: fine) { .music-source-modes button:hover { color: var(--music-accent); } }
 .music-view-tabs {
-  display: flex; justify-self: center; gap: 2px; height: 30px; padding: 3px;
-  border: 1px solid var(--border-color); border-radius: 9px; background: color-mix(in srgb, var(--bg-soft) 70%, transparent); box-sizing: border-box;
-  button { min-width: 58px; height: 22px; padding: 0 14px; border: 0; border-radius: 5px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 500; }
+  display: flex; justify-content: center; gap: 2px; min-width: 0;
+  button { flex: 1; min-width: 0; height: 22px; padding: 0 12px; border: 0; border-radius: 5px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 500; white-space: nowrap; }
   button[aria-selected='true'] { background: var(--music-tab-accent); color: var(--music-accent-text); }
 }
 .music-content { min-height: 0; overflow: hidden; }
@@ -484,6 +557,8 @@ onBeforeUnmount(() => {
   .music-current { flex-direction: row; gap: 12px; padding: 0 24px 0 0; }
   .music-current-icon { width: 48px; height: 48px; }
   .music-current-info { text-align: left; }
+  .music-source-modes { gap: 2px; height: 30px; }
+  .music-source-modes button { min-width: 44px; padding-inline: 4px; }
   .music-current h3 { font-size: 18px; }
   .music-range { height: 24px; }
 }

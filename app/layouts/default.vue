@@ -13,7 +13,7 @@
     <Footer />
 
     <ChatbotWidget />
-    <ClientOnly><MusicPlayer /></ClientOnly>
+    <ClientOnly><MusicPlayer v-if="playerMounted" /></ClientOnly>
 
   </div>
 </template>
@@ -22,13 +22,16 @@
 import Header from '~/components/shell/Header.vue'
 import Footer from '~/components/shell/Footer.vue'
 import ChatbotWidget from '~/components/chat/ChatbotWidget.vue'
-import MusicPlayer from '~/components/music/MusicPlayer.client.vue'
 import { useMusicPlayerStore } from '~/stores/music'
 import { useBlogSettings } from '~/composables/useBlogSettings'
 import { parseMusicPlaylist } from '~/data/music'
 
+const MusicPlayer = defineAsyncComponent(() => import('~/components/music/MusicPlayer.client.vue'))
+
 const route = useRoute()
 const music = useMusicPlayerStore()
+const playerMounted = ref(false)
+watch(() => music.panelOpen, open => { if (open) playerMounted.value = true }, { immediate: true })
 const { settings } = useBlogSettings()
 watch(() => settings.value['blog.music_playlist'], value => music.setPlaylist(parseMusicPlaylist(value)), { immediate: true })
 useHead(() => ({ htmlAttrs: { 'data-music-active': music.hasStarted ? 'true' : null } }))
