@@ -15,6 +15,7 @@ export interface ChatbotMessage {
   content: string
   sources?: ChatbotSource[]
   streaming?: boolean
+  incomplete?: boolean
   comments?: AgentCommentPage
   replyDraft?: AgentReplyDraft
 }
@@ -225,7 +226,6 @@ export const streamChatbotMessage = async (
       }
       if (done) break
     }
-    if (buffer.trim()) handleEvent(buffer)
     if (!finished) throw new Error('回复连接意外中断，请稍后再试。')
   } finally {
     await reader.cancel().catch(() => {})

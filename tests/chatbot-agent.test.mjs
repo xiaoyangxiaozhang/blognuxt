@@ -61,6 +61,8 @@ test('SSE keeps split Chinese text and tool results in the owner stream; message
 
   context.fetch = async () => new Response('event: delta\ndata: {"content":"未完成"}\n\n')
   await assert.rejects(context.api.streamChatbotMessage({}, () => {}), /连接意外中断/)
+  context.fetch = async () => new Response('event: delta\ndata: {"content":"保留正文"}\n\nevent: done\ndata: {"sources":[]}')
+  await assert.rejects(context.api.streamChatbotMessage({}, () => {}), /连接意外中断/, 'an incomplete done frame cannot confirm completion')
 })
 
 async function widgetFixture({ saved, getDraft, publish, update, commentToolsEnabled = true } = {}) {
@@ -222,5 +224,54 @@ test('cached drafts need a fresh read; logout discards privileged content and la
     assert.equal(fixture.state.messages.value.some(item => item.replyDraft || item.comments), false)
     assert.equal(fixture.storage.has('blog-chatbot-session-v3:owner:1'), false)
     assert.equal(fixture.state.verifiedDrafts.size, 0)
+  } finally { fixture.dispose() }
+})
+
+test('interrupted replies remain visible and marked after reload but do not enter model history', async () => {
+  const fixture = await widgetFixture()
+  let saved
+  try {
+    fixture.setStream(async (_body, onDelta) => {
+      onDelta('已收到的前半段回答。')
+      await flush()
+      const inFlight = JSON.parse(fixture.storage.get('blog-chatbot-session-v3:owner:1'))
+      assert.equal(inFlight.messages.find(item => item.content === '已收到的前半段回答。').incomplete, true, 'refreshing during a stream must not restore a partial reply as complete')
+      throw new Error('回复连接意外中断')
+    })
+    await fixture.state.send('原始问题')
+    const partial = fixture.state.messages.value.find(item => item.content === '已收到的前半段回答。')
+    assert.ok(partial)
+    assert.equal(partial.streaming, false)
+    assert.equal(partial.incomplete, true)
+    assert.equal(fixture.state.draft.value, '原始问题')
+    assert.equal(fixture.calls.some(call => call.type === 'publish'), false)
+    await flush()
+    saved = JSON.parse(fixture.storage.get('blog-chatbot-session-v3:owner:1'))
+    assert.equal(saved.messages.find(item => item.content === partial.content).incomplete, true)
+  } finally { fixture.dispose() }
+
+  const restored = await widgetFixture({ saved })
+  try {
+    assert.equal(restored.state.messages.value.find(item => item.content === '已收到的前半段回答。').incomplete, true)
+    let request
+    restored.setStream(async (body, onDelta) => {
+      request = body
+      onDelta('完整的新回答。')
+      return { reply: '完整的新回答。', sources: [] }
+    })
+    await restored.state.send('继续聊')
+    assert.equal(request.history.some(item => item.content === '已收到的前半段回答。'), false)
+    assert.equal(restored.state.messages.value.find(item => item.content === '完整的新回答。').streaming, false)
+    assert.equal(restored.state.messages.value.find(item => item.content === '完整的新回答。').incomplete, undefined)
+  } finally { restored.dispose() }
+})
+
+test('a failure before the first delta restores input without creating an empty reply', async () => {
+  const fixture = await widgetFixture()
+  try {
+    fixture.setStream(async () => { throw new Error('暂时无法连接模型') })
+    await fixture.state.send('再次提问')
+    assert.equal(fixture.state.draft.value, '再次提问')
+    assert.equal(fixture.state.messages.value.some(item => item.incomplete || item.streaming), false)
   } finally { fixture.dispose() }
 })

@@ -39,6 +39,7 @@
               <div class="chatbot-message" :class="{ 'has-tool-result': isOwner && (item.comments || item.replyDraft) }">
                 <ChatbotReply v-if="item.role === 'assistant' && item.content" :content="item.content" :animate="!!item.streaming" />
                 <p v-else-if="item.content">{{ item.content }}</p>
+                <p v-if="item.incomplete" class="chatbot-incomplete" role="status">回复中断，以上内容未完整生成。</p>
                 <div v-if="isOwner && item.comments" class="chatbot-comments">
                   <p class="chatbot-comments-heading">{{ item.comments.items.length ? `找到 ${item.comments.total} 条评论` : '没有找到符合条件的评论' }}</p>
                   <ol v-if="item.comments.items.length">
@@ -201,7 +202,7 @@ const saveSession = () => {
   try {
     sessionStorage.setItem(`${STORAGE_KEY}:${loadedIdentity}`, JSON.stringify({
       sessionId: sessionId.value,
-      messages: messages.value.slice(-60).map(({ role, content, sources, comments, replyDraft }) => ({ role, content, sources, ...(isOwner.value ? { comments, replyDraft } : {}) })),
+      messages: messages.value.slice(-60).map(({ role, content, sources, incomplete, streaming, comments, replyDraft }) => ({ role, content, sources, incomplete: incomplete || streaming || undefined, ...(isOwner.value ? { comments, replyDraft } : {}) })),
       ...(isOwner.value ? { commentIds: commentIds.value, commentQuery: commentQuery.value, currentDraftId: currentDraftId.value, uncertainPublishes: [...uncertainPublishes] } : {})
     }))
   } catch {
@@ -222,7 +223,7 @@ const loadSession = () => {
         const candidate = item as Record<string, unknown>
         return (candidate.role === 'user' || candidate.role === 'assistant') && typeof candidate.content === 'string'
       }).map((item: ChatbotMessage) => ({
-        role: item.role, content: item.content, sources: item.sources,
+        role: item.role, content: item.content, sources: item.sources, incomplete: item.incomplete === true,
         ...(isOwner.value && item.comments && Array.isArray(item.comments.items) ? { comments: { ...item.comments, items: item.comments.items.filter(isAgentComment), query: isCommentQuery(item.comments.query) ? item.comments.query : undefined } } : {}),
         ...(isOwner.value && isReplyDraft(item.replyDraft) ? { replyDraft: item.replyDraft } : {})
       }))
@@ -505,7 +506,7 @@ const send = async (preset?: string, displayedPage?: AgentCommentPage) => {
       session_id: sessionId.value,
       message: content,
       history: messages.value
-        .filter(item => item.content && (item.role === 'user' || item.role === 'assistant'))
+        .filter(item => item.content && !item.incomplete && (item.role === 'user' || item.role === 'assistant'))
         .slice(-9, -1)
         .map(({ role, content: message }) => ({ role, content: message })),
       page_context: {
@@ -558,7 +559,10 @@ const send = async (preset?: string, displayedPage?: AgentCommentPage) => {
     saveSession()
   } catch (error) {
     if (epoch !== identityEpoch) return
-    if (replyIndex !== undefined) messages.value.splice(replyIndex, 1)
+    if (replyIndex !== undefined) {
+      messages.value[replyIndex]!.streaming = false
+      messages.value[replyIndex]!.incomplete = true
+    }
     if (!hasToolResult) draft.value = content
     showNotice(errorText(error))
   } finally {
@@ -732,6 +736,7 @@ onBeforeUnmount(() => {
 .chatbot-comment-actions a:focus-visible { outline: 2px solid var(--chat-ink); outline-offset: 3px; }
 .chatbot-typing span { font-size: 13px; line-height: 1.6; }
 .chatbot-message p { margin: 0; white-space: pre-wrap; word-break: normal; line-break: strict; overflow-wrap: anywhere; text-wrap: pretty; font-size: 14px; line-height: 1.75; }
+.chatbot-message .chatbot-incomplete { margin-top: 8px; color: var(--chat-muted); font-size: 12px; }
 .chatbot-sources { display: grid; gap: 8px; margin-top: 12px; font-size: 12px; line-height: 1.5; }
 .chatbot-sources span { color: var(--chat-muted); }
 .chatbot-sources a { color: var(--chat-ink); overflow-wrap: anywhere; text-wrap: pretty; }
