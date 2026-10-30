@@ -77,7 +77,7 @@
               >
                 <HamburgerMenuIcon :active="actionsOpen" :instant="iconInputInstant" aria-hidden="true" />
               </button>
-              <Transition name="action-menu" :css="!iconInputInstant" @after-leave="updateIslandIndicator()">
+              <Transition name="action-menu" :css="!iconInputInstant">
                 <div v-if="actionsOpen" key="actions" id="header-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作">
                   <button class="action-btn action-theme island-theme-btn" :title="themeButtonTitle" :aria-label="themeButtonTitle" type="button" @click="toggleTheme">
                     <ThemeIcon :active="theme === 'blue-white'" :instant="iconInputInstant" aria-hidden="true" />
@@ -136,21 +136,16 @@
               <img class="mini-logo-mark" :src="logoUrl" alt="" aria-hidden="true" />
             </button>
 
-            <nav ref="islandNav" class="island-nav" @mouseleave="clearIslandHover">
-              <span
-                class="island-indicator"
-                aria-hidden="true"
-                :style="{ width: `${islandIndicator.width}px`, transform: `translateX(${islandIndicator.left}px)` }"
-              />
-              <NuxtLink to="/" class="island-link" @mouseenter="moveIslandIndicator(0)" @focus="moveIslandIndicator(0)">首页</NuxtLink>
-              <NuxtLink to="/articles" class="island-link" @mouseenter="moveIslandIndicator(1)" @focus="moveIslandIndicator(1)">文章</NuxtLink>
-              <NuxtLink to="/archive" class="island-link" @mouseenter="moveIslandIndicator(2)" @focus="moveIslandIndicator(2)">归档</NuxtLink>
-              <NuxtLink to="/categories" class="island-link" @mouseenter="moveIslandIndicator(3)" @focus="moveIslandIndicator(3)">分类</NuxtLink>
-              <NuxtLink to="/tags" class="island-link" @mouseenter="moveIslandIndicator(4)" @focus="moveIslandIndicator(4)">标签</NuxtLink>
-              <NuxtLink to="/friends" class="island-link" @mouseenter="moveIslandIndicator(5)" @focus="moveIslandIndicator(5)">友链</NuxtLink>
-              <NuxtLink to="/dynamic" class="island-link" @mouseenter="moveIslandIndicator(6)" @focus="moveIslandIndicator(6)">动态</NuxtLink>
-              <NuxtLink to="/message" class="island-link" @mouseenter="moveIslandIndicator(7)" @focus="moveIslandIndicator(7)">留言</NuxtLink>
-              <NuxtLink v-if="isKimidouOpen" to="/kimidou" class="island-link" @mouseenter="moveIslandIndicator(8)" @focus="moveIslandIndicator(8)">基米斗</NuxtLink>
+            <nav class="island-nav">
+              <NuxtLink to="/" class="island-link">首页</NuxtLink>
+              <NuxtLink to="/articles" class="island-link">文章</NuxtLink>
+              <NuxtLink to="/archive" class="island-link">归档</NuxtLink>
+              <NuxtLink to="/categories" class="island-link">分类</NuxtLink>
+              <NuxtLink to="/tags" class="island-link">标签</NuxtLink>
+              <NuxtLink to="/friends" class="island-link">友链</NuxtLink>
+              <NuxtLink to="/dynamic" class="island-link">动态</NuxtLink>
+              <NuxtLink to="/message" class="island-link">留言</NuxtLink>
+              <NuxtLink v-if="isKimidouOpen" to="/kimidou" class="island-link">基米斗</NuxtLink>
             </nav>
 
             <div class="island-actions action-menu" @keydown.esc="handleActionsEscape">
@@ -165,7 +160,7 @@
               >
                 <HamburgerMenuIcon :active="actionsOpen" :instant="iconInputInstant" aria-hidden="true" />
               </button>
-              <Transition name="action-menu" :css="!iconInputInstant" @after-leave="updateIslandIndicator()">
+              <Transition name="action-menu" :css="!iconInputInstant">
                 <div v-if="actionsOpen" key="actions" id="island-quick-actions" class="action-menu-panel" role="group" aria-label="快捷操作">
                   <button class="action-btn action-theme" :title="themeButtonTitle" :aria-label="themeButtonTitle" type="button" @click="toggleTheme">
                     <ThemeIcon :active="theme === 'blue-white'" :instant="iconInputInstant" aria-hidden="true" />
@@ -362,48 +357,11 @@ const handleBrandMenuFocusOut = (event: FocusEvent) => {
 }
 
 const route = useRoute()
-const islandNav = ref<HTMLElement | null>(null)
-const islandHoverIndex = ref<number | null>(null)
-const islandIndicator = reactive({ left: 0, width: 50 })
-const islandRoutePaths = computed(() => [
-  '/', '/articles', '/archive', '/categories', '/tags', '/friends', '/dynamic', '/message',
-  ...(isKimidouOpen.value ? ['/kimidou'] : [])
-])
-const activeIslandIndex = computed(() => {
-  const index = islandRoutePaths.value.indexOf(route.path)
-  return index >= 0 ? index : 0
-})
-
-const updateIslandIndicator = async (index = islandHoverIndex.value ?? activeIslandIndex.value) => {
-  await nextTick()
-  const nav = islandNav.value
-  const link = nav?.querySelectorAll<HTMLElement>('.island-link')[index]
-  if (!nav || !link) return
-
-  islandIndicator.left = link.offsetLeft
-  islandIndicator.width = link.offsetWidth
-}
-
-const moveIslandIndicator = (index: number) => {
-  islandHoverIndex.value = index
-  updateIslandIndicator(index)
-}
-
-const clearIslandHover = () => {
-  islandHoverIndex.value = null
-  updateIslandIndicator(activeIslandIndex.value)
-}
-
-const handleIslandResize = () => updateIslandIndicator()
-
 watch(() => route.fullPath, () => {
   closeBrandMenu()
   actionsOpen.value = false
   searchDialogOpen.value = false
-  clearIslandHover()
 })
-
-watch(isKimidouOpen, () => updateIslandIndicator())
 
 const handleActionsEscape = (event: KeyboardEvent) => {
   if (!actionsOpen.value) return
@@ -463,16 +421,13 @@ onMounted(() => {
   applyTheme(savedTheme || 'midnight-blue')
   lastScrollY.value = window.scrollY
   window.addEventListener('scroll', handleScroll, { passive: true })
-  window.addEventListener('resize', handleIslandResize)
   handleScroll()
-  updateIslandIndicator()
 })
 
 onUnmounted(() => {
   cancelActionLayout()
   cancelBrandMenuClose()
   window.removeEventListener('scroll', handleScroll)
-  window.removeEventListener('resize', handleIslandResize)
 })
 </script>
 
@@ -1017,18 +972,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 0 4px;
-}
-
-.island-indicator {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 0;
-  height: 44px;
-  border-radius: 999px;
-  background: var(--brand-accent-soft);
-  pointer-events: none;
-  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .island-link {
