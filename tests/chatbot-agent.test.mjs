@@ -99,7 +99,7 @@ async function widgetFixture({ saved, getDraft, publish, update, commentToolsEna
     console
   })
   const scope = effectScope()
-  scope.run(() => vm.runInContext(code + '\nglobalThis.state = { messages, draft, send, publishReply, saveReply, cancelReply, recheckDraft, setDraftDirty, verifiedDrafts, uncertainPublishes, currentDraftId, isOwner };', context))
+  scope.run(() => vm.runInContext(code + '\nglobalThis.state = { messages, visibleMessages, mode, switchMode, draft, send, publishReply, saveReply, cancelReply, recheckDraft, setDraftDirty, verifiedDrafts, uncertainPublishes, currentDraftId, isOwner };', context))
   await Promise.all(mounts.map(fn => fn()))
   await flush()
   return {
@@ -108,6 +108,31 @@ async function widgetFixture({ saved, getDraft, publish, update, commentToolsEna
     dispose: () => { disposes.forEach(fn => fn()); scope.stop() }
   }
 }
+
+test('life guide mode uses public chat and keeps conversation histories separate', async () => {
+  const fixture = await widgetFixture({ commentToolsEnabled: false })
+  try {
+    const calls = []
+    fixture.setStream(async (body, onDelta, signal, options) => {
+      calls.push({ body, options })
+      onDelta('回答')
+      return { reply: '回答', sources: [{ title: '指南', slug: 'guide', url: 'https://github.com/' }] }
+    })
+    await fixture.state.send('博客文章')
+    fixture.state.switchMode('life_guide')
+    assert.equal(fixture.state.visibleMessages.value.length, 0)
+    await fixture.state.send('租房押金怎么办')
+    assert.equal(calls[1].body.mode, 'life_guide')
+    assert.equal(calls[1].options.agent, false)
+    assert.equal(calls[1].body.history.length, 0)
+    await fixture.state.send('这个怎么办')
+    assert.equal(calls[2].body.history[0].content, '租房押金怎么办')
+    assert.equal(fixture.state.visibleMessages.value.at(-1).sources[0].title, '指南')
+    fixture.state.switchMode('blog')
+    assert.ok(fixture.state.visibleMessages.value.some(item => item.content === '博客文章'))
+    assert.ok(!fixture.state.visibleMessages.value.some(item => item.content === '租房押金怎么办'))
+  } finally { fixture.dispose() }
+})
 
 test('disabled comment tools keep owners on ordinary chat without restoring or publishing drafts', async () => {
   const fixture = await widgetFixture({

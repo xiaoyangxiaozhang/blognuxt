@@ -35,7 +35,7 @@
           </header>
 
           <div ref="messageList" class="chatbot-messages" aria-live="polite">
-            <div v-for="(item, index) in messages" :key="`${item.role}-${index}`" class="chatbot-message-row" :class="item.role">
+            <div v-for="(item, index) in visibleMessages" :key="`${item.role}-${index}`" class="chatbot-message-row" :class="item.role">
               <div class="chatbot-message" :class="{ 'has-tool-result': isOwner && (item.comments || item.replyDraft) }">
                 <ChatbotReply v-if="item.role === 'assistant' && item.content" :content="item.content" :animate="!!item.streaming" />
                 <p v-else-if="item.content">{{ item.content }}</p>
@@ -68,9 +68,9 @@
                   @recheck="recheckDraft(item.replyDraft.id)"
                   @dirty="setDraftDirty(item.replyDraft.id, $event)"
                 />
-                <div v-if="item.sources?.length" class="chatbot-sources">
+                <div v-if="item.mode !== 'life_guide' && item.sources?.length" class="chatbot-sources">
                   <span>顺手看看</span>
-                  <a v-for="source in item.sources" :key="source.slug" :href="source.url">{{ source.title }}</a>
+                  <a v-for="source in item.sources" :key="source.slug" :href="safeChatbotURL(source.url)" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>
                 </div>
               </div>
             </div>
@@ -79,7 +79,7 @@
             </div>
           </div>
 
-          <div v-if="!messages.some(item => item.role === 'user') && suggestions.length" class="chatbot-suggestions">
+          <div v-if="mode === 'blog' && !visibleMessages.some(item => item.role === 'user') && suggestions.length" class="chatbot-suggestions">
             <button v-for="suggestion in suggestions" :key="suggestion" type="button" :disabled="interactionBusy" @click="send(suggestion)">
               {{ suggestion }}
             </button>
@@ -91,14 +91,14 @@
             </transition>
           </div>
           <form class="chatbot-input-row" @submit.prevent="send()">
-            <label for="chatbot-draft" class="chatbot-input-label">{{ isOwner ? '聊聊，或交代一件事' : '聊点什么' }}</label>
+            <button type="button" class="chatbot-guide-toggle" :aria-pressed="mode === 'life_guide'" :disabled="interactionBusy" @click="switchMode(mode === 'life_guide' ? 'blog' : 'life_guide')">求指导</button>
             <textarea
               id="chatbot-draft"
               v-model="draft"
               rows="1"
               maxlength="1000"
               :disabled="interactionBusy"
-              :placeholder="isOwner ? '查评论、修改草稿，或和我聊聊……' : '和我聊聊……'"
+              :placeholder="mode === 'life_guide' ? '想了解什么？' : isOwner ? '查评论、修改草稿，或和我聊聊……' : '和我聊聊……'"
               aria-label="聊天内容"
               aria-describedby="chatbot-input-hint"
               @keydown.enter.exact="handleInputKeydown"
@@ -182,6 +182,8 @@ const config = reactive<PublicChatbotConfig>({
   suggestions: []
 })
 const messages = ref<ChatbotMessage[]>([])
+const mode = ref<'blog' | 'life_guide'>('blog')
+const visibleMessages = computed(() => messages.value.filter(item => (item.mode || 'blog') === mode.value))
 const sessionId = ref('')
 
 const displayName = computed(() => config.display_name || '博主')
@@ -202,7 +204,8 @@ const saveSession = () => {
   try {
     sessionStorage.setItem(`${STORAGE_KEY}:${loadedIdentity}`, JSON.stringify({
       sessionId: sessionId.value,
-      messages: messages.value.slice(-60).map(({ role, content, sources, incomplete, streaming, comments, replyDraft }) => ({ role, content, sources, incomplete: incomplete || streaming || undefined, ...(isOwner.value ? { comments, replyDraft } : {}) })),
+      mode: mode.value,
+      messages: messages.value.slice(-60).map(({ role, content, mode: messageMode, sources, incomplete, streaming, comments, replyDraft }) => ({ role, content, mode: messageMode, sources, incomplete: incomplete || streaming || undefined, ...(isOwner.value ? { comments, replyDraft } : {}) })),
       ...(isOwner.value ? { commentIds: commentIds.value, commentQuery: commentQuery.value, currentDraftId: currentDraftId.value, uncertainPublishes: [...uncertainPublishes] } : {})
     }))
   } catch {
@@ -216,6 +219,7 @@ const loadSession = () => {
     const raw = sessionStorage.getItem(`${STORAGE_KEY}:${loadedIdentity}`)
     if (!raw) return
     const saved = JSON.parse(raw)
+    mode.value = saved.mode === 'life_guide' ? 'life_guide' : 'blog'
     if (typeof saved.sessionId === 'string') sessionId.value = saved.sessionId
     if (Array.isArray(saved.messages)) {
       messages.value = saved.messages.filter((item: unknown): item is ChatbotMessage => {
@@ -223,7 +227,7 @@ const loadSession = () => {
         const candidate = item as Record<string, unknown>
         return (candidate.role === 'user' || candidate.role === 'assistant') && typeof candidate.content === 'string'
       }).map((item: ChatbotMessage) => ({
-        role: item.role, content: item.content, sources: item.sources, incomplete: item.incomplete === true,
+        role: item.role, content: item.content, mode: item.mode === 'life_guide' ? 'life_guide' : undefined, sources: item.sources, incomplete: item.incomplete === true,
         ...(isOwner.value && item.comments && Array.isArray(item.comments.items) ? { comments: { ...item.comments, items: item.comments.items.filter(isAgentComment), query: isCommentQuery(item.comments.query) ? item.comments.query : undefined } } : {}),
         ...(isOwner.value && isReplyDraft(item.replyDraft) ? { replyDraft: item.replyDraft } : {})
       }))
@@ -312,6 +316,7 @@ const activateIdentity = () => {
   draft.value = ''
   errorMessage.value = ''
   messages.value = []
+  mode.value = 'blog'
   selectedComment.value = null
   commentIds.value = []
   commentQuery.value = undefined
@@ -425,6 +430,14 @@ const scrollToBottom = () => {
   })
 }
 
+const switchMode = (next: 'blog' | 'life_guide') => {
+  if (interactionBusy.value || next === mode.value) return
+  mode.value = next
+  errorMessage.value = ''
+  saveSession()
+  scrollToBottom()
+}
+
 const startDrag = (event: PointerEvent) => {
   if (!event.isPrimary || event.button !== 0 || drag || !panel.value) return
   if ((event.target as HTMLElement).closest('button')) return
@@ -489,7 +502,8 @@ const send = async (preset?: string, displayedPage?: AgentCommentPage) => {
   if (uncertainPublishes.size) { showNotice('请先核对上一条回复的发布结果。'); return }
   if (currentDraftId.value && !verifiedDrafts.has(currentDraftId.value)) { showNotice('请先检查当前草稿状态。'); return }
   const epoch = identityEpoch
-  const useAgent = isOwner.value
+  const useAgent = isOwner.value && mode.value === 'blog'
+  const messageMode = mode.value === 'life_guide' ? 'life_guide' : undefined
   let replyIndex: number | undefined
   let hasToolResult = false
   chatAbort = new AbortController()
@@ -497,15 +511,16 @@ const send = async (preset?: string, displayedPage?: AgentCommentPage) => {
   clearTimeout(noticeTimer)
   errorMessage.value = ''
   agentStatus.value = ''
-  messages.value.push({ role: 'user', content })
+  messages.value.push({ role: 'user', content, mode: messageMode })
   sending.value = true
   scrollToBottom()
 
   try {
     const response = await streamChatbotMessage({
       session_id: sessionId.value,
+      mode: messageMode,
       message: content,
-      history: messages.value
+      history: visibleMessages.value
         .filter(item => item.content && !item.incomplete && (item.role === 'user' || item.role === 'assistant'))
         .slice(-9, -1)
         .map(({ role, content: message }) => ({ role, content: message })),
@@ -523,7 +538,7 @@ const send = async (preset?: string, displayedPage?: AgentCommentPage) => {
       if (epoch !== identityEpoch) return
       if (replyIndex === undefined) {
         replyIndex = messages.value.length
-        messages.value.push({ role: 'assistant', content: delta, streaming: true })
+        messages.value.push({ role: 'assistant', content: delta, mode: messageMode, streaming: true })
       } else {
         messages.value[replyIndex]!.content += delta
       }
@@ -751,7 +766,8 @@ onBeforeUnmount(() => {
 .chatbot-suggestions { display: grid; flex-shrink: 0; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 8px; max-height: min(28dvh, 220px); overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 16px; }
 .chatbot-suggestions button { min-width: 0; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 10px; background: var(--chat-raised); text-align: left; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; text-wrap: pretty; transition: background 150ms var(--chat-ease), transform 220ms var(--chat-spring); }
 .chatbot-input-row { display: grid; flex-shrink: 0; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; padding: 14px 16px 16px; background: var(--chat-raised); }
-.chatbot-input-label { grid-column: 1 / -1; font-size: 12px; line-height: 1.4; }
+.chatbot-input-row .chatbot-guide-toggle { grid-column: 1 / -1; justify-self: start; min-height: 32px; padding: 0 10px; color: var(--chat-muted); background: var(--chat-inset); font-size: 12px; }
+.chatbot-input-row .chatbot-guide-toggle[aria-pressed='true'] { color: var(--chat-surface); background: var(--chat-ink); }
 .chatbot-input-row textarea {
   width: 100%;
   min-width: 0;

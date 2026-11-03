@@ -13,6 +13,7 @@ export interface PublicChatbotConfig {
 export interface ChatbotMessage {
   role: 'user' | 'assistant'
   content: string
+  mode?: 'life_guide'
   sources?: ChatbotSource[]
   streaming?: boolean
   incomplete?: boolean
@@ -75,6 +76,7 @@ export interface ChatbotResponse {
 
 export interface ChatbotChatRequest {
   session_id: string
+  mode?: 'life_guide'
   message: string
   history: Array<Pick<ChatbotMessage, 'role' | 'content'>>
   page_context: {

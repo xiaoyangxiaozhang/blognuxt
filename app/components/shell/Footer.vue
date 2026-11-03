@@ -191,6 +191,7 @@ const totalArticles = computed(() => articleData.value?.data?.total || 0)
             </template>
           </p>
           <p v-if="!isMessagePage" class="powered">Powered by Nuxt 4 & Designed with care</p>
+          <p class="powered">生活指南：<a href="https://github.com/eternity4719/HowToLiveBetter" target="_blank" rel="noopener noreferrer">《高性价比人生指南》 · eternity4719</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></p>
         </div>
         <nav v-if="footerLinks.length" class="footer-links" aria-label="页脚链接">
           <template v-for="item in footerLinks" :key="`${item.name}-${item.url}`">
