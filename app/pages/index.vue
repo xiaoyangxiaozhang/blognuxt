@@ -370,6 +370,8 @@ const typingIntroText = computed(() => {
 
   return typingTexts[0] || blogSettings.value['blog.slogan'] || blogSettings.value['blog.subtitle'] || authorDesc.value || '欢迎来到这里。'
 })
+// Render the full heading on the server; the typing animation starts on mount.
+displayedIntroChars.value = Array.from(typingIntroText.value)
 const announcementHtml = computed(() => blogSettings.value['blog.announcement'] || '')
 
 const clearTypingTimers = () => {
