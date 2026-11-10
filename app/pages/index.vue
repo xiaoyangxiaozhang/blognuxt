@@ -45,12 +45,7 @@
       <div class="hero-section">
         <div class="hero-content">
           <div v-if="authorName" class="hero-name">{{ authorName }}</div>
-          <h1 class="hero-title">
-            <span v-for="(char, index) in displayedIntroChars" :key="`${char}-${index}`" class="title-char">
-              {{ char }}
-            </span>
-            <span class="title-cursor blinking"></span>
-          </h1>
+          <HomeLyricIntro :lines="introLines" :ready="isRevealed" />
         </div>
       </div>
 
@@ -132,6 +127,7 @@
 import PageCurtain from '~/components/shell/PageCurtain.vue'
 import HomeFeaturePanel from '~/components/home/HomeFeaturePanel.vue'
 import HomeNewestSection from '~/components/home/HomeNewestSection.vue'
+import HomeLyricIntro from '~/components/home/HomeLyricIntro.vue'
 import FeatureMomentsPanel from '~/components/home/feature-panels/FeatureMomentsPanel.vue'
 import { getMomentList, type MomentItem } from '~/services/api/moments'
 import { getArticleList } from '~/services/api/article'
@@ -194,7 +190,6 @@ const EMPTY_HOME_PAYLOAD: HomePayload = {
 
 const currentPage = ref(1)
 const pageSize = 10
-const displayedIntroChars = ref<string[]>([])
 const heroVisualRef = ref<HTMLElement | null>(null)
 const heroPosterRef = ref<HTMLImageElement | null>(null)
 const heroVideoRef = ref<HTMLVideoElement | null>(null)
@@ -202,8 +197,6 @@ const heroPosterSettled = ref(false)
 const heroVideoCanLoad = ref(false)
 const heroVideoReady = ref(false)
 const heroVideoFailed = ref(false)
-let typingTimer: ReturnType<typeof setInterval> | null = null
-let restartTimer: ReturnType<typeof setTimeout> | null = null
 let heroVideoObserver: IntersectionObserver | null = null
 let reducedMotionQuery: MediaQueryList | null = null
 let heroIsVisible = true
@@ -363,28 +356,15 @@ const sidebarSocialList = computed<SidebarSocialItem[]>(() => {
     return []
   }
 })
-const typingIntroText = computed(() => {
-  const typingTexts = parseBlogJson<string[]>(blogSettings.value['blog.typing_texts'], [])
-    .map((item) => item.trim())
-    .filter(Boolean)
+const introLines = computed(() => {
+  const configured = parseBlogJson<unknown>(blogSettings.value['blog.typing_texts'], [])
+  const lines = Array.isArray(configured)
+    ? configured.filter((item): item is string => typeof item === 'string').map(item => item.trim()).filter(Boolean)
+    : []
 
-  return typingTexts[0] || blogSettings.value['blog.slogan'] || blogSettings.value['blog.subtitle'] || authorDesc.value || '欢迎来到这里。'
+  return lines.length ? lines : [blogSettings.value['blog.slogan'] || blogSettings.value['blog.subtitle'] || authorDesc.value || '欢迎来到这里。']
 })
-// Render the full heading on the server; the typing animation starts on mount.
-displayedIntroChars.value = Array.from(typingIntroText.value)
 const announcementHtml = computed(() => blogSettings.value['blog.announcement'] || '')
-
-const clearTypingTimers = () => {
-  if (typingTimer) {
-    clearInterval(typingTimer)
-    typingTimer = null
-  }
-
-  if (restartTimer) {
-    clearTimeout(restartTimer)
-    restartTimer = null
-  }
-}
 
 const shouldAvoidHeroVideo = () => {
   if (!import.meta.client) {
@@ -464,7 +444,6 @@ const handleMotionPreferenceChange = () => {
     heroVideoReady.value = false
   }
 
-  resetTyping()
   void syncHeroVideoPlayback()
 }
 
@@ -472,42 +451,9 @@ const handleDocumentVisibilityChange = () => {
   void syncHeroVideoPlayback()
 }
 
-const resetTyping = () => {
-  clearTypingTimers()
-
-  const characters = Array.from(typingIntroText.value)
-  if (reducedMotionQuery?.matches) {
-    displayedIntroChars.value = characters
-    return
-  }
-
-  displayedIntroChars.value = []
-  let index = 0
-
-  typingTimer = setInterval(() => {
-    if (index >= characters.length) {
-      clearTypingTimers()
-      restartTimer = setTimeout(() => {
-        resetTyping()
-      }, 1800)
-      return
-    }
-
-    displayedIntroChars.value.push(characters[index] || '')
-    index += 1
-  }, 120)
-}
-
-watch(typingIntroText, () => {
-  if (import.meta.client) {
-    resetTyping()
-  }
-})
-
 onMounted(() => {
   reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
   reducedMotionQuery.addEventListener('change', handleMotionPreferenceChange)
-  resetTyping()
   document.addEventListener('visibilitychange', handleDocumentVisibilityChange)
   heroPosterSettled.value = !heroPosterUrl.value || Boolean(heroPosterRef.value?.complete)
   if (document.readyState === 'complete') {
@@ -537,7 +483,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   heroDisposed = true
   window.removeEventListener('load', onHeroPageLoad)
-  clearTypingTimers()
   heroVideoObserver?.disconnect()
   heroVideoObserver = null
   reducedMotionQuery?.removeEventListener('change', handleMotionPreferenceChange)
@@ -644,30 +589,6 @@ onBeforeUnmount(() => {
   }
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes blink {
-  0%,
-  50% {
-    opacity: 1;
-  }
-
-  51%,
-  100% {
-    opacity: 0;
-  }
-}
-
 @keyframes bgZoomIn {
   from {
     transform: scale(1.2);
@@ -678,6 +599,11 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hero-content {
+    transform: none;
+    transition: none;
+  }
+
   .viewport-background {
     .viewport-bg-poster {
       animation: none;
@@ -707,34 +633,6 @@ onBeforeUnmount(() => {
   color: var(--brand-accent);
   letter-spacing: 2px;
   text-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
-}
-
-.hero-title {
-  margin: 0;
-  font-size: 32px;
-  line-height: 1.6;
-  font-weight: 500;
-  color: #ffffff;
-  letter-spacing: 1px;
-  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-}
-
-.title-char {
-  display: inline-block;
-  animation: fadeInUp 0.35s ease-out;
-}
-
-.title-cursor {
-  display: inline-block;
-  width: 2px;
-  height: 38px;
-  margin-left: 8px;
-  vertical-align: middle;
-  background-color: var(--home-accent);
-}
-
-.title-cursor.blinking {
-  animation: blink 1s infinite;
 }
 
 .hero-socials {
@@ -883,9 +781,6 @@ onBeforeUnmount(() => {
     font-size: 72px;
   }
 
-  .hero-title {
-    font-size: 24px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -900,9 +795,6 @@ onBeforeUnmount(() => {
     font-size: 52px;
   }
 
-  .hero-title {
-    font-size: 24px;
-  }
 
   .hero-socials {
     gap: 12px;
@@ -919,9 +811,6 @@ onBeforeUnmount(() => {
     }
   }
 
-  .title-cursor {
-    height: 24px;
-  }
 
   .content-shell {
     width: min(100%, calc(100% - 60px));
