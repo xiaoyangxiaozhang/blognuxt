@@ -83,15 +83,15 @@ fi
 echo "发布成功: $RELEASE_ID"
 
 # 只清理旧 release 目录，保留当前版本和最近的几个版本用于回滚。
-mapfile -t old_releases < <(
+while IFS= read -r old_release; do
+  [[ -n "$old_release" ]] || continue
+  [[ "$old_release" != "$RELEASE_DIR" ]] || continue
+  if ! rm -rf -- "$old_release"; then
+    echo "警告：无法清理旧版本 ${old_release}，请检查目录权限。" >&2
+  fi
+done < <(
   find "$APP_ROOT/releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
     | sort -nr \
     | tail -n +$((KEEP_RELEASES + 1)) \
     | cut -d' ' -f2-
 )
-
-for old_release in "${old_releases[@]}"; do
-  [[ -n "$old_release" ]] || continue
-  [[ "$old_release" != "$RELEASE_DIR" ]] || continue
-  rm -rf -- "$old_release"
-done
