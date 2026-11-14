@@ -87,9 +87,11 @@
                     type="button"
                     title="订阅更新"
                     aria-label="订阅更新"
-                    @click="openSubscribe"
+                    @pointerenter="handleSubscribeHover"
+                    @pointerleave="subscribeHovered = false"
+                    @click="handleSubscribeClick"
                   >
-                    <BellIcon aria-hidden="true" />
+                    <BellIcon :active="subscribeHovered || subscribeOpen" :instant="subscribeInputInstant" aria-hidden="true" />
                   </button>
                   <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
                     <ExclamationTriangleIcon aria-hidden="true" />
@@ -170,9 +172,11 @@
                     type="button"
                     title="订阅更新"
                     aria-label="订阅更新"
-                    @click="openSubscribe"
+                    @pointerenter="handleSubscribeHover"
+                    @pointerleave="subscribeHovered = false"
+                    @click="handleSubscribeClick"
                   >
-                    <BellIcon aria-hidden="true" />
+                    <BellIcon :active="subscribeHovered || subscribeOpen" :instant="subscribeInputInstant" aria-hidden="true" />
                   </button>
                   <button class="action-btn" type="button" title="反馈与举报" aria-label="反馈与举报" @click="openFeedback">
                     <ExclamationTriangleIcon aria-hidden="true" />
@@ -265,6 +269,16 @@ watch(actionsOpen, async (_open, _previous, onCleanup) => {
   }
 }, { flush: 'pre' })
 
+const subscribeHovered = ref(false)
+const subscribeInputInstant = ref(false)
+const handleSubscribeHover = (event: PointerEvent) => {
+  subscribeInputInstant.value = false
+  subscribeHovered.value = event.pointerType === 'mouse'
+}
+const handleSubscribeClick = (event: MouseEvent) => {
+  subscribeInputInstant.value = event.detail === 0
+  openSubscribe()
+}
 const toggleActions = (event: MouseEvent) => {
   iconInputInstant.value = event.detail === 0
   closeBrandMenu()
@@ -418,8 +432,8 @@ const handleScroll = () => {
 }
 
 onMounted(() => {
-  const savedTheme = localStorage.getItem('blog-color-theme') as ThemeMode | null
-  applyTheme(savedTheme || 'midnight-blue')
+  const savedTheme = localStorage.getItem('blog-color-theme')
+  applyTheme(savedTheme === 'blue-white' ? 'blue-white' : 'midnight-blue')
   lastScrollY.value = window.scrollY
   window.addEventListener('scroll', handleScroll, { passive: true })
   handleScroll()

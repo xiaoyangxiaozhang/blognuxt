@@ -1,33 +1,34 @@
 <template>
   <Teleport to="body">
-    <Transition name="subscribe-modal">
+    <Transition name="subscribe-modal" :css="!motionInstant">
       <div
         v-if="modelValue"
         class="subscribe-overlay"
         role="dialog"
         aria-modal="true"
+        tabindex="-1"
+        ref="overlay"
         :aria-labelledby="titleId"
         :aria-describedby="descriptionId"
         @click.self="closeDialog"
         @keydown.esc="closeDialog"
       >
         <section class="subscribe-dialog">
-          <button class="close-button" type="button" aria-label="关闭订阅弹窗" @click="closeDialog">
+          <button class="close-button" type="button" aria-label="关闭订阅弹窗" :disabled="submitState === 'submitting'" @click="closeDialog">
             <Cross1Icon aria-hidden="true" />
           </button>
 
-          <div class="dialog-icon" aria-hidden="true">
-            <CheckCircledIcon v-if="submitState === 'success' || submitState === 'already-subscribed'" />
-            <BellIcon v-else />
+          <div class="dialog-icon" :class="{ 'is-submitting': submitState === 'submitting' && !motionInstant }" aria-hidden="true">
+            <SubscriptionIcon :active="isComplete" :instant="motionInstant" />
           </div>
 
-          <template v-if="submitState === 'success' || submitState === 'already-subscribed'">
+          <template v-if="isComplete">
             <div class="dialog-copy success-copy" aria-live="polite">
               <h2 :id="titleId">{{ resultTitle }}</h2>
               <p :id="descriptionId">{{ resultDescription }}</p>
             </div>
 
-            <button class="primary-button" type="button" @click="closeDialog">
+            <button ref="completeButton" class="primary-button" type="button" @click="closeDialog">
               完成
             </button>
           </template>
@@ -35,11 +36,15 @@
           <template v-else>
             <div class="dialog-copy">
               <h2 :id="titleId">订阅更新</h2>
-              <p :id="descriptionId">留下邮箱，有新文章时及时收到通知。</p>
+              <p :id="descriptionId">{{ accountEmail ? '使用登录邮箱订阅，有新文章时及时收到通知。' : '留下邮箱，有新文章时及时收到通知。' }}</p>
             </div>
 
-            <form class="subscribe-form" novalidate @submit.prevent="handleSubmit">
-              <div class="form-field">
+            <form class="subscribe-form" novalidate :aria-busy="submitState === 'submitting'" @submit.prevent="handleSubmit" @keydown.enter="motionInstant = true">
+              <div v-if="accountEmail" class="account-email">
+                <span>登录邮箱</span>
+                <strong>{{ accountEmail }}</strong>
+              </div>
+              <div v-else class="form-field">
                 <label for="subscribe-email">邮箱</label>
                 <input
                   id="subscribe-email"
@@ -54,14 +59,13 @@
                   :disabled="submitState === 'submitting'"
                   @input="clearError"
                 >
-                <p v-if="errorMessage" :id="errorId" class="field-error" role="alert">
-                  {{ errorMessage }}
-                </p>
+                <p v-if="isLoggedIn" class="email-hint">当前账号尚未绑定真实邮箱，请填写用于接收更新的邮箱。</p>
               </div>
+              <p v-if="errorMessage" :id="errorId" class="field-error" role="alert">{{ errorMessage }}</p>
 
-              <button class="primary-button" type="submit" :disabled="submitState === 'submitting'">
+              <button class="primary-button" type="submit" :disabled="submitState === 'submitting'" @pointerdown="motionInstant = false">
                 <span v-if="submitState === 'submitting'" class="loading-spinner" aria-hidden="true" />
-                {{ submitState === 'submitting' ? '提交中...' : '立即订阅' }}
+                <span aria-live="polite">{{ submitState === 'submitting' ? '正在订阅...' : errorMessage ? '重试订阅' : '立即订阅' }}</span>
               </button>
             </form>
 
@@ -74,8 +78,9 @@
 </template>
 
 <script setup lang="ts">
-import { BellIcon, CheckCircledIcon, Cross1Icon } from '~/utils/siteIcons'
+import { SubscriptionIcon, Cross1Icon } from '~/utils/siteIcons'
 import { subscribeToUpdates } from '~/services/api/subscription'
+import { useCommentAuth } from '~/composables/useCommentAuth'
 
 const props = defineProps<{
   modelValue: boolean
@@ -93,9 +98,19 @@ const descriptionId = 'subscribe-dialog-description'
 const errorId = 'subscribe-email-error'
 
 const emailInput = ref<HTMLInputElement | null>(null)
+const overlay = ref<HTMLElement | null>(null)
+const motionInstant = ref(false)
+const completeButton = ref<HTMLButtonElement | null>(null)
+const { currentUser, isLoggedIn } = useCommentAuth()
+const accountEmail = computed(() => {
+  const value = currentUser.value?.email?.trim().toLowerCase() || ''
+  return isLoggedIn.value && !currentUser.value?.is_virtual_email && !/@virtual\.local$/i.test(value) && EMAIL_PATTERN.test(value) ? value : ''
+})
 const email = ref('')
+const submittedEmail = ref('')
 const errorMessage = ref('')
 const submitState = ref<SubmitState>('idle')
+const isComplete = computed(() => submitState.value === 'success' || submitState.value === 'already-subscribed')
 
 let previousActiveElement: HTMLElement | null = null
 let previousBodyOverflow = ''
@@ -107,7 +122,7 @@ const resultTitle = computed(() => (
 const resultDescription = computed(() => (
   submitState.value === 'already-subscribed'
     ? '这个邮箱已在订阅列表中，无需重复提交。'
-    : '订阅请求已提交，感谢你的关注。'
+    : `将通过 ${submittedEmail.value} 接收博客更新。`
 ))
 
 const clearError = () => {
@@ -116,6 +131,7 @@ const clearError = () => {
 
 const resetDialog = () => {
   email.value = ''
+  submittedEmail.value = ''
   errorMessage.value = ''
   submitState.value = 'idle'
 }
@@ -141,7 +157,8 @@ const getErrorStatus = (error: unknown) => {
 }
 
 const handleSubmit = async () => {
-  const normalizedEmail = email.value.trim().toLowerCase()
+  if (submitState.value === 'submitting' || isComplete.value) return
+  const normalizedEmail = accountEmail.value || email.value.trim().toLowerCase()
 
   if (!normalizedEmail) {
     errorMessage.value = '请输入邮箱地址。'
@@ -149,13 +166,14 @@ const handleSubmit = async () => {
     return
   }
 
-  if (!EMAIL_PATTERN.test(normalizedEmail)) {
+  if (!EMAIL_PATTERN.test(normalizedEmail) || /@virtual\.local$/i.test(normalizedEmail)) {
     errorMessage.value = '请输入正确的邮箱地址。'
     emailInput.value?.focus()
     return
   }
 
   errorMessage.value = ''
+  submittedEmail.value = normalizedEmail
   submitState.value = 'submitting'
 
   try {
@@ -167,7 +185,7 @@ const handleSubmit = async () => {
       return
     }
 
-    if (response.code === 409) {
+    if (response.code === 409 || response.message === '该邮箱已订阅') {
       submitState.value = 'already-subscribed'
       return
     }
@@ -175,13 +193,13 @@ const handleSubmit = async () => {
     errorMessage.value = response.message || '订阅失败，请稍后重试。'
     submitState.value = 'idle'
   } catch (error) {
-    if (getErrorStatus(error) === 409) {
+    if (getErrorStatus(error) === 409 || (error as { data?: { message?: string } })?.data?.message === '该邮箱已订阅') {
       submitState.value = 'already-subscribed'
       return
     }
 
     console.error('Failed to subscribe:', error)
-    errorMessage.value = '订阅失败，请检查网络后重试。'
+    errorMessage.value = (error as { data?: { message?: string } })?.data?.message || '订阅失败，请检查网络后重试。'
     submitState.value = 'idle'
   }
 }
@@ -193,9 +211,16 @@ watch(
 
     if (isOpen) {
       previousActiveElement = document.activeElement as HTMLElement | null
+      motionInstant.value = previousActiveElement?.matches(':focus-visible') || false
       previousBodyOverflow = document.body.style.overflow
       document.body.style.overflow = 'hidden'
       await nextTick()
+      if (!props.modelValue) return
+      if (accountEmail.value) {
+        overlay.value?.focus()
+        await handleSubmit()
+        return
+      }
       emailInput.value?.focus()
       return
     }
@@ -207,6 +232,12 @@ watch(
   }
 )
 
+watch(isComplete, async (complete) => {
+  if (!complete || !props.modelValue) return
+  await nextTick()
+  completeButton.value?.focus()
+})
+
 onUnmounted(() => {
   if (!import.meta.client) return
   document.body.style.overflow = previousBodyOverflow
@@ -217,7 +248,7 @@ onUnmounted(() => {
 .subscribe-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 600;
   display: grid;
   place-items: center;
   padding: 16px;
@@ -271,6 +302,11 @@ onUnmounted(() => {
     outline: 2px solid currentColor;
     outline-offset: 2px;
   }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.5;
+  }
 }
 
 .dialog-icon {
@@ -286,6 +322,11 @@ onUnmounted(() => {
   :deep(svg) {
     width: 29px;
     height: 29px;
+  }
+
+  &.is-submitting :deep(svg) {
+    transform-origin: 50% 20%;
+    animation: subscribe-ring 0.8s ease-out infinite;
   }
 }
 
@@ -304,6 +345,7 @@ onUnmounted(() => {
     color: var(--text-secondary);
     font-size: 14px;
     line-height: 1.7;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -315,6 +357,29 @@ onUnmounted(() => {
   display: grid;
   gap: 18px;
   margin-top: 24px;
+}
+
+.account-email {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+
+  span {
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  strong {
+    font-size: 15px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.email-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .form-field {
@@ -381,12 +446,16 @@ onUnmounted(() => {
   padding: 0 18px;
   border: 0;
   border-radius: 14px;
-  background: var(--brand-accent-hover);
-  color: var(--brand-accent-text);
+  background: var(--text-primary);
+  color: var(--bg-primary);
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: filter var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform 160ms ease-out, filter var(--transition-fast), box-shadow var(--transition-fast);
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
 
   &:hover:not(:disabled) {
     filter: brightness(1.08);
@@ -407,7 +476,7 @@ onUnmounted(() => {
 .loading-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.36);
+  border: 2px solid color-mix(in srgb, currentColor 36%, transparent);
   border-top-color: currentColor;
   border-radius: 50%;
   animation: subscribe-spin 0.7s linear infinite;
@@ -421,6 +490,12 @@ onUnmounted(() => {
   text-align: center;
 }
 
+@keyframes subscribe-ring {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(12deg); }
+  40%, 80% { transform: rotate(-9deg); }
+}
+
 @keyframes subscribe-spin {
   to {
     transform: rotate(360deg);
@@ -429,10 +504,10 @@ onUnmounted(() => {
 
 .subscribe-modal-enter-active,
 .subscribe-modal-leave-active {
-  transition: opacity 0.22s ease;
+  transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1);
 
   .subscribe-dialog {
-    transition: opacity 0.22s ease, transform 0.22s ease;
+    transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1), transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
   }
 }
 
@@ -443,6 +518,27 @@ onUnmounted(() => {
   .subscribe-dialog {
     opacity: 0;
     transform: translateY(12px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog-icon.is-submitting :deep(svg),
+  .loading-spinner {
+    animation: none;
+  }
+
+  .subscribe-modal-enter-active,
+  .subscribe-modal-leave-active,
+  .subscribe-modal-enter-active .subscribe-dialog,
+  .subscribe-modal-leave-active .subscribe-dialog,
+  .primary-button {
+    transition: none;
+  }
+
+  .subscribe-modal-enter-from .subscribe-dialog,
+  .subscribe-modal-leave-to .subscribe-dialog,
+  .primary-button:active:not(:disabled) {
+    transform: none;
   }
 }
 

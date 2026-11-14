@@ -1,7 +1,7 @@
 import { defineComponent, h } from 'vue'
 import { MorphIcon, type IconInput } from 'morphicons/vue'
 import {
-  Archive, ArrowLeft, Bell, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleCheck,
+  Archive, ArrowLeft, Bell, BellRing, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleCheck,
   Download, Ellipsis, Eye, EyeOff, Globe, Heart, Image, Info, Mail, MapPin,
   Menu, MessageCircle, Moon, Pause, Play, Search, Send, Settings,
   Shuffle, SkipBack, SkipForward, Smile, Sun, TriangleAlert, UserRound, X
@@ -29,7 +29,8 @@ const createIcon = (icon: IconInput, activeIcon = icon, filled = false) => defin
 
 export const ArchiveIcon = createIcon(Archive)
 export const ArrowLeftIcon = createIcon(ArrowLeft)
-export const BellIcon = createIcon(Bell)
+export const BellIcon = createIcon(Bell, BellRing)
+export const SubscriptionIcon = createIcon(Bell, CircleCheck)
 export const ChatBubbleIcon = createIcon(MessageCircle)
 export const CheckCircledIcon = createIcon(CircleCheck)
 export const ChevronDownIcon = createIcon(ChevronDown, ChevronUp)

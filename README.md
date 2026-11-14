@@ -137,7 +137,9 @@ blognuxt/
 
 ## 自动部署
 
-合并并推送到 `main` 或 `master` 主分支后，GitHub Actions 会使用 `.nvmrc` 指定的 Node.js 版本（当前为 22.23.4）安装依赖、构建 `.output`，再上传到阿里云 ECS，并通过 systemd 切换当前 release。部署成功后会在本次提交上自动创建递增的带注释 Git tag，格式为 `v1.0.0`、`v1.0.1`、`v1.0.2`……其他分支不会触发发布流程。
+合并并推送到 `main` 或 `master` 主分支后，GitHub Actions 会使用 `.nvmrc` 指定的 Node.js 版本（当前为 22.23.4）安装依赖、构建 `.output`，再上传到阿里云 ECS，并通过 systemd 切换当前 release。部署成功后会按本次提交标题自动创建语义化版本 tag：`feat:` 或 `feat(scope):` 升次版本（如 `v1.0.64` → `v1.1.0`），其他类型升补丁版本（如 `fix:` 对应 `v1.1.1`）。
+
+提交标题规范、类型说明和示例见 [AI 协作约定](./AGENTS.md)。部署工作流会校验触发发布的提交标题；格式不正确时发布失败。完整格式参考 [Conventional Commits](https://www.conventionalcommits.org/)。
 
 部署所需的 SSH 密钥、主机和 API 配置通过 GitHub Actions Secrets/Variables 注入。不要把私钥、Token 或生产环境敏感配置提交到仓库。
 

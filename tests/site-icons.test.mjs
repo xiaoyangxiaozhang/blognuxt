@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
 import { canonicalD } from 'morphicons/dom'
-import { Eye, EyeOff, Menu, Moon, Pause, Play, Sun, X } from 'lucide'
+import { Bell, BellRing, CircleCheck, Eye, EyeOff, Menu, Moon, Pause, Play, Sun, X } from 'lucide'
 import {
-  Cross1Icon, EyeOpenIcon, HamburgerMenuIcon, HeartFilledIcon, PlayIcon, ThemeIcon
+  BellIcon, SubscriptionIcon, Cross1Icon, EyeOpenIcon, HamburgerMenuIcon, HeartFilledIcon, PlayIcon, ThemeIcon
 } from '../app/utils/siteIcons.ts'
 
 test('menu, theme, password and playback icons describe the next available action', async () => {
@@ -13,7 +13,9 @@ test('menu, theme, password and playback icons describe the next available actio
     [HamburgerMenuIcon, false, Menu], [HamburgerMenuIcon, true, X],
     [ThemeIcon, false, Sun], [ThemeIcon, true, Moon],
     [EyeOpenIcon, false, Eye], [EyeOpenIcon, true, EyeOff],
-    [PlayIcon, false, Play], [PlayIcon, true, Pause]
+    [PlayIcon, false, Play], [PlayIcon, true, Pause],
+    [BellIcon, false, Bell], [BellIcon, true, BellRing],
+    [SubscriptionIcon, false, Bell], [SubscriptionIcon, true, CircleCheck]
   ]) {
     const html = await renderToString(h(component, { active }))
     assert.equal(html.match(/<path[^>]* d="([^"]+)"/)?.[1], canonicalD(expected))

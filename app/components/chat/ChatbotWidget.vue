@@ -68,7 +68,11 @@
                   @recheck="recheckDraft(item.replyDraft.id)"
                   @dirty="setDraftDirty(item.replyDraft.id, $event)"
                 />
-                <div v-if="item.mode !== 'life_guide' && item.sources?.length" class="chatbot-sources">
+                <details v-if="item.mode === 'life_guide' && item.sources?.length" class="chatbot-sources chatbot-guide-sources">
+                  <summary>参考指南</summary>
+                  <a v-for="source in item.sources" :key="source.slug" :href="safeChatbotURL(source.url)" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>
+                </details>
+                <div v-else-if="item.mode !== 'life_guide' && item.sources?.length" class="chatbot-sources">
                   <span>顺手看看</span>
                   <a v-for="source in item.sources" :key="source.slug" :href="safeChatbotURL(source.url)" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>
                 </div>
@@ -757,6 +761,9 @@ onBeforeUnmount(() => {
 .chatbot-message p { margin: 0; white-space: pre-wrap; word-break: normal; line-break: strict; overflow-wrap: anywhere; text-wrap: pretty; font-size: 14px; line-height: 1.75; }
 .chatbot-message .chatbot-incomplete { margin-top: 8px; color: var(--chat-muted); font-size: 12px; }
 .chatbot-sources { display: grid; gap: 8px; margin-top: 12px; font-size: 12px; line-height: 1.5; }
+.chatbot-guide-sources { display: block; }
+.chatbot-guide-sources summary { cursor: pointer; color: var(--chat-muted); }
+.chatbot-guide-sources a { display: block; margin-top: 8px; }
 .chatbot-sources span { color: var(--chat-muted); }
 .chatbot-sources a { color: var(--chat-ink); overflow-wrap: anywhere; text-wrap: pretty; }
 .chatbot-typing { display: flex; align-items: center; gap: 5px; min-height: 44px; }
