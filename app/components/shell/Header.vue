@@ -22,7 +22,7 @@
                 @mouseenter="openBrandMenu"
                 @click="openBrandMenu"
               >
-                <img class="brand-logo" :src="logoUrl" alt="" aria-hidden="true" />
+                <img class="brand-logo" :class="{ 'is-default-logo': isDefaultLogo }" :src="logoUrl" alt="" aria-hidden="true" />
                 <span>{{ siteTitle }}</span>
                 <ChevronDownIcon class="brand-menu-arrow" :active="brandMenuOpen" :instant="iconInputInstant" aria-hidden="true" />
               </button>
@@ -120,7 +120,7 @@
       >
         <div class="floating-center">
           <button class="mini-logo" type="button" aria-label="返回顶部" @click="scrollToTop">
-            <img class="mini-logo-mark" :src="logoUrl" alt="" aria-hidden="true" />
+            <img class="mini-logo-mark" :class="{ 'is-default-logo': isDefaultLogo }" :src="logoUrl" alt="" aria-hidden="true" />
           </button>
           <MusicPlayerTrigger v-if="headerState === 'logo'" compact />
         </div>
@@ -133,7 +133,7 @@
         <div class="floating-center">
           <div class="island-shell">
             <button class="mini-logo mini-logo-inline" type="button" aria-label="返回顶部" @click="scrollToTop">
-              <img class="mini-logo-mark" :src="logoUrl" alt="" aria-hidden="true" />
+              <img class="mini-logo-mark" :class="{ 'is-default-logo': isDefaultLogo }" :src="logoUrl" alt="" aria-hidden="true" />
             </button>
 
             <nav class="island-nav">
@@ -212,8 +212,7 @@ import FeedbackDialog from '~/components/shell/FeedbackDialog.vue'
 import SearchDialog from '~/components/shell/SearchDialog.vue'
 import SubscribeDialog from '~/components/shell/SubscribeDialog.vue'
 import MusicPlayerTrigger from '~/components/music/MusicPlayerTrigger.vue'
-import logoUrl from '~/assets/img/logo-sheep.png'
-import { useBlogSettings } from '~/composables/useBlogSettings'
+import { DEFAULT_SITE_LOGO, resolveSiteLogo, useBlogSettings } from '~/composables/useBlogSettings'
 import { useSiteOverlays } from '~/composables/useSiteOverlays'
 import { useMusicPlayerStore } from '~/stores/music'
 
@@ -223,6 +222,8 @@ type HeaderState = 'full' | 'logo' | 'island'
 const theme = ref<ThemeMode>('midnight-blue')
 const music = useMusicPlayerStore()
 const { settings: blogSettings } = useBlogSettings()
+const logoUrl = computed(() => resolveSiteLogo(blogSettings.value))
+const isDefaultLogo = computed(() => logoUrl.value === DEFAULT_SITE_LOGO)
 const isKimidouOpen = computed(() => blogSettings.value['blog.kimidou_enabled'] === 'true')
 const { openFeedback, openAccount, openSubscribe, subscribeOpen } = useSiteOverlays()
 const siteTitle = computed(() => blogSettings.value['blog.title'] || '小羊嚣张')
@@ -595,12 +596,16 @@ onUnmounted(() => {
   height: 34px;
   flex: 0 0 auto;
   object-fit: contain;
-  filter: invert(1);
   transition: filter 0.4s ease;
 }
 
-:global([data-theme='blue-white'] .brand-logo),
-:global([data-theme='blue-white'] .mini-logo-mark) {
+.brand-logo.is-default-logo,
+.mini-logo-mark.is-default-logo {
+  filter: invert(1);
+}
+
+:global([data-theme='blue-white'] .brand-logo.is-default-logo),
+:global([data-theme='blue-white'] .mini-logo-mark.is-default-logo) {
   filter: none;
 }
 

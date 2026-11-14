@@ -23,7 +23,7 @@
             @lostpointercapture="cancelDrag"
           >
             <div class="chatbot-heading">
-              <img v-bind="avatar ? optimizedImageAttrs(avatar, [128], '44px') : { src: logoUrl, decoding: 'async' }" :alt="displayName" class="chatbot-avatar" :class="{ 'is-default': !avatar }" />
+              <img v-bind="avatar ? optimizedImageAttrs(avatar, [128], '44px') : { src: logoUrl, decoding: 'async' }" :alt="displayName" class="chatbot-avatar" :class="{ 'is-default': !avatar && isDefaultLogo }" />
               <div class="chatbot-heading-copy">
                 <span class="chatbot-kicker">{{ isOwner ? '查评论、拟回复，发布由你确认' : '来聊两句' }}</span>
                 <strong>{{ displayName }}</strong>
@@ -123,7 +123,7 @@
         :aria-label="`打开${displayName}的聊天窗口`"
         @click="open = true"
       >
-        <span class="chatbot-launcher-mark" aria-hidden="true" />
+        <img class="chatbot-launcher-mark" :class="{ 'is-default-logo': isDefaultLogo }" :src="logoUrl" alt="" aria-hidden="true" />
       </button>
     </div>
   </Teleport>
@@ -134,14 +134,17 @@ import { Cross1Icon, PaperPlaneIcon } from '~/utils/siteIcons'
 import { cancelReplyDraft, getChatbotConfig, getReplyDraft, publishReplyDraft, safeChatbotURL, streamChatbotMessage, updateReplyDraft } from '~/services/api/chatbot'
 import type { AgentComment, AgentCommentPage, AgentCommentQuery, AgentReplyDraft, ChatbotMessage, PublicChatbotConfig } from '~/services/api/chatbot'
 import { useCommentAuth } from '~/composables/useCommentAuth'
+import { DEFAULT_SITE_LOGO, resolveSiteLogo, useBlogSettings } from '~/composables/useBlogSettings'
 import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
-import logoUrl from '~/assets/img/logo-sheep.png'
 import ChatbotReply from './ChatbotReply.vue'
 import ChatbotReplyDraft from './ChatbotReplyDraft.vue'
 
 const STORAGE_KEY = 'blog-chatbot-session-v3'
 
 const route = useRoute()
+const { settings: blogSettings } = useBlogSettings()
+const logoUrl = computed(() => resolveSiteLogo(blogSettings.value))
+const isDefaultLogo = computed(() => logoUrl.value === DEFAULT_SITE_LOGO)
 const { currentUser, isLoggedIn, authReady, restoreSession } = useCommentAuth()
 const ownerId = computed(() => isLoggedIn.value && currentUser.value?.role === 'super_admin' && currentUser.value.id ? String(currentUser.value.id) : '')
 const isOwner = computed(() => !!ownerId.value && config.comment_tools_enabled === true)
@@ -683,10 +686,11 @@ onBeforeUnmount(() => {
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--chat-ink);
-  -webkit-mask: url('../../assets/img/logo-sheep.png') center / contain no-repeat;
-  mask: url('../../assets/img/logo-sheep.png') center / contain no-repeat;
+  object-fit: contain;
 }
+
+.chatbot-launcher-mark.is-default-logo { filter: invert(1); }
+:global(:is([data-theme='blue-white'], [data-theme='paper']) .chatbot-launcher-mark.is-default-logo) { filter: none; }
 
 .chatbot-panel {
   position: fixed;

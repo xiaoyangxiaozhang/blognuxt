@@ -1,4 +1,4 @@
-import { useBlogSettings } from '~/composables/useBlogSettings'
+import { resolveSiteLogo, useBlogSettings } from '~/composables/useBlogSettings'
 
 export default defineNuxtPlugin(() => {
   const { settings } = useBlogSettings()
@@ -7,8 +7,8 @@ export default defineNuxtPlugin(() => {
     link: [
       {
         rel: 'icon',
-        type: /\.svg(?:$|[?#])/i.test(settings.value['blog.favicon'] || '') ? 'image/svg+xml' : 'image/png',
-        href: settings.value['blog.favicon'] || '/favicon.png'
+        type: /\.svg(?:$|[?#])/i.test(resolveSiteLogo(settings.value)) ? 'image/svg+xml' : undefined,
+        href: resolveSiteLogo(settings.value)
       }
     ]
   }))

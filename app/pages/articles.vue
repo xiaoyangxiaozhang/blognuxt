@@ -1208,8 +1208,8 @@ useSeoMeta({
   display: none;
 }
 
-:global([data-theme='blue-white'] .blog-layout:has(.articles-page.is-immersive) .blog-header .brand-logo),
-:global([data-theme='blue-white'] .blog-layout:has(.articles-page.is-immersive) .blog-header .mini-logo-mark) {
+:global([data-theme='blue-white'] .blog-layout:has(.articles-page.is-immersive) .blog-header .brand-logo.is-default-logo),
+:global([data-theme='blue-white'] .blog-layout:has(.articles-page.is-immersive) .blog-header .mini-logo-mark.is-default-logo) {
   filter: invert(1);
 }
 

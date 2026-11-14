@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">小羊嚣张</title>
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <!-- One continuous wool silhouette keeps the mark readable when small. -->
+    <path stroke-width="9" d="M56 92c2-23 21-39 43-36 16-21 49-25 69-7 20-6 41 5 45 25 17 6 25 23 20 40 13 14 12 36-1 49-1 19-17 34-36 34-13 15-35 18-51 7-16 11-38 8-50-6-21 3-40-11-42-32-17-12-20-35-7-50 1-11 5-18 10-24Z"/>
+    <!-- Drooping ears and the softly pointed face echo the original mascot. -->
+    <path fill="currentColor" stroke="none" d="M97 111c-9 1-15 10-16 20-1 8 3 13 9 13 7 0 11-8 12-17Zm63 0c9 1 15 10 16 20 1 8-3 13-9 13-7 0-11-8-12-17Z"/>
+    <path stroke-width="8" d="M99 112c2 10 12 14 21 6 5 7 16 9 23 4 5-3 9-6 12-11M99 122v8c0 22 12 35 29 35s29-13 29-35v-8"/>
+    <path stroke-width="6.5" d="m111 137 7 4-5 4m32-8-7 4 5 4"/>
+    <path stroke-width="11" d="M89 195v11m79-11v11"/>
+  </g>
+</svg>

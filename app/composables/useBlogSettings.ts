@@ -2,6 +2,9 @@ import { getSettings } from '~/services/api/user'
 
 export type BlogSettingMap = Record<string, string>
 
+export const DEFAULT_SITE_LOGO = '/sheep-logo.svg'
+export const resolveSiteLogo = (settings: BlogSettingMap) => settings['blog.favicon']?.trim() || DEFAULT_SITE_LOGO
+
 export const parseBlogJson = <T>(value: string | undefined, fallback: T): T => {
   if (!value) return fallback
 

@@ -86,6 +86,8 @@ async function widgetFixture({ saved, getDraft, publish, update, commentToolsEna
     crypto: { randomUUID: () => 'session-test' },
     useRoute: () => ({ path: '/friends', fullPath: '/friends', params: {} }),
     useCommentAuth: () => ({ currentUser, isLoggedIn: loggedIn, authReady, restoreSession: async () => currentUser.value }),
+    useBlogSettings: () => ({ settings: ref({}) }),
+    DEFAULT_SITE_LOGO: '/sheep-logo.svg', resolveSiteLogo: settings => settings['blog.favicon'] || '/sheep-logo.svg',
     onMounted: fn => mounts.push(fn), onBeforeUnmount: fn => disposes.push(fn),
     window: { addEventListener() {}, removeEventListener() {} },
     sessionStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },

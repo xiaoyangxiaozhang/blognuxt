@@ -38,7 +38,7 @@ const upstream = http.createServer((req, res) => {
     return
   }
   let data = { list: [], total: 0 }
-  if (path.endsWith('/settings/blog')) data = { 'blog.title': mode === 'new-settings' ? 'UPDATED_AUDIT_BLOG' : 'Audit Blog', 'blog.kimidou_enabled': 'false', 'blog.typing_texts': JSON.stringify(['AUDIT HERO HEADING']), 'blog.background_image': '/audit-hero.jpg' }
+  if (path.endsWith('/settings/blog')) data = { 'blog.title': mode === 'new-settings' ? 'UPDATED_AUDIT_BLOG' : 'Audit Blog', 'blog.kimidou_enabled': 'false', 'blog.typing_texts': JSON.stringify(['AUDIT HERO HEADING']), 'blog.background_image': '/audit-hero.jpg', 'blog.favicon': mode === 'custom-logo' ? '/uploads/custom-logo.png' : '' }
   if (path.endsWith('/settings/basic')) data = { 'basic.author': 'Audit author' }
   if (path.endsWith('/settings/oauth')) data = {}
   if (path.endsWith('/articles')) {
@@ -99,6 +99,10 @@ try {
   assert(!visibleHtml.includes('获取首页数据失败'))
   const heading = visibleHtml.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
   assert.equal(heading, 'AUDIT HERO HEADING', 'home heading must be present in server-rendered HTML')
+  assert.match(visibleHtml, /<link[^>]*rel="icon"[^>]*href="\/sheep-logo\.svg"/)
+  const defaultLogo = visibleHtml.match(/<img\b[^>]*class="[^"]*brand-logo[^"]*"[^>]*>/)?.[0] || ''
+  assert.match(defaultLogo, /is-default-logo/)
+  assert.match(defaultLogo, /src="\/sheep-logo\.svg"/)
   assert.equal(counts['/api/v1/settings/blog'], 1)
   assert.equal(counts['/api/v1/settings/basic'], 1)
   assert.equal(counts['/api/v1/categories'], undefined)
@@ -106,6 +110,14 @@ try {
   assert.equal(counts['/api/v1/comments'], undefined)
   assert.equal(counts['/api/v1/moments'], undefined)
   console.log(JSON.stringify({ case: 'healthy home SSR', status: home.status, apiCounts: counts }))
+
+  mode = 'custom-logo'
+  const customLogoHtml = await (await fetch(origin + '/')).text()
+  assert.match(customLogoHtml, /<link[^>]*rel="icon"[^>]*href="\/uploads\/custom-logo\.png"/)
+  const customLogo = customLogoHtml.match(/<img\b[^>]*class="[^"]*brand-logo[^"]*"[^>]*>/)?.[0] || ''
+  assert(!customLogo.includes('is-default-logo'))
+  assert.match(customLogo, /src="\/uploads\/custom-logo\.png"/)
+  mode = 'normal'
 
   const list = await fetch(origin + '/articles')
   const listHtml = await list.text()
