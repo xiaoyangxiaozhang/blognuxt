@@ -106,7 +106,8 @@
       </div>
     </dialog>
 
-    <div v-if="music.hasStarted" class="music-mini" role="region" aria-label="音乐迷你播放器">
+    <Teleport v-if="music.hasStarted" :to="musicDocked ? '#chatbot-music-slot' : 'body'">
+    <div class="music-mini" :class="{ 'is-chat-docked': musicDocked }" role="region" aria-label="音乐迷你播放器">
       <div class="music-mini-progress" aria-hidden="true"><span :style="{ transform: `scaleX(${music.progress / 100})` }" /></div>
       <button class="music-mini-details" type="button" aria-controls="site-music-panel" :aria-expanded="music.panelOpen" :aria-label="`打开音乐面板，${music.currentTrack.title}`" @click="music.openPanel">
         <VinylRecord :cover="music.currentTrack.cover" :playing="music.isPlaying && !music.isLoading" :instant="music.instant" />
@@ -117,6 +118,7 @@
       </button>
       <button class="music-icon-button" type="button" aria-label="下一首" @click="music.next"><TrackNextIcon aria-hidden="true" /></button>
     </div>
+    </Teleport>
   </Teleport>
 </template>
 
@@ -132,6 +134,7 @@ import { parseMusicLyrics, type MusicLyricLine } from '~/utils/musicLyrics'
 import type { ApiResponse } from '~/types/api'
 
 const music = useMusicPlayerStore()
+const musicDocked = useState('chatbot-music-docked', () => false)
 const { settings } = useBlogSettings()
 const accentText = computed(() => {
   const color = settings.value['blog.theme_color']?.trim() || ''
@@ -538,9 +541,19 @@ onBeforeUnmount(() => {
   .music-panel.music-instant { animation: none; }
   .music-range { height: 44px; }
   .music-mini {
-    display: flex; align-items: center; gap: 4px; position: fixed; z-index: 350; inset: auto 0 0;
+    display: flex; align-items: center; gap: 4px; position: fixed; z-index: 450; inset: auto 0 0;
     padding: 10px 16px max(10px, env(safe-area-inset-bottom)); min-height: 70px;
     border-top: 1px solid var(--border-color);
+  }
+  .music-mini.is-chat-docked {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 70px;
+    padding-bottom: 10px;
+    border-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 16px 16px 0 0;
   }
   .music-mini-progress { position: absolute; inset: -1px 0 auto; height: 2px; background: var(--border-color); overflow: hidden; span { display: block; width: 100%; height: 100%; background: var(--music-range-fill); transform-origin: left; } }
   .music-mini-details {

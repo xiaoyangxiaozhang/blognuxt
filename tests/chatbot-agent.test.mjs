@@ -85,6 +85,8 @@ async function widgetFixture({ saved, getDraft, publish, update, commentToolsEna
     computed, ref, reactive, watch, nextTick, setTimeout, clearTimeout, AbortController,
     crypto: { randomUUID: () => 'session-test' },
     useRoute: () => ({ path: '/friends', fullPath: '/friends', params: {} }),
+    useState: (_key, initial) => ref(initial()),
+    useMusicPlayerStore: () => reactive({ hasStarted: false }),
     useCommentAuth: () => ({ currentUser, isLoggedIn: loggedIn, authReady, restoreSession: async () => currentUser.value }),
     useBlogSettings: () => ({ settings: ref({}) }),
     DEFAULT_SITE_LOGO: '/sheep-logo.svg', resolveSiteLogo: settings => settings['blog.favicon'] || '/sheep-logo.svg',

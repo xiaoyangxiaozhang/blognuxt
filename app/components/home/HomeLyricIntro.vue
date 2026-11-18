@@ -71,7 +71,7 @@ onBeforeUnmount(() => {
   --lyric-play-state: running;
   width: 100%;
   color: #fff;
-  text-shadow: 0 2px 12px rgb(0 0 0 / 65%);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 80%), 0 2px 12px rgb(0 0 0 / 55%);
 }
 
 .is-paused { --lyric-play-state: paused; }
@@ -108,8 +108,8 @@ onBeforeUnmount(() => {
   content: attr(data-character);
   position: absolute;
   inset: 0;
-  color: var(--brand-accent);
-  text-shadow: 0 0 8px var(--brand-accent), 0 0 20px var(--brand-accent);
+  color: transparent;
+  text-shadow: 0 0 5px rgba(255, 255, 255, .95), 0 0 15px rgba(255, 255, 255, .55);
   opacity: 0;
   pointer-events: none;
 }
@@ -125,19 +125,19 @@ onBeforeUnmount(() => {
 }
 
 .is-started .lyric-character::after {
-  animation: lyric-character-glow 1400ms ease-out var(--character-delay) both;
+  animation: lyric-character-glow 1050ms ease-in-out var(--character-delay) both;
   animation-play-state: var(--lyric-play-state);
 }
 
 @keyframes lyric-character-reveal {
-  0% { opacity: 0; filter: blur(5px); transform: translateY(0.42em) scale(0.85); }
-  48% { opacity: 1; filter: blur(0); transform: translateY(-0.04em) scale(1.06); }
+  0% { opacity: 0; filter: blur(3px); transform: translateY(0.22em) scale(0.96); }
+  48% { opacity: 1; filter: blur(0); transform: translateY(-0.02em) scale(1.025); }
   100% { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
 }
 
 @keyframes lyric-character-glow {
   0% { opacity: 0; }
-  30% { opacity: 0.55; }
+  25% { opacity: 0.8; }
   100% { opacity: 0; }
 }
 

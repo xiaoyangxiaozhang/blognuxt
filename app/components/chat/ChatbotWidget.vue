@@ -1,18 +1,19 @@
 <template>
   <Teleport to="body">
     <div v-if="config.enabled" class="chatbot-root">
-      <transition name="chatbot-fade">
+      <transition name="chatbot-fade" @before-enter="dockMusic" @after-leave="undockMusic">
         <section
           v-show="open"
           ref="panel"
           class="chatbot-panel"
-          :class="{ 'is-dragging': dragging }"
+          :class="{ 'is-dragging': dragging, 'is-music-docked': musicDocked }"
           :style="{ translate: `${position.x}px ${position.y}px` }"
           role="dialog"
           aria-label="和博主聊聊"
           tabindex="-1"
           @keydown.esc.stop="open = false"
         >
+          <div id="chatbot-music-slot" class="chatbot-music-slot"></div>
           <header
             class="chatbot-header"
             title="拖动以移动对话框，手机下滑可收起"
@@ -139,6 +140,7 @@ import { cancelReplyDraft, getChatbotConfig, getReplyDraft, publishReplyDraft, s
 import type { AgentComment, AgentCommentPage, AgentCommentQuery, AgentReplyDraft, ChatbotMessage, PublicChatbotConfig } from '~/services/api/chatbot'
 import { useCommentAuth } from '~/composables/useCommentAuth'
 import { DEFAULT_SITE_LOGO, resolveSiteLogo, useBlogSettings } from '~/composables/useBlogSettings'
+import { useMusicPlayerStore } from '~/stores/music'
 import { proxyImageUrl, optimizedImageAttrs } from '~/utils/image'
 import ChatbotReply from './ChatbotReply.vue'
 import ChatbotReplyDraft from './ChatbotReplyDraft.vue'
@@ -154,6 +156,8 @@ const ownerId = computed(() => isLoggedIn.value && currentUser.value?.role === '
 const isOwner = computed(() => !!ownerId.value && config.comment_tools_enabled === true)
 const identityKey = computed(() => isLoggedIn.value ? `${isOwner.value ? 'owner' : 'user'}:${currentUser.value?.id}` : 'visitor')
 const open = ref(false)
+const music = useMusicPlayerStore()
+const musicDocked = useState('chatbot-music-docked', () => false)
 const sending = ref(false)
 const busyDraftId = ref('')
 const interactionBusy = computed(() => sending.value || !!busyDraftId.value || !authReady.value)
@@ -476,10 +480,18 @@ const endDrag = (event: PointerEvent) => {
   cancelDrag()
 }
 
+const dockMusic = () => {
+  musicDocked.value = music.hasStarted && window.matchMedia('(max-width: 768px)').matches
+  panel.value?.classList.toggle('is-music-docked', musicDocked.value)
+}
+
+const undockMusic = () => { musicDocked.value = false }
+
 const resetPosition = () => {
   cancelDrag()
   position.x = 0
   position.y = 0
+  if (open.value) dockMusic()
 }
 
 const showNotice = (message: string) => {
@@ -599,6 +611,7 @@ const send = async (preset?: string, displayedPage?: AgentCommentPage) => {
 
 watch(messages, saveSession, { deep: true })
 watch([identityKey, authReady], activateIdentity, { flush: 'sync' })
+watch(() => music.hasStarted, (started) => { if (open.value && started) dockMusic() })
 watch(open, async (value) => {
   if (value) {
     addWelcomeMessages()
@@ -629,6 +642,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  undockMusic()
   mounted = false
   identityEpoch += 1
   chatAbort?.abort()
@@ -728,6 +742,8 @@ onBeforeUnmount(() => {
   touch-action: none;
   user-select: none;
 }
+
+.chatbot-music-slot { display: none; }
 .is-dragging .chatbot-header { cursor: grabbing; }
 .chatbot-heading { display: flex; min-width: 0; align-items: center; gap: 12px; }
 .chatbot-heading-copy { display: grid; min-width: 0; gap: 4px; }
@@ -831,6 +847,23 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .chatbot-launcher { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
   .chatbot-panel { right: 0; bottom: 0; width: 100%; height: min(82dvh, 680px); border-radius: 16px 16px 0 0; }
+  .chatbot-panel.is-music-docked {
+    --chat-panel-height: min(82dvh, 680px, calc(100dvh - 86px));
+    height: calc(var(--chat-panel-height) + 70px);
+  }
+  .is-music-docked .chatbot-music-slot {
+    display: block;
+    flex: 0 0 70px;
+  }
+  .chatbot-panel.is-music-docked.chatbot-fade-enter-active,
+  .chatbot-panel.is-music-docked.chatbot-fade-leave-active {
+    transition: transform 320ms cubic-bezier(.22, 1, .36, 1);
+  }
+  .chatbot-panel.is-music-docked.chatbot-fade-enter-from,
+  .chatbot-panel.is-music-docked.chatbot-fade-leave-to {
+    opacity: 1;
+    transform: translateY(var(--chat-panel-height));
+  }
   .chatbot-input-row { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
   .chatbot-input-row textarea { font-size: 16px; }
 }
@@ -839,5 +872,7 @@ onBeforeUnmount(() => {
   .chatbot-root *, .chatbot-root *::before, .chatbot-root *::after { animation: none !important; transition: none !important; }
   .chatbot-launcher:hover, .chatbot-suggestions button:hover, .chatbot-root button:active { transform: none !important; }
   .chatbot-fade-enter-from, .chatbot-fade-leave-to, .chatbot-notice-enter-from { transform: none; }
+  .chatbot-panel.is-music-docked.chatbot-fade-enter-from,
+  .chatbot-panel.is-music-docked.chatbot-fade-leave-to { transform: none; }
 }
 </style>
