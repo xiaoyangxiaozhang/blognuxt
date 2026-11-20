@@ -38,7 +38,7 @@ const upstream = http.createServer((req, res) => {
     return
   }
   let data = { list: [], total: 0 }
-  if (path.endsWith('/settings/blog')) data = { 'blog.title': mode === 'new-settings' ? 'UPDATED_AUDIT_BLOG' : 'Audit Blog', 'blog.kimidou_enabled': 'false', 'blog.typing_texts': JSON.stringify(['AUDIT HERO HEADING']), 'blog.background_image': '/audit-hero.jpg', 'blog.favicon': mode === 'custom-logo' ? '/uploads/custom-logo.png' : '' }
+  if (path.endsWith('/settings/blog')) data = { 'blog.title': mode === 'new-settings' ? 'UPDATED_AUDIT_BLOG' : mode === 'markup-escape' ? 'Audit </script><img src=x>' : 'Audit Blog', 'blog.kimidou_enabled': 'false', 'blog.typing_texts': JSON.stringify(['AUDIT HERO HEADING']), 'blog.background_image': '/audit-hero.jpg', 'blog.favicon': mode === 'custom-logo' ? '/uploads/custom-logo.png' : '' }
   if (path.endsWith('/settings/basic')) data = { 'basic.author': 'Audit author' }
   if (path.endsWith('/settings/oauth')) data = {}
   if (path.endsWith('/articles')) {
@@ -97,6 +97,10 @@ try {
   const visibleHtml = homeHtml.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
   assert(visibleHtml.includes(marker), 'synthetic article must render in healthy home HTML')
   assert(!visibleHtml.includes('获取首页数据失败'))
+  assert(homeHtml.includes('<title>Audit Blog｜个人博客</title>'), 'home title must describe the site')
+  const siteMarkup = homeHtml.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/)?.[1]
+  assert.deepEqual(JSON.parse(siteMarkup), { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Audit Blog', url: origin + '/' })
+  assert.match(homeHtml, /<meta property="og:site_name" content="Audit Blog"/)
   const heading = visibleHtml.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
   assert.equal(heading, 'AUDIT HERO HEADING', 'home heading must be present in server-rendered HTML')
   assert.match(visibleHtml, /<link[^>]*rel="icon"[^>]*href="\/sheep-logo\.svg"/)
@@ -117,10 +121,16 @@ try {
   const customLogo = customLogoHtml.match(/<img\b[^>]*class="[^"]*brand-logo[^"]*"[^>]*>/)?.[0] || ''
   assert(!customLogo.includes('is-default-logo'))
   assert.match(customLogo, /src="\/uploads\/custom-logo\.png"/)
+  mode = 'markup-escape'
+  const escapedHtml = await (await fetch(origin + '/')).text()
+  const escapedMarkup = escapedHtml.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/)?.[1]
+  assert.equal(JSON.parse(escapedMarkup).name, 'Audit </script><img src=x>')
+  assert(!escapedMarkup.includes('<'), 'site name must not break out of structured data')
   mode = 'normal'
 
   const list = await fetch(origin + '/articles')
   const listHtml = await list.text()
+  assert(!listHtml.includes('application/ld+json'), 'site name markup belongs on the home page')
   const canonical = listHtml.match(/<link[^>]+rel="canonical"[^>]*>/)?.[0]
   assert(canonical?.includes(origin + '/articles'))
   console.log(JSON.stringify({ case: 'articles index canonical', canonical }))

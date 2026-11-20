@@ -92,6 +92,7 @@ useSeoMeta({
   title: siteTitle,
   description: siteDescription,
   ogTitle: siteTitle,
+  ogSiteName: siteTitle,
   ogDescription: siteDescription,
   ogType: 'website',
   ogUrl: canonicalUrl,

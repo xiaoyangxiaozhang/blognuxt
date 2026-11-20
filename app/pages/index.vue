@@ -238,6 +238,21 @@ const mapFeatureArticle = (item: ArticleListItem): FeatureArticleItem => mapBase
 
 const { settings: basicSettings } = useBasicSettings()
 const { settings: blogSettings } = useBlogSettings()
+const siteUrl = String(useRuntimeConfig().public.siteUrl).replace(/\/+$/, '')
+const siteName = computed(() => blogSettings.value['blog.title'] || '小羊嚣张')
+
+useSeoMeta({ title: () => `${siteName.value}｜个人博客` })
+useHead(() => ({
+  script: [{
+    type: 'application/ld+json',
+    innerHTML: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: siteName.value,
+      url: `${siteUrl}/`
+    }).replace(/</g, '\\u003c')
+  }]
+}))
 
 const buildHomePayload = async (): Promise<HomePayload> => {
   try {
