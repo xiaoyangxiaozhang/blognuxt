@@ -44,7 +44,7 @@
 
       <div class="hero-section">
         <div class="hero-content">
-          <div v-if="authorName" class="hero-name">{{ authorName }}</div>
+          <h1 class="hero-name">{{ siteName }}</h1>
           <HomeLyricIntro :lines="introLines" :ready="isRevealed" />
         </div>
       </div>
@@ -80,6 +80,7 @@
 
     <section class="content-section">
       <div class="content-shell">
+        <h1 v-if="!heroBackgroundUrl" class="home-site-name">{{ siteName }}</h1>
         <HomeFeaturePanel
           :author-name="authorName"
           :author-desc="authorDesc"
@@ -641,13 +642,17 @@ onBeforeUnmount(() => {
 }
 
 .hero-name {
-  margin-bottom: 20px;
+  margin: 0 0 20px;
   font-size: 92px;
   font-weight: 700;
   line-height: 1.05;
   color: var(--brand-accent);
   letter-spacing: 2px;
   text-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.home-site-name {
+  margin: 0 0 20px;
 }
 
 .hero-socials {

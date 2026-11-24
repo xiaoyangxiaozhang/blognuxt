@@ -102,7 +102,8 @@ try {
   assert.deepEqual(JSON.parse(siteMarkup), { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Audit Blog', url: origin + '/' })
   assert.match(homeHtml, /<meta property="og:site_name" content="Audit Blog"/)
   const heading = visibleHtml.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-  assert.equal(heading, 'AUDIT HERO HEADING', 'home heading must be present in server-rendered HTML')
+  assert.equal(heading, 'Audit Blog', 'the visible home heading must identify the site')
+  assert.match(visibleHtml, /<p[^>]*class="lyric-accessible"[^>]*>AUDIT HERO HEADING<\/p>/)
   assert.match(visibleHtml, /<link[^>]*rel="icon"[^>]*href="\/sheep-logo\.svg"/)
   const defaultLogo = visibleHtml.match(/<img\b[^>]*class="[^"]*brand-logo[^"]*"[^>]*>/)?.[0] || ''
   assert.match(defaultLogo, /is-default-logo/)

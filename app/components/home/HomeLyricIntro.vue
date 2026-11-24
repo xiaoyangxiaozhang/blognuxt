@@ -5,7 +5,7 @@
     :class="{ 'is-started': ready, 'is-paused': !inView || !pageVisible }"
     :style="{ '--line-duration': `${lineDuration}ms` }"
   >
-    <h1 class="lyric-accessible">{{ lines.join('，') }}</h1>
+    <p class="lyric-accessible">{{ lines.join('，') }}</p>
     <div class="lyric-heading" aria-hidden="true">
       <span class="lyric-static">
         <span v-for="(line, index) in lines" :key="index">{{ line }}</span>
